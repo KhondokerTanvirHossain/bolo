@@ -14,6 +14,7 @@ import app.bolo.speech.application.port.in.StreamTranscriptionUseCase;
 import app.bolo.speech.application.port.in.SynthesizeUseCase;
 import app.bolo.speech.application.port.in.TranscriptListener;
 import app.bolo.speech.application.port.in.TranscriptionStream;
+import app.bolo.speech.application.port.in.Voice;
 import app.bolo.talk.application.port.in.ClientMessage;
 import app.bolo.talk.application.port.in.StartTalkUseCase;
 import app.bolo.talk.application.port.in.TalkEnded;
@@ -22,6 +23,10 @@ import app.bolo.talk.application.port.in.TalkOutput;
 import app.bolo.talk.application.port.in.TalkView;
 import app.bolo.talk.application.port.out.TurnPort;
 import app.bolo.talk.domain.BuddyPrompt;
+import app.bolo.talk.domain.CrisisScreen;
+import app.bolo.talk.domain.CrisisScript;
+import app.bolo.talk.domain.QuietClock;
+import app.bolo.talk.domain.TalkIntent;
 import app.bolo.talk.domain.EndReason;
 import app.bolo.talk.domain.EnergyVad;
 import app.bolo.talk.domain.Exchange;
@@ -60,7 +65,7 @@ import java.util.function.LongSupplier;
 @Slf4j
 final class TalkConversation implements TalkConnection {
 
-    enum Phase { BUDDY_SPEAKING, YOUR_TURN, THINKING, ENDED }
+    enum Phase { BUDDY_SPEAKING, YOUR_TURN, THINKING, PAUSED, ENDED }
 
     private static final Object END = new Object();
     private static final int FRAME_BYTES = 640;
@@ -101,6 +106,8 @@ final class TalkConversation implements TalkConnection {
     private final TalkSettings settings;
     private final LongSupplier nowMs;
     private final Consumer<TalkEnded> onEnded;
+    private final SafetyGuard safety;
+    private final Starters starters;
 
     private final ReentrantLock lock = new ReentrantLock();
     private final EnergyVad vad = new EnergyVad();
@@ -112,6 +119,11 @@ final class TalkConversation implements TalkConnection {
     private volatile boolean ended;
     private volatile long lastFrameMs;
     private volatile TranscriptionStream stt;
+    /** Stream time at which the current recogniser opened (it restarts at 0 after a pause). */
+    private volatile long sttBaseMs;
+    /** Bumped whenever a new Buddy line takes over; an older speaker stops sending (e.g. a crisis replaces a reply). */
+    private volatile int speakGen;
+    private volatile boolean slow;
 
     // Guarded by lock.
     private Phase phase = Phase.BUDDY_SPEAKING;
@@ -127,6 +139,12 @@ final class TalkConversation implements TalkConnection {
     private long startedMs;
     private Reply speculation;
     private Reply speaking;
+    private QuietClock quiet;
+    private int shortStreak;
+    private String lastBuddyText = "";
+    private long pausedAtMs = -1;
+    private long pausedTotalMs;
+    private EndReason endAfterSpeaking;
     /** Audio ms written to the recogniser so far: word times come back in this clock. */
     private long streamMs;
     private long turnStreamStartMs;
@@ -138,7 +156,8 @@ final class TalkConversation implements TalkConnection {
 
     TalkConversation(TalkView talk, TalkContext ctx, TalkOutput out, StreamTranscriptionUseCase recogniser,
                      SynthesizeUseCase voice, LlmClient llm, StartTalkUseCase talks, TurnPort turns,
-                     AudioStoreUseCase audioStore, TalkSettings settings, LongSupplier nowMs, Consumer<TalkEnded> onEnded) {
+                     AudioStoreUseCase audioStore, TalkSettings settings, LongSupplier nowMs, Consumer<TalkEnded> onEnded,
+                     SafetyGuard safety, Starters starters) {
         this.talk = talk;
         this.ctx = ctx;
         this.out = out;
@@ -151,6 +170,9 @@ final class TalkConversation implements TalkConnection {
         this.settings = settings;
         this.nowMs = nowMs;
         this.onEnded = onEnded;
+        this.safety = safety;
+        this.starters = starters;
+        this.quiet = new QuietClock(settings.quietEncourageMs(), settings.quietHintMs(), settings.quietPauseMs());
         this.taker = new TurnTaker(settings.policy());
         this.system = BuddyPrompt.system(talk.goal(), talk.fearedMoment(), talk.minutes());
     }
@@ -219,8 +241,12 @@ final class TalkConversation implements TalkConnection {
         try {
             for (int off = 0; off < pcm.length && phase == Phase.YOUR_TURN; off += FRAME_BYTES) {
                 byte[] frame = Arrays.copyOfRange(pcm, off, Math.min(pcm.length, off + FRAME_BYTES));
-                audioMs += Math.max(1, frame.length / BYTES_PER_MS);
-                handle(taker.onFrame(vad.isSpeech(samples(frame)), audioMs));
+                long frameMs = Math.max(1, frame.length / BYTES_PER_MS);
+                audioMs += frameMs;
+                boolean speech = vad.isSpeech(samples(frame));
+                if (speech) quiet.onSpeech();
+                else onQuiet(quiet.onQuiet(frameMs));
+                if (phase == Phase.YOUR_TURN) handle(taker.onFrame(speech, audioMs));
             }
             if (phase == Phase.YOUR_TURN && elapsedMs() >= limitMs() + settings.wrapGraceMs()) wrapUpNow();
         } finally {
@@ -235,6 +261,9 @@ final class TalkConversation implements TalkConnection {
             case "done" -> done();
             case "heard" -> heard(m.turn(), m.ms());
             case "end" -> end(EndReason.LEARNER_ENDED, false, true);
+            case "pause" -> pause("learner");
+            case "resume" -> resume();
+            case "repeat" -> repeatOnRequest();
             default -> { }
         }
     }
@@ -248,7 +277,8 @@ final class TalkConversation implements TalkConnection {
         boolean timeUp = false;
         lock.lock();
         try {
-            if (ended || turn == null || turn != buddyTurn || !buddyDone || phase == Phase.YOUR_TURN) return;
+            if (ended || turn == null || turn != buddyTurn || !buddyDone || phase == Phase.YOUR_TURN || phase == Phase.PAUSED) return;
+            if (endAfterSpeaking != null) return;
             if (wrapping) {
                 timeUp = true;
             } else {
@@ -303,15 +333,21 @@ final class TalkConversation implements TalkConnection {
         switch (d) {
             case SPECULATE -> {
                 cancel(speculation);
+                // "Sorry?" / "Slower please" are answered without the model: nothing to speculate.
+                if (TalkIntent.of(transcript) != TalkIntent.NONE) {
+                    speculation = null;
+                    return;
+                }
                 List<Exchange> withLearner = new ArrayList<>(history);
                 withLearner.add(new Exchange(Exchange.Speaker.LEARNER, transcript.trim()));
-                speculation = ask(BuddyPrompt.messages(withLearner), system, transcript.trim());
+                speculation = ask(BuddyPrompt.messages(withLearner), systemFor(transcript.trim()), transcript.trim());
             }
             case RESUMED -> {
                 cancel(speculation);
                 speculation = null;
             }
             case COMMIT -> commit();
+            case UNCLEAR -> cue(BuddyPrompt.UNCLEAR_CUE);
             case NONE -> { }
         }
     }
@@ -332,18 +368,112 @@ final class TalkConversation implements TalkConnection {
         lastTurnWords.addAll(turnWords);
         history.add(new Exchange(Exchange.Speaker.LEARNER, said));
 
-        boolean wrap = elapsedMs() >= limitMs();
-        Reply reply;
-        if (!wrap && speculation != null && sameWords(speculation.forTranscript, said)) {
-            reply = speculation;
-        } else {
+        // TLK-13: "Sorry?" and "Slower please" are answered in Java, with no model call.
+        TalkIntent intent = TalkIntent.of(said);
+        if (intent != TalkIntent.NONE && !lastBuddyText.isBlank()) {
             cancel(speculation);
-            reply = ask(BuddyPrompt.messages(history), wrap ? BuddyPrompt.wrapUpSystem(system) : system, said);
+            speculation = null;
+            if (intent == TalkIntent.SLOWER) slow = true;
+            history.add(new Exchange(Exchange.Speaker.BUDDY, lastBuddyText));
+            buddyTurn = nextIdx++;
+            startSpeaker(buddyTurn, fixed(lastBuddyText), commitAt);
+            return;
         }
+
+        // TLK-14: a turn that trips the keyword screen waits for the classifier before Bolo says anything.
+        if (CrisisScreen.mayBeCrisis(said)) {
+            cancel(speculation);
+            speculation = null;
+            Thread.ofVirtual().start(() -> {
+                boolean crisis;
+                try {
+                    crisis = safety.isCrisis(ctx, said).get(3, TimeUnit.SECONDS);
+                } catch (Exception e) {
+                    crisis = true;
+                }
+                if (crisis) crisis();
+                else replyTo(said, commitAt, false);
+            });
+            return;
+        }
+        replyTo(said, commitAt, true);
+        // Any other turn is checked in parallel; a late "crisis" stops Bolo mid-reply.
+        var check = safety.isCrisis(ctx, said);
+        if (check != null) check.thenAccept(c -> { if (Boolean.TRUE.equals(c)) crisis(); });
+    }
+
+    /** Bolo's reply to a committed learner turn (lock may or may not be held by the caller; it is taken here). */
+    private void replyTo(String said, long commitAt, boolean mayReuseSpeculation) {
+        lock.lock();
+        try {
+            if (ended || endAfterSpeaking != null) return;
+            boolean wrap = elapsedMs() >= limitMs();
+            String sys = wrap ? BuddyPrompt.wrapUpSystem(system) : systemFor(said);
+            shortStreak = words(said).split(" ").length < 5 ? shortStreak + 1 : 0;
+            if (shortStreak >= 3) sendStartersAsync();
+            Reply reply;
+            if (mayReuseSpeculation && !wrap && speculation != null && sameWords(speculation.forTranscript, said)) {
+                reply = speculation;
+            } else {
+                cancel(speculation);
+                reply = ask(BuddyPrompt.messages(history), sys, said);
+            }
+            speculation = null;
+            wrapping = wrap;
+            buddyTurn = nextIdx++;
+            startSpeaker(buddyTurn, reply, commitAt);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    /** TLK-5: a very short answer gets a specific follow-up; the third in a row also gets a starter. */
+    private String systemFor(String said) {
+        if (words(said).split(" ").length >= 5) return system;
+        return BuddyPrompt.shortAnswerSystem(system, shortStreak + 1 >= 3);
+    }
+
+    /** A Bolo line driven by a cue instead of a learner turn: silence (TLK-6), Bangla or unclear speech (TLK-7), resume. */
+    private void cue(String cue) {
+        phase = Phase.THINKING;
+        out.send(message("state", "value", "thinking"));
+        cancel(speculation);
         speculation = null;
-        wrapping = wrap;
+        history.add(new Exchange(Exchange.Speaker.LEARNER, cue));
         buddyTurn = nextIdx++;
-        startSpeaker(buddyTurn, reply, commitAt);
+        startSpeaker(buddyTurn, ask(BuddyPrompt.messages(history), system, ""), null);
+    }
+
+    private void onQuiet(QuietClock.Stage stage) {
+        switch (stage) {
+            case ENCOURAGE -> cue(BuddyPrompt.ENCOURAGE_CUE);
+            case HINT -> sendStartersAsync();
+            case PAUSE -> {
+                lock.unlock();
+                try {
+                    pause("quiet");
+                } finally {
+                    lock.lock();
+                }
+            }
+            case NONE -> { }
+        }
+    }
+
+    private void sendStartersAsync() {
+        String line = lastBuddyText;
+        Thread.ofVirtual().start(() -> {
+            List<String> s = starters.forLine(ctx, line);
+            if (!ended) out.send(message("hint", "starters", s));
+        });
+    }
+
+    /** A Bolo line already known (repeat, crisis): no model call. */
+    private static Reply fixed(String text) {
+        Reply r = new Reply(text);
+        r.queue.add(text);
+        r.queue.add(END);
+        return r;
     }
 
     /** The talk ran past its time plus grace while the learner held the floor: say goodbye now. */
@@ -377,15 +507,16 @@ final class TalkConversation implements TalkConnection {
         buddyDone = false;
         pendingHeard = null;
         speaking = reply;
-        Thread.ofVirtual().start(() -> speak(idx, reply, commitAt));
+        int gen = ++speakGen;
+        Thread.ofVirtual().start(() -> speak(idx, reply, commitAt, gen));
     }
 
-    private void speak(int idx, Reply reply, Long commitAt) {
+    private void speak(int idx, Reply reply, Long commitAt, int gen) {
         SentenceSplitter splitter = new SentenceSplitter();
         StringBuilder full = new StringBuilder();
         Integer[] serverMs = {null};
         try {
-            while (!ended) {
+            while (!ended && gen == speakGen) {
                 Object item = reply.queue.poll(settings.replyTimeoutMs(), TimeUnit.MILLISECONDS);
                 if (item == null) throw new LlmUnavailableException("reply timed out", null);
                 if (item == END) break;
@@ -395,12 +526,12 @@ final class TalkConversation implements TalkConnection {
                 }
                 String delta = (String) item;
                 full.append(delta);
-                for (String sentence : splitter.push(delta)) say(idx, sentence, commitAt, serverMs);
+                for (String sentence : splitter.push(delta)) say(idx, sentence, commitAt, serverMs, gen);
             }
-            if (ended) return;
+            if (ended || gen != speakGen) return;
             var tail = splitter.flush();
-            if (tail.isPresent()) say(idx, tail.get(), commitAt, serverMs);
-            finishBuddyTurn(idx, full.toString().trim(), serverMs[0]);
+            if (tail.isPresent()) say(idx, tail.get(), commitAt, serverMs, gen);
+            finishBuddyTurn(idx, full.toString().trim(), serverMs[0], gen);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         } catch (RuntimeException e) {
@@ -408,10 +539,10 @@ final class TalkConversation implements TalkConnection {
         }
     }
 
-    private void say(int idx, String sentence, Long commitAt, Integer[] serverMs) {
+    private void say(int idx, String sentence, Long commitAt, Integer[] serverMs, int gen) {
         lock.lock();
         try {
-            if (ended) return;
+            if (ended || gen != speakGen) return;
             if (phase == Phase.THINKING) {
                 phase = Phase.BUDDY_SPEAKING;
                 out.send(message("state", "value", "buddy_speaking"));
@@ -421,17 +552,18 @@ final class TalkConversation implements TalkConnection {
             lock.unlock();
         }
         // Runs on the TTS vendor's thread: never throw into it, and never block it (output only enqueues).
-        voice.synthesize(ctx, sentence, chunk -> {
-            if (ended) return;
+        voice.synthesize(ctx, slow ? Voice.BUDDY_SLOW : Voice.BUDDY, sentence, chunk -> {
+            if (ended || gen != speakGen) return;
             if (serverMs[0] == null && commitAt != null) serverMs[0] = (int) (nowMs.getAsLong() - commitAt);
             out.audio(chunk);
         });
     }
 
-    private void finishBuddyTurn(int idx, String text, Integer serverMs) {
+    private void finishBuddyTurn(int idx, String text, Integer serverMs, int gen) {
+        EndReason thenEnd;
         lock.lock();
         try {
-            if (ended) return;
+            if (ended || gen != speakGen) return;
             Integer heardMs = pendingHeard;
             pendingHeard = null;
             turns.save(talk.id(), idx, "buddy", text, serverMs, heardMs);
@@ -440,7 +572,107 @@ final class TalkConversation implements TalkConnection {
             if (latency != null) latencyByTurn.put(idx, latency);
             if (phase == Phase.THINKING) phase = Phase.BUDDY_SPEAKING;
             buddyDone = true;
+            if (!text.isBlank()) lastBuddyText = text;
             out.send(message("buddy_done", "turn", idx));
+            thenEnd = endAfterSpeaking;
+        } finally {
+            lock.unlock();
+        }
+        if (thenEnd != null) end(thenEnd, false, true);
+    }
+
+    // ---- pause, resume, repeat, crisis ------------------------------------------------------------------------------
+
+    /** TLK-10: the clock and the no-audio watchdog stop; the recogniser closes (freeing the vendor's one live slot). */
+    private void pause(String reason) {
+        TranscriptionStream s;
+        lock.lock();
+        try {
+            if (ended || phase == Phase.PAUSED || endAfterSpeaking != null) return;
+            phase = Phase.PAUSED;
+            pausedAtMs = nowMs.getAsLong();
+            cancel(speculation);
+            speculation = null;
+            ++speakGen;
+            s = stt;
+            stt = null;
+            out.send(message("paused", "reason", reason));
+        } finally {
+            lock.unlock();
+        }
+        if (s != null) Thread.ofVirtual().start(s::close);
+    }
+
+    /** Back from a pause: a fresh recogniser, then Bolo welcomes the learner back and asks its last question again. */
+    private void resume() {
+        lock.lock();
+        try {
+            if (ended || phase != Phase.PAUSED) return;
+            long now = nowMs.getAsLong();
+            pausedTotalMs += now - pausedAtMs;
+            pausedAtMs = -1;
+            lastFrameMs = now;
+            phase = Phase.THINKING;
+            out.send(message("resumed"));
+        } finally {
+            lock.unlock();
+        }
+        Thread.ofVirtual().start(() -> {
+            try {
+                TranscriptionStream opened = recogniser.open(ctx, new Listener());
+                lock.lock();
+                try {
+                    if (ended) {
+                        opened.close();
+                        return;
+                    }
+                    sttBaseMs = streamMs;
+                    stt = opened;
+                    quiet.onSpeech();
+                    cue(BuddyPrompt.RESUME_CUE);
+                } finally {
+                    lock.unlock();
+                }
+            } catch (RuntimeException e) {
+                fail(e);
+            }
+        });
+    }
+
+    /** The replay icon (TLK-13): say Bolo's last line again. */
+    private void repeatOnRequest() {
+        lock.lock();
+        try {
+            if (ended || phase != Phase.YOUR_TURN || lastBuddyText.isBlank()) return;
+            phase = Phase.THINKING;
+            history.add(new Exchange(Exchange.Speaker.LEARNER, "(asks you to repeat that)"));
+            history.add(new Exchange(Exchange.Speaker.BUDDY, lastBuddyText));
+            buddyTurn = nextIdx++;
+            startSpeaker(buddyTurn, fixed(lastBuddyText), null);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    /**
+     * TLK-14: stop whatever Bolo was about to say, show local help, speak the approved script (never generated), and
+     * end the practice (no debrief follows).
+     */
+    private void crisis() {
+        lock.lock();
+        try {
+            if (ended || endAfterSpeaking != null) return;
+            log.warn("talk {} crisis response", talk.id());
+            cancel(speculation);
+            speculation = null;
+            cancel(speaking);
+            endAfterSpeaking = EndReason.CRISIS;
+            phase = Phase.THINKING;
+            List<Map<String, Object>> help = CrisisScript.HELP.stream()
+                    .map(h -> Map.<String, Object>of("name", h.name(), "number", h.number(), "hours", h.hours())).toList();
+            out.send(message("crisis", "title", CrisisScript.TITLE, "lines", CrisisScript.LINES, "help", help));
+            buddyTurn = nextIdx++;
+            startSpeaker(buddyTurn, fixed(String.join(" ", CrisisScript.LINES)), null);
         } finally {
             lock.unlock();
         }
@@ -454,8 +686,14 @@ final class TalkConversation implements TalkConnection {
             while (!ended) {
                 Thread.sleep(WATCHDOG_TICK_MS);
                 long now = nowMs.getAsLong();
-                if (now - lastFrameMs > settings.noAudioTimeoutMs()) end(EndReason.DISCONNECTED, false, true);
-                else if (now - startedMs >= limitMs() + settings.wrapGraceMs()) end(EndReason.TIME_UP, false, true);
+                long pausedAt = pausedAtMs;
+                if (pausedAt >= 0) {
+                    if (now - pausedAt > settings.pausedMaxMs()) end(EndReason.DISCONNECTED, false, true);
+                } else if (now - lastFrameMs > settings.noAudioTimeoutMs()) {
+                    end(EndReason.DISCONNECTED, false, true);
+                } else if (elapsedMs() >= limitMs() + settings.wrapGraceMs()) {
+                    end(EndReason.TIME_UP, false, true);
+                }
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -539,8 +777,10 @@ final class TalkConversation implements TalkConnection {
         return values.get(Math.max(0, rank - 1));
     }
 
+    /** Talk time, not counting pauses. */
     private long elapsedMs() {
-        return nowMs.getAsLong() - startedMs;
+        long pausedNow = pausedAtMs >= 0 ? nowMs.getAsLong() - pausedAtMs : 0;
+        return nowMs.getAsLong() - startedMs - pausedTotalMs - pausedNow;
     }
 
     private long limitMs() {
@@ -586,6 +826,11 @@ final class TalkConversation implements TalkConnection {
             lock.lock();
             try {
                 if (ended || segment.words().isEmpty()) return;
+                long base = sttBaseMs;
+                if (base != 0) {
+                    segment = new ScoredSegment(segment.text(), segment.words().stream().map(w -> new ScoredWord(w.word(),
+                            w.startMs() + base, w.endMs() + base, w.accuracy(), w.errorType(), w.phonemes())).toList());
+                }
                 if (phase == Phase.YOUR_TURN) {
                     turnWords.addAll(segment.words());
                 } else if (lastLearnerIdx >= 0 && segment.words().getFirst().startMs() >= lastTurnStreamStartMs) {

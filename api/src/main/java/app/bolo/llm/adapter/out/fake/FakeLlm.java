@@ -22,9 +22,29 @@ public class FakeLlm implements LlmPort {
                          {"turn":3,"said":"hello bolo","better":"Hello again, Bolo, I have more to tell you."}],
              "sentenceLevel":"GOOD","vocabularyLevel":"BUILDING"}""";
 
+    public static final String SAFE = "{\"crisis\":false}";
+    public static final String STARTERS = "{\"starters\":[\"I think that...\",\"For example, ...\"]}";
+
     private volatile String reply = REPLY;
     private volatile String structuredReply = STRUCTURED_REPLY;
+    private volatile String safetyReply = SAFE;
     private volatile boolean failStructured;
+    private final java.util.concurrent.atomic.AtomicInteger replyCalls = new java.util.concurrent.atomic.AtomicInteger();
+    private volatile String lastReplyRequest = "";
+
+    public void safetyReply(String json) {
+        this.safetyReply = json == null ? SAFE : json;
+    }
+
+    /** Plain (non-structured) requests so far: Bolo's replies. */
+    public int replyCalls() {
+        return replyCalls.get();
+    }
+
+    /** The system prompt and messages of the last plain request, for assertions on hints and cues. */
+    public String lastReplyRequest() {
+        return lastReplyRequest;
+    }
     private volatile RuntimeException failWith;
     private volatile long deltaMs = 30;
 
@@ -57,8 +77,15 @@ public class FakeLlm implements LlmPort {
     public LlmStream stream(LlmRequest request, Consumer<String> onDelta) {
         CompletableFuture<LlmResult> done = new CompletableFuture<>();
         boolean structured = request.jsonSchema() != null;
-        String text = structured ? structuredReply : reply;
-        RuntimeException fail = structured ? (failStructured ? new IllegalStateException("coach down") : null) : failWith;
+        Object props = structured ? request.jsonSchema().get("properties") : null;
+        boolean safety = props instanceof java.util.Map<?, ?> m && m.containsKey("crisis");
+        boolean starters = props instanceof java.util.Map<?, ?> m2 && m2.containsKey("starters");
+        if (!structured) {
+            replyCalls.incrementAndGet();
+            lastReplyRequest = request.system() + "\n" + request.messages();
+        }
+        String text = safety ? safetyReply : starters ? STARTERS : structured ? structuredReply : reply;
+        RuntimeException fail = safety || starters ? null : structured ? (failStructured ? new IllegalStateException("coach down") : null) : failWith;
         long pause = deltaMs;
         Thread worker = Thread.ofVirtual().start(() -> {
             try {

@@ -1,6 +1,10 @@
 package app.bolo.speech.adapter.out.fake;
 
+import app.bolo.speech.application.port.in.Voice;
 import app.bolo.speech.application.port.out.TextToSpeechPort;
+
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import java.util.function.Consumer;
 
@@ -8,6 +12,18 @@ import java.util.function.Consumer;
 public class FakeTextToSpeech implements TextToSpeechPort {
 
     private volatile RuntimeException failWith;
+    private final List<Voice> voices = new CopyOnWriteArrayList<>();
+
+    /** Every voice asked for, in order (tests). */
+    public List<Voice> voices() {
+        return voices;
+    }
+
+    @Override
+    public void synthesize(Voice voice, String text, java.util.function.Consumer<byte[]> pcm24kChunk) {
+        voices.add(voice);
+        synthesize(text, pcm24kChunk);
+    }
 
     @Override
     public String vendor() {

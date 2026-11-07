@@ -39,7 +39,11 @@ public class AzureTextToSpeech implements TextToSpeechPort {
 
     @Override
     public void synthesize(Voice who, String text, Consumer<byte[]> pcm24kChunk) {
-        speak(who == Voice.COACH ? coachVoice : voice, who == Voice.COACH ? "0%" : rate, text, pcm24kChunk);
+        switch (who) {
+            case COACH -> speak(coachVoice, "0%", text, pcm24kChunk);
+            case BUDDY_SLOW -> speak(voice, "-25%", text, pcm24kChunk);
+            default -> speak(voice, rate, text, pcm24kChunk);
+        }
     }
 
     @Override

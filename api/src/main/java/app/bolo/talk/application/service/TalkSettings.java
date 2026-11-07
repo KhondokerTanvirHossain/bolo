@@ -7,5 +7,6 @@ import app.bolo.talk.domain.TurnPolicy;
  * long past the talk time a learner may keep the floor before Bolo says goodbye anyway.
  */
 record TalkSettings(TurnPolicy policy, String model, int maxTokens, long minuteMs, long wrapGraceMs, long replyTimeoutMs,
-                    long noAudioTimeoutMs, long burstAllowanceMs) {
+                    long noAudioTimeoutMs, long burstAllowanceMs, long quietEncourageMs, long quietHintMs, long quietPauseMs,
+                    long pausedMaxMs) {
 }

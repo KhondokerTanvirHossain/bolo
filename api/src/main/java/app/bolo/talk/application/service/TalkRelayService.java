@@ -31,11 +31,13 @@ public class TalkRelayService implements TalkRelayUseCase {
     private final TurnPort turns;
     private final AudioStoreUseCase audioStore;
     private final ApplicationEventPublisher events;
+    private final SafetyGuard safety;
+    private final Starters starters;
     private final TalkSettings settings;
 
     public TalkRelayService(StreamTranscriptionUseCase recogniser, SynthesizeUseCase voice, LlmClient llm,
                             StartTalkUseCase talks, TurnPort turns, AudioStoreUseCase audioStore,
-                            ApplicationEventPublisher events,
+                            ApplicationEventPublisher events, SafetyGuard safety, Starters starters,
                             @Value("${bolo.talk.speculate-after-ms}") long speculateAfterMs,
                             @Value("${bolo.talk.end-after-ms}") long endAfterMs,
                             @Value("${bolo.talk.unfinished-end-after-ms}") long unfinishedEndAfterMs,
@@ -45,6 +47,10 @@ public class TalkRelayService implements TalkRelayUseCase {
                             @Value("${bolo.talk.reply-timeout-ms}") long replyTimeoutMs,
                             @Value("${bolo.talk.no-audio-timeout-ms}") long noAudioTimeoutMs,
                             @Value("${bolo.talk.burst-allowance-ms}") long burstAllowanceMs,
+                            @Value("${bolo.talk.quiet-encourage-ms}") long quietEncourageMs,
+                            @Value("${bolo.talk.quiet-hint-ms}") long quietHintMs,
+                            @Value("${bolo.talk.quiet-pause-ms}") long quietPauseMs,
+                            @Value("${bolo.talk.paused-max-ms}") long pausedMaxMs,
                             @Value("${bolo.llm.buddy-model}") String model,
                             @Value("${bolo.llm.max-tokens}") int maxTokens) {
         this.recogniser = recogniser;
@@ -54,17 +60,19 @@ public class TalkRelayService implements TalkRelayUseCase {
         this.turns = turns;
         this.audioStore = audioStore;
         this.events = events;
+        this.safety = safety;
+        this.starters = starters;
         var words = Arrays.stream(unfinishedWords.split(",")).map(w -> w.trim().toLowerCase(Locale.ROOT))
                 .filter(w -> !w.isEmpty()).collect(Collectors.toUnmodifiableSet());
         this.settings = new TalkSettings(new TurnPolicy(speculateAfterMs, endAfterMs, unfinishedEndAfterMs, words),
                 model, maxTokens, minuteMs, wrapGraceMs, replyTimeoutMs,
-                noAudioTimeoutMs, burstAllowanceMs);
+                noAudioTimeoutMs, burstAllowanceMs, quietEncourageMs, quietHintMs, quietPauseMs, pausedMaxMs);
     }
 
     @Override
     public TalkConnection open(TalkView talk, LearnerId learner, TalkOutput out) {
         TalkConversation c = new TalkConversation(talk, new TalkContext(learner, talk.id()), out, recogniser, voice, llm,
-                talks, turns, audioStore, settings, () -> System.nanoTime() / 1_000_000, events::publishEvent);
+                talks, turns, audioStore, settings, () -> System.nanoTime() / 1_000_000, events::publishEvent, safety, starters);
         c.start();
         return c;
     }

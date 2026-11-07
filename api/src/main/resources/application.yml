@@ -50,6 +50,12 @@ bolo:
     wrap-grace-ms: 60000
     # A reply that hasn't finished streaming in this long ends the talk kindly.
     reply-timeout-ms: 20000
+    # TLK-6 silence help, in the learner's turn time: encourage, then a starter card, then pause.
+    quiet-encourage-ms: 8000
+    quiet-hint-ms: 15000
+    quiet-pause-ms: 45000
+    # TLK-10: a paused talk is kept this long.
+    paused-max-ms: 1800000
     # A socket that sends no audio for this long (a half-open phone connection) is ended.
     no-audio-timeout-ms: 15000
     # Audio may run this far ahead of real time (x1.2) before frames are dropped: the recogniser is billed per second.

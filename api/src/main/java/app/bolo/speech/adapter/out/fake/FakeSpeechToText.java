@@ -21,6 +21,18 @@ public class FakeSpeechToText implements SpeechToTextPort {
 
     private final List<Stream> streams = new CopyOnWriteArrayList<>();
     private volatile List<ScoredWord> nextWords = defaultWords();
+    private volatile String nextText = "hello bolo";
+    private volatile boolean silent;
+
+    /** What the fake "hears" (default "hello bolo"). */
+    public void nextText(String text) {
+        this.nextText = text == null ? "hello bolo" : text;
+    }
+
+    /** Hears speech but makes no words of it (Bangla, mumbling). */
+    public void silentRecogniser(boolean silent) {
+        this.silent = silent;
+    }
 
     /** The scored words the fake reports with each "hello bolo" (times are offsets from the utterance's first loud frame). */
     public void nextWords(List<ScoredWord> words) {
@@ -74,16 +86,16 @@ public class FakeSpeechToText implements SpeechToTextPort {
                 if (closed || !loud(pcm16k)) return;
                 loudFrames.incrementAndGet();
                 if (utteranceStartMs < 0) utteranceStartMs = at;
-                if (++loudInUtterance == FRAMES_TO_HEAR) {
+                if (++loudInUtterance == FRAMES_TO_HEAR && !owner.silent) {
                     heard = true;
                     long base = utteranceStartMs;
-                    scored = new ScoredSegment("hello bolo", owner.nextWords.stream()
+                    scored = new ScoredSegment(owner.nextText, owner.nextWords.stream()
                             .map(w -> new ScoredWord(w.word(), base + w.startMs(), base + w.endMs(), w.accuracy(), w.errorType(), w.phonemes()))
                             .toList());
                 }
             }
             if (heard) {
-                listener.onPartial("hello bolo");
+                listener.onPartial(scored.text());
                 listener.onScored(scored);
             }
         }

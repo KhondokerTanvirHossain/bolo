@@ -95,7 +95,8 @@ public class CoachService implements DebriefUseCase {
 
     @EventListener
     public void onTalkEnded(TalkEnded e) {
-        if (e.learnerTurns() < 1) return;
+        // No debrief after a crisis (TLK-14): the practice framing stops.
+        if (e.learnerTurns() < 1 || "crisis".equals(e.reason())) return;
         debriefs.start(e.id(), clock.now());
         Thread.ofVirtual().name("coach-" + e.id()).start(() -> compose(e.id(), e.learner()));
     }
