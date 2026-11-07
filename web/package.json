@@ -26,5 +26,6 @@
     "eslint-config-next": "15.5.29",
     "typescript": "^5",
     "vitest": "^3.2.7"
-  }
+  },
+  "packageManager": "pnpm@10.11.0"
 }

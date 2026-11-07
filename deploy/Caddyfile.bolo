@@ -1,0 +1,25 @@
+# Bolo's site block, appended to the box's /home/ec2-user/n8n/Caddyfile (shared with medioo, drugdb and n8n).
+# Apply only with the procedure in docs/RUNBOOK.md (in-place write, validate, reload, compare the other tenants).
+# Host: sslip.io resolves bolo.13-205-14-249.sslip.io to the box, so HTTPS (needed for the mic) works with no DNS edit.
+bolo.13-205-14-249.sslip.io {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		X-Frame-Options "DENY"
+		Permissions-Policy "microphone=(self), camera=(), geolocation=()"
+		-Server
+	}
+
+	handle /api/* {
+		reverse_proxy bolo-api:8080
+	}
+	handle /ws/* {
+		reverse_proxy bolo-api:8080
+	}
+	handle {
+		reverse_proxy bolo-web:3000
+	}
+}
