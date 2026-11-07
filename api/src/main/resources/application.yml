@@ -38,6 +38,18 @@ bolo:
   talk:
     # Live talks at once. Azure Speech's free tier allows one live recognition, so 1 until we move to S0.
     max-live-sessions: ${BOLO_TALK_MAX_LIVE:1}
+    # TLK-4: start a speculative reply after this much silence, end the turn after end-after-ms, or after
+    # unfinished-end-after-ms when the last word suggests more is coming.
+    speculate-after-ms: 1000
+    end-after-ms: 2500
+    unfinished-end-after-ms: 4000
+    unfinished-words: and,but,because,so,or,then,like,um,uh,the,a,an,to,my,i
+    # One minute of talk time; tests shorten it.
+    minute-ms: 60000
+    # TLK-9: a learner still talking this long after the talk time gets Bolo's goodbye anyway.
+    wrap-grace-ms: 60000
+    # A reply that hasn't finished streaming in this long ends the talk kindly.
+    reply-timeout-ms: 20000
   speech:
     # azure | fake. Production sets azure in deploy/compose.prod.yml; fake keeps tests and keyless dev working.
     vendor: ${BOLO_SPEECH_VENDOR:fake}
