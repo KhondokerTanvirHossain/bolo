@@ -85,6 +85,9 @@ bolo:
       key: ${BOLO_ANTHROPIC_API_KEY:}
     buddy-model: claude-haiku-5-5
     max-tokens: 300
+  assessment:
+    # "Try it" / practice attempts per learner per minute (each is a billed vendor call).
+    attempts-per-minute: 20
   coaching:
     model: claude-sonnet-5-5
     max-tokens: 1500

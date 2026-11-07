@@ -1,0 +1,10 @@
+package app.bolo.assessment.application.port.out;
+
+import app.bolo.common.id.LearnerId;
+
+import java.time.Instant;
+
+public interface AttemptPort {
+
+    void save(LearnerId learner, String reference, String level, boolean heard, double accuracy, String focusJson, Instant at);
+}

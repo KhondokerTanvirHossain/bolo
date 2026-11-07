@@ -10,5 +10,11 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 public abstract class PostgresTestBase {
 
     @ServiceConnection
-    static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:17-alpine");
+    static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:17-alpine")
+            .withCommand("postgres", "-c", "max_connections=400");
+
+    static {
+        // Spring keeps a context per distinct test configuration alive; small pools keep them under the limit.
+        System.setProperty("spring.datasource.hikari.maximum-pool-size", "4");
+    }
 }
