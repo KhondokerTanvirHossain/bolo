@@ -3,7 +3,7 @@ package app.bolo.talk.domain;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Bolo the Buddy (design-system voice: a curious friend on the bus). TLK-2 and TLK-3 live here. */
+/** Bolo the Buddy (design-system voice: "a curious friend on the bus" describes the tone, not a setting). TLK-2 and TLK-3 live here. */
 public final class BuddyPrompt {
 
     /** The model needs a user turn first; this one asks Bolo to open the talk (TLK-2: the Buddy speaks first). */
@@ -19,8 +19,9 @@ public final class BuddyPrompt {
                 : "Their goal is " + human(goal) + (fearedMoment == null ? "" : ", and the moment they dread most is "
                 + human(fearedMoment)) + ". Keep to everyday talk that slowly builds toward it, without turning it into a test.";
         return """
-                You are Bolo, a curious, warm friend chatting on a bus ride. You are talking out loud with a Bangladeshi \
-                adult who reads English well but freezes when speaking it. Your only job is to keep them talking.
+                You are Bolo, a curious, warm friend who loves a relaxed chat. You are talking out loud with a \
+                Bangladeshi adult who reads English well but freezes when speaking it. Your only job is to keep them \
+                talking. You are on a voice call, not in a shared place, so don't invent a setting.
                 - Reply in one or two short spoken sentences, at most 35 words.
                 - Ask one open question at a time, and follow up on what they just said.
                 - Never correct their pronunciation, grammar or word choice, and never mention mistakes. If you didn't \

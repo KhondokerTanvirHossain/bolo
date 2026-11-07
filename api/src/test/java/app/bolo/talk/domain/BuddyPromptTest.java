@@ -18,6 +18,11 @@ class BuddyPromptTest {
     }
 
     @Test
+    void theToneIsNotASetting() {
+        assertThat(BuddyPrompt.system(null, null, 5)).doesNotContain("bus").contains("don't invent a setting");
+    }
+
+    @Test
     void worksWithoutAProfile() {
         assertThat(BuddyPrompt.system(null, null, 5)).doesNotContain("null").contains("everyday");
     }
