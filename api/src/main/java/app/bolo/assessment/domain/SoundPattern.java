@@ -6,15 +6,17 @@ import java.util.Set;
 
 /**
  * The Bangla-speaker sound patterns the Coach can name (ASM-2), by the IPA sounds Azure scores. Named the way
- * people say them (design-system copy): "The v sound · v as in van". The s-cluster extra vowel isn't detectable
- * without a script, so it waits for the "Try it" practice (plan B).
+ * people say them (design-system copy): "The v sound · v as in van". The s-cluster extra vowel is detected only
+ * in scripted practice, where Azure reports the inserted sound.
  */
 public enum SoundPattern {
     V_BH("The v sound", "v as in van", "Top teeth touch your lower lip for v.", "v"),
     W_V("The w sound", "w as in we", "Round your lips, no teeth, for w.", "w"),
     TH_TD("The th sound", "th as in think", "Put the tip of your tongue between your teeth for th.", "θ", "ð"),
     Z_J("The z sound", "z as in zoo", "Keep your tongue behind your teeth and buzz for z.", "z"),
-    S_SH("The sh sound", "sh as in ship", "Round your lips and pull your tongue back a little for sh.", "ʃ");
+    S_SH("The sh sound", "sh as in ship", "Round your lips and pull your tongue back a little for sh.", "ʃ"),
+    /** Found from an inserted sound before s + consonant in scripted practice; no IPA symbol of its own. */
+    S_CLUSTER_VOWEL("The s at the start", "s as in school", "Start straight on the s: school, not ischool.");
 
     private final String title;
     private final String example;
