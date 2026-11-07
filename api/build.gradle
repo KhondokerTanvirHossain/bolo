@@ -41,7 +41,6 @@ dependencies {
 tasks.named('test') {
     useJUnitPlatform { excludeTags 'live' }
     testLogging { events 'failed'; exceptionFormat 'full' }
-    if (project.hasProperty('oneCpu')) jvmArgs '-XX:ActiveProcessorCount=1'
 }
 
 // Probes the deployed Bolo with real vendors: BOLO_LIVE_URL=https://bolo.eliooo.org ./gradlew liveProbe
