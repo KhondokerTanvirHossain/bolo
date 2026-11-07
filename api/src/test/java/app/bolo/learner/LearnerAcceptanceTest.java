@@ -17,6 +17,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -94,6 +95,53 @@ class LearnerAcceptanceTest extends PostgresTestBase {
         mvc.perform(write(post("/api/consent"))
                         .content("{\"keepRecordings\":true,\"over13\":true,\"policyVersion\":\"2026-11-v1\"}"))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void profileIsStoredAndOverwritten() throws Exception {
+        Cookie cookie = startSession();
+        mvc.perform(write(put("/api/profile")).cookie(cookie)
+                        .content("{\"goal\":\"work_meetings\",\"fearedMoment\":\"small_talk\",\"talkMinutes\":5}"))
+                .andExpect(status().isNoContent());
+        mvc.perform(write(put("/api/profile")).cookie(cookie)
+                        .content("{\"goal\":\"job_interviews\",\"fearedMoment\":\"phone_calls\",\"talkMinutes\":10}"))
+                .andExpect(status().isNoContent());
+        String body = mvc.perform(get("/api/me").cookie(cookie))
+                .andExpect(jsonPath("$.profile.goal").value("job_interviews"))
+                .andExpect(jsonPath("$.profile.fearedMoment").value("phone_calls"))
+                .andExpect(jsonPath("$.profile.talkMinutes").value(10))
+                .andReturn().getResponse().getContentAsString();
+        String learnerId = com.jayway.jsonpath.JsonPath.read(body, "$.learnerId");
+        assertThat(jdbc.sql("select count(*) from learner_profile where learner_id = ?")
+                .param(UUID.fromString(learnerId)).query(Integer.class).single()).isEqualTo(1);
+    }
+
+    @Test
+    void profileWithAnUnknownGoalIsRefused() throws Exception {
+        Cookie cookie = startSession();
+        mvc.perform(write(put("/api/profile")).cookie(cookie)
+                        .content("{\"goal\":\"nonsense\",\"fearedMoment\":\"phone_calls\",\"talkMinutes\":5}"))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.code").value("goal"));
+    }
+
+    @Test
+    void profileWithoutASessionIsSignedOut() throws Exception {
+        mvc.perform(write(put("/api/profile"))
+                        .content("{\"goal\":\"work_meetings\",\"fearedMoment\":\"small_talk\",\"talkMinutes\":5}"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void theDatabaseRefusesAnUnknownGoalToo() throws Exception {
+        Cookie cookie = startSession();
+        String learnerId = com.jayway.jsonpath.JsonPath.read(
+                mvc.perform(get("/api/me").cookie(cookie)).andReturn().getResponse().getContentAsString(), "$.learnerId");
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> jdbc.sql("""
+                        insert into learner_profile (learner_id, goal, feared_moment, talk_minutes, updated_at)
+                        values (?, 'nonsense', 'phone_calls', 5, now())""")
+                        .param(UUID.fromString(learnerId)).update())
+                .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
     }
 
     @Test

@@ -7,6 +7,7 @@ import app.bolo.learner.application.port.in.LearnerView;
 import app.bolo.learner.application.port.in.StartGuestUseCase;
 import app.bolo.learner.application.port.out.ConsentLedgerPort;
 import app.bolo.learner.application.port.out.LearnerPort;
+import app.bolo.learner.application.port.out.ProfilePort;
 import app.bolo.learner.application.port.out.SessionPort;
 import app.bolo.learner.domain.Learner;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +33,7 @@ public class GuestService implements StartGuestUseCase, CurrentLearnerUseCase {
     private final LearnerPort learners;
     private final ConsentLedgerPort consents;
     private final SessionPort sessions;
+    private final ProfilePort profiles;
     private final BoloClock clock;
 
     @Override
@@ -59,7 +61,10 @@ public class GuestService implements StartGuestUseCase, CurrentLearnerUseCase {
         LearnerView.ConsentView consent = consents.latest(id)
                 .map(c -> new LearnerView.ConsentView(c.keepRecordings(), c.policyVersion()))
                 .orElse(null);
-        return new LearnerView(id, learner.kind().dbValue(), consent);
+        LearnerView.ProfileView profile = profiles.find(id)
+                .map(p -> new LearnerView.ProfileView(p.goal().key(), p.fearedMoment().key(), p.talkMinutes()))
+                .orElse(null);
+        return new LearnerView(id, learner.kind().dbValue(), consent, profile);
     }
 
     static String newToken() {
