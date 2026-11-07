@@ -95,8 +95,12 @@ public class CoachService implements DebriefUseCase {
 
     @EventListener
     public void onTalkEnded(TalkEnded e) {
-        // No debrief after a crisis (TLK-14): the practice framing stops.
-        if (e.learnerTurns() < 1 || "crisis".equals(e.reason())) return;
+        // No debrief after a crisis (TLK-14): the practice stops, and its audio isn't kept.
+        if ("crisis".equals(e.reason())) {
+            audio.deletePrefix("talk/" + e.id() + "/");
+            return;
+        }
+        if (e.learnerTurns() < 1) return;
         debriefs.start(e.id(), clock.now());
         Thread.ofVirtual().name("coach-" + e.id()).start(() -> compose(e.id(), e.learner()));
     }
@@ -111,6 +115,7 @@ public class CoachService implements DebriefUseCase {
                 Built b = build(id, learner);
                 debriefs.save(id, b.status(), b.body(), attempt, clock.now());
                 log.info("debrief {} {} after {} attempt(s)", id, b.status(), attempt);
+                deleteTurnAudio(id);
                 return;
             } catch (RuntimeException e) {
                 log.warn("debrief {} attempt {} failed: {}", id, attempt, e.getClass().getSimpleName());
@@ -118,6 +123,17 @@ public class CoachService implements DebriefUseCase {
             }
         }
         debriefs.save(id, "failed", "{\"status\":\"failed\"}", ATTEMPTS, clock.now());
+        deleteTurnAudio(id);
+    }
+
+    /** Raw turn audio is only needed to cut clips; once the debrief is settled only the short clips stay (disk, NFR-14). */
+    private void deleteTurnAudio(TalkSessionId id) {
+        try {
+            talks.record(id).ifPresent(r -> r.turns().stream().filter(t -> t.audioKey() != null)
+                    .forEach(t -> audio.delete(t.audioKey())));
+        } catch (RuntimeException e) {
+            log.warn("debrief {} turn audio not deleted: {}", id, e.getClass().getSimpleName());
+        }
     }
 
     private record Built(String status, String body) {
@@ -146,11 +162,16 @@ public class CoachService implements DebriefUseCase {
         ArrayNode fixes = body.putArray("fixes");
         int n = 1;
         for (FixSlot slot : plan) {
-            switch (slot.kind()) {
-                case "sound" -> fixes.add(soundFix(id, ctx, n, scored.sounds().get(slot.index()), byIdx));
-                case "upgrade" -> fixes.add(upgradeFix(id, ctx, n, upgrades.get(slot.index()), byIdx));
-                default -> fixes.add(habitFix(id, ctx, n, scored.habit().orElseThrow()));
-            }
+            ObjectNode fix = switch (slot.kind()) {
+                case "sound" -> soundFix(id, ctx, n, scored.sounds().get(slot.index()), byIdx);
+                case "upgrade" -> upgradeFix(id, ctx, n, upgrades.get(slot.index()), byIdx);
+                default -> habitFix(id, ctx, n, scored.habit().orElseThrow());
+            };
+            // A stable id: disputes name the card, not its position (positions shift as cards are removed).
+            ObjectNode withId = JSON.createObjectNode();
+            withId.put("id", "f" + n);
+            withId.setAll(fix);
+            fixes.add(withId);
             n++;
         }
         ObjectNode skills = body.putObject("skills");
@@ -265,26 +286,35 @@ public class CoachService implements DebriefUseCase {
                 .filter(p -> p.length > 0).orElse(null);
     }
 
-    /** The span of {@code quote} in the turn, by word times; the whole turn (up to 12 s) when it can't be placed. */
+    /** The quote's span in the turn (see {@link #quoteWindow}); no clip rather than an unrelated one. */
     private byte[] cutQuote(TalkRecord.Turn turn, String quote) {
         if (turn == null) return null;
         Optional<byte[]> pcm = turnPcm(turn);
         if (pcm.isEmpty()) return null;
+        long turnMs = pcm.get().length / 32L;
+        long[] window = quoteWindow(turn.words(), turn.streamStartMs() == null ? 0 : turn.streamStartMs(), quote, turnMs);
+        return window == null ? null : Wav.slice(pcm.get(), 16000, window[0], window[1]);
+    }
+
+    /**
+     * Where {@code quote} was said in a turn, relative to the turn's audio (±300 ms, at most 12 s). Recognised words
+     * can differ from the display text ("five" vs "5"), so a quote may not place: then a turn short enough to be the
+     * moment itself is used whole, and a longer one gets no clip rather than an unrelated 12 s (review #5).
+     */
+    static long[] quoteWindow(List<ScoredWord> words, long base, String quote, long turnMs) {
         String[] q = ReplyCheck.normalize(quote).split(" ");
-        List<ScoredWord> words = turn.words();
-        if (turn.streamStartMs() != null && !words.isEmpty() && !q[0].isEmpty()) {
+        if (!words.isEmpty() && !q[0].isEmpty()) {
             for (int i = 0; i + q.length <= words.size(); i++) {
                 boolean match = true;
                 for (int k = 0; k < q.length && match; k++) match = ReplyCheck.normalize(words.get(i + k).word()).equals(q[k]);
                 if (match) {
-                    long base = turn.streamStartMs();
                     long start = words.get(i).startMs() - base - 300;
                     long end = Math.min(words.get(i + q.length - 1).endMs() - base + 300, start + MAX_CLIP_MS);
-                    return Wav.slice(pcm.get(), 16000, start, end);
+                    return new long[]{start, end};
                 }
             }
         }
-        return Wav.slice(pcm.get(), 16000, 0, MAX_CLIP_MS);
+        return turnMs <= MAX_CLIP_MS ? new long[]{0, turnMs} : null;
     }
 
     private Optional<byte[]> turnPcm(TalkRecord.Turn turn) {
@@ -329,16 +359,27 @@ public class CoachService implements DebriefUseCase {
     }
 
     @Override
-    public boolean dispute(LearnerId learner, TalkSessionId talk, int fixIndex) {
-        var stored = debriefs.find(talk).filter(d -> d.learner().equals(learner) && "ready".equals(d.status()) && d.body() != null);
-        if (stored.isEmpty()) return false;
-        ObjectNode body = (ObjectNode) JSON.readTree(stored.get().body());
-        ArrayNode fixes = (ArrayNode) body.get("fixes");
-        if (fixes == null || fixIndex < 0 || fixIndex >= fixes.size()) return false;
-        String kind = fixes.get(fixIndex).path("kind").asString("unknown");
-        fixes.remove(fixIndex);
-        debriefs.save(talk, "ready", JSON.writeValueAsString(body), 0, clock.now());
-        debriefs.logDispute(talk, fixIndex, kind, clock.now());
+    public boolean dispute(LearnerId learner, TalkSessionId talk, String fixId) {
+        boolean owner = debriefs.find(talk).map(d -> d.learner().equals(learner)).orElse(false);
+        if (!owner || fixId == null) return false;
+        String[] removed = {null};
+        int[] at = {-1};
+        debriefs.updateReadyBody(talk, current -> {
+            ObjectNode body = (ObjectNode) JSON.readTree(current);
+            ArrayNode fixes = (ArrayNode) body.get("fixes");
+            if (fixes == null) return null;
+            for (int i = 0; i < fixes.size(); i++) {
+                if (fixId.equals(fixes.get(i).path("id").asString(""))) {
+                    removed[0] = fixes.get(i).path("kind").asString("unknown");
+                    at[0] = i;
+                    fixes.remove(i);
+                    return JSON.writeValueAsString(body);
+                }
+            }
+            return null;
+        }, clock.now());
+        if (removed[0] == null) return false;
+        debriefs.logDispute(talk, at[0], removed[0], clock.now());
         return true;
     }
 

@@ -22,6 +22,12 @@ public interface DebriefPort {
 
     void logDispute(TalkSessionId talk, int fixIndex, String kind, Instant at);
 
+    /**
+     * Read-modify-write of a ready debrief's body under a row lock: {@code change} returns the new body, or null to
+     * leave it as is. Returns what {@code change} returned.
+     */
+    String updateReadyBody(TalkSessionId talk, java.util.function.UnaryOperator<String> change, Instant at);
+
     /** After a restart nothing is scoring any more. */
     void failAllScoring(Instant at);
 }

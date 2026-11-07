@@ -62,6 +62,20 @@ class JdbcDebriefAdapter implements DebriefPort {
     }
 
     @Override
+    @org.springframework.transaction.annotation.Transactional
+    public String updateReadyBody(TalkSessionId talk, java.util.function.UnaryOperator<String> change, Instant at) {
+        String body = jdbc.sql("select body::text from debrief where session_id = ? and status = 'ready' for update")
+                .param(talk.value()).query(String.class).optional().orElse(null);
+        if (body == null) return null;
+        String next = change.apply(body);
+        if (next != null) {
+            jdbc.sql("update debrief set body = cast(? as jsonb), updated_at = ? where session_id = ?")
+                    .params(next, Timestamp.from(at), talk.value()).update();
+        }
+        return next;
+    }
+
+    @Override
     public void failAllScoring(Instant at) {
         jdbc.sql("update debrief set status = 'failed', updated_at = ? where status = 'scoring'").param(Timestamp.from(at)).update();
     }

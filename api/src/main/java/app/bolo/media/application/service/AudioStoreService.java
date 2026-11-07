@@ -27,4 +27,9 @@ public class AudioStoreService implements AudioStoreUseCase {
     public void deletePrefix(String prefix) {
         store.deletePrefix(prefix);
     }
+
+    @Override
+    public void delete(String key) {
+        store.delete(key);
+    }
 }

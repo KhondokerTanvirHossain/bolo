@@ -3,6 +3,7 @@ import { api } from "@/api/browser";
 export type Level = "BUILDING" | "GOOD" | "STRONG";
 
 export type Fix = {
+  id?: string;
   kind: "sound" | "upgrade" | "habit";
   title: string;
   example?: string;
@@ -57,6 +58,6 @@ export async function fetchDebrief(talkId: string): Promise<Debrief | null> {
   return null;
 }
 
-export async function disputeFix(talkId: string, index: number): Promise<boolean> {
-  return (await api.post<void>(`/api/talk/${talkId}/debrief/fixes/${index}/dispute`)).kind === "ok";
+export async function disputeFix(talkId: string, fixId: string): Promise<boolean> {
+  return (await api.post<void>(`/api/talk/${talkId}/debrief/fixes/${fixId}/dispute`)).kind === "ok";
 }

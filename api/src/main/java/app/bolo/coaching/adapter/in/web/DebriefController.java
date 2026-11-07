@@ -33,10 +33,10 @@ class DebriefController {
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    @PostMapping("/api/talk/{id}/debrief/fixes/{n}/dispute")
+    @PostMapping("/api/talk/{id}/debrief/fixes/{fixId}/dispute")
     ResponseEntity<Void> dispute(@RequestAttribute(name = CurrentLearner.ATTRIBUTE, required = false) LearnerId learner,
-                                 @PathVariable String id, @PathVariable int n) {
-        boolean done = talk(id).map(t -> debriefs.dispute(signedIn(learner), t, n)).orElse(false);
+                                 @PathVariable String id, @PathVariable String fixId) {
+        boolean done = talk(id).map(t -> debriefs.dispute(signedIn(learner), t, fixId)).orElse(false);
         return done ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
     }
 

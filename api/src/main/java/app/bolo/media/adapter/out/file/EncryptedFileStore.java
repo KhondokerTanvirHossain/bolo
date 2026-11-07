@@ -96,6 +96,15 @@ public class EncryptedFileStore implements ObjectStorePort {
         }
     }
 
+    @Override
+    public void delete(String name) {
+        try {
+            Files.deleteIfExists(resolve(name));
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
     private Path resolve(String name) {
         if (name == null || name.isBlank() || name.startsWith("/") || name.contains("..") || name.contains("\\")) {
             throw new IllegalArgumentException("bad media key");

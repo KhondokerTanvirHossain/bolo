@@ -36,6 +36,7 @@ class CoachAcceptanceTest extends PostgresTestBase {
     @Autowired JdbcClient jdbc;
     @Autowired FakeSpeechToText stt;
     @Autowired FakeLlm llm;
+    @Autowired app.bolo.media.application.port.in.AudioStoreUseCase audio;
 
     TalkTestClient client;
     String cookie;
@@ -155,11 +156,37 @@ class CoachAcceptanceTest extends PostgresTestBase {
     void disputingAFixRemovesItAndLogsIt() throws Exception {
         talk(3);
         debriefWhenSettled();
-        TalkTestClient.Reply r = client.send("POST", "/api/talk/" + id + "/debrief/fixes/0/dispute", cookie, "{}");
+        TalkTestClient.Reply r = client.send("POST", "/api/talk/" + id + "/debrief/fixes/f1/dispute", cookie, "{}");
         assertThat(r.status()).isEqualTo(204);
         List<String> kinds = JsonPath.read(get("/api/talk/" + id + "/debrief", cookie).body(), "$.fixes[*].kind");
         assertThat(kinds).containsExactly("upgrade", "upgrade");
         assertThat(jdbc.sql("select kind from fix_dispute where session_id = ?").param(UUID.fromString(id))
                 .query(String.class).single()).isEqualTo("sound");
+    }
+
+    /** Review #3: two disputes of the same card at once remove that card only, and log it once. */
+    @Test
+    void concurrentDisputesOfOneCardRemoveOnlyIt() throws Exception {
+        talk(3);
+        debriefWhenSettled();
+        var pool = java.util.concurrent.Executors.newFixedThreadPool(2);
+        var a = pool.submit(() -> client.send("POST", "/api/talk/" + id + "/debrief/fixes/f1/dispute", cookie, "{}").status());
+        var b = pool.submit(() -> client.send("POST", "/api/talk/" + id + "/debrief/fixes/f1/dispute", cookie, "{}").status());
+        assertThat(List.of(a.get(), b.get())).containsExactlyInAnyOrder(204, 404);
+        pool.shutdown();
+        List<String> kinds = JsonPath.read(get("/api/talk/" + id + "/debrief", cookie).body(), "$.fixes[*].kind");
+        assertThat(kinds).containsExactly("upgrade", "upgrade");
+        assertThat(jdbc.sql("select count(*) from fix_dispute where session_id = ?").param(UUID.fromString(id))
+                .query(Integer.class).single()).isEqualTo(1);
+    }
+
+    /** Review #4: once the debrief is settled the raw turn audio goes; only the short clips stay (until retention). */
+    @Test
+    void rawTurnAudioIsDeletedOnceTheDebriefIsSettled() throws Exception {
+        talk(3);
+        String body = debriefWhenSettled();
+        assertThat(audio.get("talk/" + id + "/turn-1.wav")).isEmpty();
+        String clip = JsonPath.read(body, "$.fixes[0].clip");
+        assertThat(audio.get(clip.substring("/api/media/".length()))).isPresent();
     }
 }

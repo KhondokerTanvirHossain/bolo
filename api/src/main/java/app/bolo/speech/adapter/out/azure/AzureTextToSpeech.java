@@ -86,7 +86,8 @@ public class AzureTextToSpeech implements TextToSpeechPort {
     }
 
     String ssml(String voiceName, String voiceRate, String text) {
-        return "<speak version=\"1.0\" xmlns=\"http://www.w3.org/2001/10/synthesis\" xml:lang=\"en-US\">"
+        String lang = voiceName.length() >= 5 ? voiceName.substring(0, 5) : "en-US";
+        return "<speak version=\"1.0\" xmlns=\"http://www.w3.org/2001/10/synthesis\" xml:lang=\"" + escape(lang) + "\">"
                 + "<voice name=\"" + escape(voiceName) + "\"><prosody rate=\"" + escape(voiceRate) + "\">" + escape(text)
                 + "</prosody></voice></speak>";
     }

@@ -18,12 +18,12 @@ const READY = {
   status: "ready",
   strength: { text: "You explained your job for 40 seconds without stopping.", clip: `/api/media/talk/${TALK}/clip-0.wav` },
   fixes: [
-    { kind: "sound", title: "The v sound", example: "v as in van", said: "It is very important.", saidHighlight: "very",
+    { id: "f1", kind: "sound", title: "The v sound", example: "v as in van", said: "It is very important.", saidHighlight: "very",
       better: "It is very important.", betterHighlight: "very", tip: "Top teeth touch your lower lip for v.", count: 3,
       clip: `/api/media/talk/${TALK}/clip-1.wav`, model: `/api/media/talk/${TALK}/model-1.wav` },
-    { kind: "upgrade", title: "Say it better", said: "Yesterday I fix bug", better: "Yesterday I fixed a bug.",
+    { id: "f2", kind: "upgrade", title: "Say it better", said: "Yesterday I fix bug", better: "Yesterday I fixed a bug.",
       changed: ["fixed", "a"], clip: `/api/media/talk/${TALK}/clip-2.wav`, model: `/api/media/talk/${TALK}/model-2.wav` },
-    { kind: "habit", title: "Filler watch", word: "um", count: 7, tip: "Try a short pause instead of \"um\"." },
+    { id: "f3", kind: "habit", title: "Filler watch", word: "um", count: 7, tip: "Try a short pause instead of \"um\"." },
   ],
   skills: { pronunciation: "GOOD", fluency: "STRONG", sentenceBuilding: "BUILDING", vocabulary: "GOOD" },
   firstSession: true,
@@ -75,7 +75,7 @@ test("after a talk the Coach listens back, then shows the strength, the fixes an
 
   await page.getByRole("button", { name: "That's not what I said" }).click();
   await expect(page.getByText("Thanks, we've removed it")).toBeVisible();
-  expect(s.disputes[0]).toContain("/debrief/fixes/0/dispute");
+  expect(s.disputes[0]).toContain("/debrief/fixes/f1/dispute");
   await expect(page.getByText("Say it better · 1 of 2")).toBeVisible();
 
   await page.keyboard.press("ArrowDown");
@@ -97,4 +97,36 @@ test("a debrief that couldn't be prepared says the talk is saved", async ({ page
   const s = await stub(page, [{ status: "failed" }]);
   await talkAndEnd(page, s);
   await expect(page.getByText("We couldn't prepare your feedback. Your talk is saved.")).toBeVisible();
+});
+
+const TWO_UPGRADES = { ...READY, fixes: [
+  { id: "f1", kind: "upgrade", title: "Say it better", said: "Yesterday I fix bug", better: "Yesterday I fixed a bug.", changed: ["fixed", "a"],
+    clip: `/api/media/talk/${TALK}/clip-1.wav`, model: `/api/media/talk/${TALK}/model-1.wav` },
+  { id: "f2", kind: "upgrade", title: "Say it better", said: "My mother teach me", better: "My mother taught me.", changed: ["taught"],
+    clip: `/api/media/talk/${TALK}/clip-2.wav`, model: `/api/media/talk/${TALK}/model-2.wav` },
+] };
+
+/** Review #1: two cards of the same kind — the second card plays its own clips. */
+test("each card plays its own clip", async ({ page }) => {
+  const s = await stub(page, [TWO_UPGRADES]);
+  await talkAndEnd(page, s);
+  await expect(page.getByText("You explained your job for 40 seconds without stopping.")).toBeVisible({ timeout: 10_000 });
+  await page.keyboard.press("ArrowDown");
+  await expect(page.locator("audio").first()).toHaveAttribute("src", /clip-1\.wav$/);
+  await page.keyboard.press("ArrowDown");
+  await expect(page.getByText("My mother teach me")).toBeVisible();
+  await expect(page.locator("audio").first()).toHaveAttribute("src", /clip-2\.wav$/);
+});
+
+/** Review #3: a double tap disputes one card, once. */
+test("a double tap on 'That's not what I said' removes one card", async ({ page }) => {
+  const s = await stub(page, [TWO_UPGRADES]);
+  await talkAndEnd(page, s);
+  await expect(page.getByText("You explained your job for 40 seconds without stopping.")).toBeVisible({ timeout: 10_000 });
+  await page.keyboard.press("ArrowDown");
+  await page.getByRole("button", { name: "That's not what I said" }).dblclick();
+  await expect(page.getByText("Thanks, we've removed it")).toBeVisible();
+  await expect(page.getByText("My mother teach me")).toBeVisible();
+  expect(s.disputes).toHaveLength(1);
+  expect(s.disputes[0]).toContain("/fixes/f1/dispute");
 });

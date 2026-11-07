@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/scene/Scene";
 import { Clip } from "./Clip";
 import { fetchDebrief, pollDebrief, disputeFix, type Debrief, type Fix, type Level } from "./debrief";
@@ -78,25 +78,32 @@ function DebriefScreen({ talkId, debrief, onTalkAgain, onDone }: { talkId: strin
   const [fixes, setFixes] = useState<Fix[]>(debrief.fixes ?? []);
   const [at, setAt] = useState(0);
   const [note, setNote] = useState<string | null>(null);
-  const [playMine, setPlayMine] = useState<(() => void) | null>(null);
+  const [disputing, setDisputing] = useState(false);
+  // The current card's "play my clip" (Space). A ref, not state: registering it must not re-render the screen.
+  const playMine = useRef<(() => void) | null>(null);
   const cards = 1 + fixes.length + 1;
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "ArrowDown") { e.preventDefault(); setAt((a) => Math.min(cards - 1, a + 1)); setNote(null); }
       else if (e.key === "ArrowUp") { e.preventDefault(); setAt((a) => Math.max(0, a - 1)); setNote(null); }
-      else if (e.key === " " && playMine) { e.preventDefault(); playMine(); }
+      else if (e.key === " " && playMine.current) { e.preventDefault(); playMine.current(); }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [cards, playMine]);
+  }, [cards]);
 
-  const dispute = async (index: number) => {
-    if (!(await disputeFix(talkId, index))) return;
-    setFixes((f) => f.filter((_, i) => i !== index));
+  /** By the fix's stable id, once: a double tap can't remove a second card. */
+  const dispute = async (fix: Fix) => {
+    if (disputing || !fix.id) return;
+    setDisputing(true);
+    const done = await disputeFix(talkId, fix.id);
+    setDisputing(false);
+    if (!done) return;
+    setFixes((f) => f.filter((x) => x.id !== fix.id));
     setNote("Thanks, we've removed it");
   };
-  const register = (play: () => void) => { if (playMine !== play) setPlayMine(() => play); };
+  const register = (play: () => void) => { playMine.current = play; };
 
   return (
     <section className="dk-screen on" data-screen="debrief">
@@ -125,7 +132,8 @@ function DebriefScreen({ talkId, debrief, onTalkAgain, onDone }: { talkId: strin
             </div>
           )}
           {at > 0 && at <= fixes.length && (
-            <FixCard fix={fixes[at - 1]} n={at} of={fixes.length} onDispute={() => void dispute(at - 1)} playRef={register} />
+            <FixCard key={fixes[at - 1].id ?? at} fix={fixes[at - 1]} n={at} of={fixes.length} disputing={disputing}
+              onDispute={() => void dispute(fixes[at - 1])} playRef={register} />
           )}
           {at === cards - 1 && <Skills debrief={debrief} onTalkAgain={onTalkAgain} onDone={onDone} />}
           <div className="dk-deb__nav"><span><span className="dk-kbd">↑</span> <span className="dk-kbd">↓</span> move between cards</span><span><span className="dk-kbd">Space</span> plays your clip</span></div>
@@ -151,9 +159,10 @@ function Item({ n, title, sub, on, onClick }: { n: React.ReactNode; title: strin
   );
 }
 
-function FixCard({ fix, n, of, onDispute, playRef }: { fix: Fix; n: number; of: number; onDispute: () => void; playRef: (p: () => void) => void }) {
+function FixCard({ fix, n, of, disputing, onDispute, playRef }: { fix: Fix; n: number; of: number; disputing: boolean;
+  onDispute: () => void; playRef: (p: () => void) => void }) {
   const kindLabel = fix.kind === "sound" ? "Sound fix" : fix.kind === "upgrade" ? "Say it better" : fix.title;
-  const disputeButton = <button className="bo-btn bo-btn--quiet-neutral" onClick={onDispute}>That&apos;s not what I said</button>;
+  const disputeButton = <button className="bo-btn bo-btn--quiet-neutral" disabled={disputing} onClick={onDispute}>That&apos;s not what I said</button>;
   return (
     <div className="dk-detail on">
       <article className="bo-fix" style={{ padding: 28 }}>

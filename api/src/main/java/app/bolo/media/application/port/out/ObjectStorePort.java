@@ -9,4 +9,6 @@ public interface ObjectStorePort {
     Optional<byte[]> get(String key);
 
     void deletePrefix(String prefix);
+
+    void delete(String key);
 }

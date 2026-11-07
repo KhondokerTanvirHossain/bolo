@@ -195,17 +195,19 @@ class TalkRelayAcceptanceTest extends PostgresTestBase {
     /** Coach v1: each learner turn keeps its audio (encrypted) and its pronunciation scores. */
     @Test
     void aLearnerTurnKeepsItsAudioAndScores() throws Exception {
+        byte[] wav;
         try (TalkSocket s = yourTurn()) {
             s.tone(400);
             s.zeros(600);
             s.await(3000, "\"buddy_done\"", "\"turn\":2");
+            // Read while the talk is live: once it ends and the debrief settles, raw turn audio is deleted.
+            wav = audio.get("talk/" + id + "/turn-1.wav").orElseThrow();
         }
         Map<String, Object> row = jdbc.sql("select audio_key, stream_start_ms, scored::text as scored from talk_turn where session_id = ? and idx = 1")
                 .param(UUID.fromString(id)).query().singleRow();
         assertThat((String) row.get("audio_key")).isEqualTo("talk/" + id + "/turn-1.wav");
         assertThat(row.get("stream_start_ms")).isNotNull();
         assertThat((String) row.get("scored")).contains("\"hello\"").contains("\"bolo\"");
-        byte[] wav = audio.get("talk/" + id + "/turn-1.wav").orElseThrow();
         assertThat(new String(wav, 0, 4, java.nio.charset.StandardCharsets.US_ASCII)).isEqualTo("RIFF");
         assertThat(wav.length).as("400 ms of speech + silence up to the commit").isGreaterThan(44 + 32 * 600);
     }

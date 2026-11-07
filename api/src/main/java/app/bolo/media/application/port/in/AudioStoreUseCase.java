@@ -10,4 +10,6 @@ public interface AudioStoreUseCase {
     Optional<byte[]> get(String key);
 
     void deletePrefix(String prefix);
+
+    void delete(String key);
 }
