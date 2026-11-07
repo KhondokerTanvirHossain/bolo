@@ -39,8 +39,17 @@ dependencies {
 }
 
 tasks.named('test') {
-    useJUnitPlatform()
+    useJUnitPlatform { excludeTags 'live' }
     testLogging { events 'failed'; exceptionFormat 'full' }
+}
+
+// Probes the deployed Bolo with real vendors: BOLO_LIVE_URL=https://bolo.eliooo.org ./gradlew liveProbe
+tasks.register('liveProbe', Test) {
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform { includeTags 'live' }
+    testLogging { events 'passed', 'failed'; exceptionFormat 'full'; showStandardStreams = true }
+    outputs.upToDateWhen { false }
 }
 
 tasks.named('bootJar') { archiveFileName = 'bolo-api.jar' }

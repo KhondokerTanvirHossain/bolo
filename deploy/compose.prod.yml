@@ -34,6 +34,9 @@ services:
     environment:
       BOLO_DB_URL: jdbc:postgresql://bolo-db:5432/bolo
       BOLO_DB_USER: bolo
+      # Real vendors in production; the app's defaults are fakes so tests and keyless dev never call them.
+      BOLO_SPEECH_VENDOR: azure
+      BOLO_LLM_VENDOR: anthropic
     depends_on:
       bolo-db:
         condition: service_healthy

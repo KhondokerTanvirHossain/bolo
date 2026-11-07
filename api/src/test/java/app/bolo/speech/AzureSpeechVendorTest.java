@@ -7,7 +7,6 @@ import app.bolo.speech.application.port.in.TranscriptionStream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
-import java.io.InputStream;
 import java.util.Arrays;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -25,11 +24,7 @@ class AzureSpeechVendorTest {
 
     @Test
     void transcribesTheJobInterviewFixture() throws Exception {
-        byte[] wav;
-        try (InputStream in = getClass().getResourceAsStream("/audio/job-interview-16k.wav")) {
-            wav = in.readAllBytes();
-        }
-        byte[] pcm = Arrays.copyOfRange(wav, 44, wav.length);
+        byte[] pcm = app.bolo.WavFixture.pcm("/audio/job-interview-16k.wav");
         AtomicReference<String> heard = new AtomicReference<>("");
         CountDownLatch gotIt = new CountDownLatch(1);
         TranscriptionStream stream = new AzureSpeechToText(KEY, REGION, "en-IN").open(new TranscriptListener() {
