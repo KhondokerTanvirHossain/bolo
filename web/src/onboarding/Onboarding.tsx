@@ -124,6 +124,6 @@ export default function Onboarding() {
     case "day1":
       return <Day1Screen deviceId={state.micDeviceId} onSaved={toTalk} />;
     case "talk":
-      return <FirstTalkScreen />;
+      return <FirstTalkScreen deviceId={state.micDeviceId} />;
   }
 }
