@@ -5,6 +5,10 @@ const viewport = { width: 1280, height: 800 };
 export default defineConfig({
   testDir: "./e2e",
   timeout: 30_000,
+  // CI runners open the fake mic slowly when several browsers start at once (mic-opening tests flaked in turn), so
+  // CI runs one worker and allows assertions 10 s. Local runs keep the defaults.
+  workers: process.env.CI ? 1 : undefined,
+  expect: { timeout: process.env.CI ? 10_000 : 5_000 },
   use: { baseURL: "http://localhost:3100" },
   projects: [
     // Chromium runs on Linux only: on macOS its capture waits for the OS mic permission even with a fake device.
