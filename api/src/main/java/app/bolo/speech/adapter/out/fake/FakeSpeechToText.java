@@ -1,5 +1,8 @@
 package app.bolo.speech.adapter.out.fake;
 
+import app.bolo.speech.application.port.in.ScoredPhoneme;
+import app.bolo.speech.application.port.in.ScoredSegment;
+import app.bolo.speech.application.port.in.ScoredWord;
 import app.bolo.speech.application.port.in.TranscriptListener;
 import app.bolo.speech.application.port.in.TranscriptionStream;
 import app.bolo.speech.application.port.out.SpeechToTextPort;
@@ -17,6 +20,18 @@ public class FakeSpeechToText implements SpeechToTextPort {
     static final int FRAMES_TO_HEAR = 15;
 
     private final List<Stream> streams = new CopyOnWriteArrayList<>();
+    private volatile List<ScoredWord> nextWords = defaultWords();
+
+    /** The scored words the fake reports with each "hello bolo" (times are offsets from the utterance's first loud frame). */
+    public void nextWords(List<ScoredWord> words) {
+        this.nextWords = words == null ? defaultWords() : List.copyOf(words);
+    }
+
+    static List<ScoredWord> defaultWords() {
+        return List.of(
+                new ScoredWord("hello", 0, 150, 95, "None", List.of(new ScoredPhoneme("h", 95), new ScoredPhoneme("ɛ", 95))),
+                new ScoredWord("bolo", 150, 300, 95, "None", List.of(new ScoredPhoneme("b", 95), new ScoredPhoneme("oʊ", 95))));
+    }
 
     @Override
     public String vendor() {
@@ -25,7 +40,7 @@ public class FakeSpeechToText implements SpeechToTextPort {
 
     @Override
     public TranscriptionStream open(TranscriptListener listener) {
-        Stream s = new Stream(listener);
+        Stream s = new Stream(listener, this);
         streams.add(s);
         return s;
     }
@@ -37,24 +52,46 @@ public class FakeSpeechToText implements SpeechToTextPort {
     public static final class Stream implements TranscriptionStream {
 
         private final TranscriptListener listener;
+        private final FakeSpeechToText owner;
         private final AtomicInteger loudFrames = new AtomicInteger();
         private int loudInUtterance;
+        private long streamMs;
+        private long utteranceStartMs = -1;
         private volatile boolean closed;
 
-        Stream(TranscriptListener listener) {
+        Stream(TranscriptListener listener, FakeSpeechToText owner) {
             this.listener = listener;
+            this.owner = owner;
         }
 
         @Override
-        public synchronized void write(byte[] pcm16k) {
-            if (closed || !loud(pcm16k)) return;
-            loudFrames.incrementAndGet();
-            if (++loudInUtterance == FRAMES_TO_HEAR) listener.onPartial("hello bolo");
+        public void write(byte[] pcm16k) {
+            ScoredSegment scored = null;
+            boolean heard = false;
+            synchronized (this) {
+                long at = streamMs;
+                streamMs += pcm16k.length / 32;
+                if (closed || !loud(pcm16k)) return;
+                loudFrames.incrementAndGet();
+                if (utteranceStartMs < 0) utteranceStartMs = at;
+                if (++loudInUtterance == FRAMES_TO_HEAR) {
+                    heard = true;
+                    long base = utteranceStartMs;
+                    scored = new ScoredSegment("hello bolo", owner.nextWords.stream()
+                            .map(w -> new ScoredWord(w.word(), base + w.startMs(), base + w.endMs(), w.accuracy(), w.errorType(), w.phonemes()))
+                            .toList());
+                }
+            }
+            if (heard) {
+                listener.onPartial("hello bolo");
+                listener.onScored(scored);
+            }
         }
 
         @Override
         public synchronized void mark() {
             loudInUtterance = 0;
+            utteranceStartMs = -1;
         }
 
         @Override

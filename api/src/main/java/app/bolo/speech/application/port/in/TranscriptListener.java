@@ -7,4 +7,8 @@ public interface TranscriptListener {
     void onPartial(String textSoFar);
 
     void onFailure(Exception e);
+
+    /** A finished segment with pronunciation scores, when the recogniser provides them. */
+    default void onScored(ScoredSegment segment) {
+    }
 }

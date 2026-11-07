@@ -62,7 +62,8 @@ bolo:
     azure:
       key: ${BOLO_AZURE_SPEECH_KEY:}
       region: ${BOLO_AZURE_SPEECH_REGION:centralindia}
-      stt-language: en-IN
+      # en-US: Azure's pronunciation assessment names the sounds (IPA) only for en-US; en-IN returns empty symbols.
+      stt-language: en-US
       buddy-voice: en-IN-NeerjaNeural
       buddy-rate: "-5%"
   llm:

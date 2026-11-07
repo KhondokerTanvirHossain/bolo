@@ -5,6 +5,10 @@ import app.bolo.speech.application.port.in.TranscriptListener;
 import app.bolo.speech.application.port.in.TranscriptionStream;
 import app.bolo.speech.application.port.out.SpeechToTextPort;
 import com.microsoft.cognitiveservices.speech.CancellationReason;
+import com.microsoft.cognitiveservices.speech.PronunciationAssessmentConfig;
+import com.microsoft.cognitiveservices.speech.PronunciationAssessmentGradingSystem;
+import com.microsoft.cognitiveservices.speech.PronunciationAssessmentGranularity;
+import com.microsoft.cognitiveservices.speech.PropertyId;
 import com.microsoft.cognitiveservices.speech.ResultReason;
 import com.microsoft.cognitiveservices.speech.SpeechConfig;
 import com.microsoft.cognitiveservices.speech.SpeechRecognizer;
@@ -44,10 +48,20 @@ public class AzureSpeechToText implements SpeechToTextPort {
         PushAudioInputStream push = AudioInputStream.createPushStream(AudioStreamFormat.getWaveFormatPCM(16000L, (short) 16, (short) 1));
         AudioConfig audio = AudioConfig.fromStreamInput(push);
         SpeechRecognizer recognizer = new SpeechRecognizer(config, audio);
+        // Unscripted pronunciation assessment rides on the live recognition: each finished segment arrives scored,
+        // word by word and sound by sound (IPA), with no second request.
+        PronunciationAssessmentConfig assessment = new PronunciationAssessmentConfig("",
+                PronunciationAssessmentGradingSystem.HundredMark, PronunciationAssessmentGranularity.Phoneme, false);
+        assessment.setPhonemeAlphabet("IPA");
+        assessment.applyTo(recognizer);
         Utterance utterance = new Utterance(listener);
         recognizer.recognizing.addEventListener((s, e) -> utterance.partial(e.getResult().getText()));
         recognizer.recognized.addEventListener((s, e) -> {
-            if (e.getResult().getReason() == ResultReason.RecognizedSpeech) utterance.fin(e.getResult().getText());
+            if (e.getResult().getReason() != ResultReason.RecognizedSpeech) return;
+            utterance.fin(e.getResult().getText());
+            String json = e.getResult().getProperties().getProperty(PropertyId.SpeechServiceResponse_JsonResult);
+            AzureScoreParser.parse(json == null ? "" : json).ifPresentOrElse(listener::onScored,
+                    () -> log.debug("azure stt: no pronunciation scores on a segment"));
         });
         recognizer.canceled.addEventListener((s, e) -> {
             if (e.getReason() == CancellationReason.Error) {
@@ -84,6 +98,7 @@ public class AzureSpeechToText implements SpeechToTextPort {
                 } catch (Exception e) {
                     log.warn("azure stt stop: {}", e.getClass().getSimpleName());
                 } finally {
+                    assessment.close();
                     closeAll(recognizer, audio, null, config);
                 }
             }
