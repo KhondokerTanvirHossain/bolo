@@ -62,6 +62,17 @@ prints nothing; `caddy validate`; `caddy reload`; compare the three status codes
 - `scripts/coach-probe.sh` runs a real ~2-minute talk (4 spoken turns) and prints the debrief and its time to ready.
 - Disputed fixes: `select kind, count(*) from bolo.fix_dispute group by 1`.
 
+## Pilot safety (TLK-14) and talk help
+
+- Crisis content is fixed, never generated: `api/src/main/java/app/bolo/talk/domain/CrisisScript.java`. Numbers
+  verified 2026-11-08: Kaan Pete Roi 09612-119911 (3 PM–3 AM), national emergency 999. **Founder approval is needed
+  before any pilot learner uses Bolo**; re-verify the numbers every quarter.
+- A keyword screen (CrisisScreen) plus a Haiku classifier (SafetyGuard) on every learner turn; a crisis stops Bolo,
+  speaks the script, shows the help card and ends the talk (reason `crisis`, no debrief, its audio deleted).
+- Live check: `cd api && BOLO_LIVE_URL=https://bolo.eliooo.org ./gradlew liveProbe --tests '*LiveCrisisProbe*'`.
+- Silence help (8 s / 15 s / 45 s), short-answer nudges, Bangla/unclear nudges, "Sorry?"/"Slower please", pause and
+  resume are all in `TalkConversation`; thresholds in application.yml under `bolo.talk.*`.
+
 ## Logs and health
 
 ```bash
