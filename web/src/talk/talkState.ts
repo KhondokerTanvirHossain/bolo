@@ -8,6 +8,7 @@ export type Summary = { turns: number; p50Ms: number | null; p90Ms: number | nul
 
 export type TalkState = {
   phase: TalkPhase;
+  talkId: string | null;
   minutes: number;
   caption: string;
   captionTurn: number;
@@ -25,13 +26,13 @@ export type ServerMessage =
 export type TalkAction =
   | ServerMessage
   | { type: "connecting" }
-  | { type: "started"; minutes: number }
+  | { type: "started"; minutes: number; talkId?: string }
   | { type: "busy" }
   | { type: "no_mic"; problem: MicProblem }
   | { type: "socket_closed" }
   | { type: "reset" };
 
-export const initialTalk: TalkState = { phase: "idle", minutes: 5, caption: "", captionTurn: -1 };
+export const initialTalk: TalkState = { phase: "idle", talkId: null, minutes: 5, caption: "", captionTurn: -1 };
 
 const FINAL: TalkPhase[] = ["ended", "busy", "no_voice", "no_mic", "idle"];
 
@@ -40,7 +41,7 @@ export function talk(state: TalkState, action: TalkAction): TalkState {
     case "connecting":
       return { ...initialTalk, phase: "connecting" };
     case "started":
-      return { ...state, minutes: action.minutes };
+      return { ...state, minutes: action.minutes, talkId: action.talkId ?? state.talkId };
     case "busy":
       return { ...state, phase: "busy" };
     case "no_mic":

@@ -92,7 +92,7 @@ export function useTalk(deviceId: string | null) {
       dispatch(created.kind === "refused" && created.code === "busy" ? { type: "busy" } : { type: "socket_closed" });
       return;
     }
-    dispatch({ type: "started", minutes: created.value.minutes });
+    dispatch({ type: "started", minutes: created.value.minutes, talkId: created.value.id });
 
     const maybePlayed = () => {
       if (l.pendingPlayed === null || !l.player.idle()) return;

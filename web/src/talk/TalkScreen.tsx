@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { unblockGuidance } from "@/audio/micErrors";
+import { CoachFlow } from "@/coach/CoachFlow";
 import { Icon, Scene } from "@/scene/Scene";
 import type { TalkState } from "./talkState";
 
@@ -15,6 +16,7 @@ function seconds(ms: number): string {
 /** The conversation (TLK-16): the scene, Bolo's caption, the mic state, the time left, Done and End. Nothing else. */
 export function TalkScreen({ state, onDone, onEnd, onTalkAgain, onLeave }: Props) {
   const [asking, setAsking] = useState(false);
+  const [noDebrief, setNoDebrief] = useState(false);
   const [startedAt] = useState(() => Date.now());
   const [now, setNow] = useState(() => Date.now());
   const live = LIVE.includes(state.phase);
@@ -43,6 +45,11 @@ export function TalkScreen({ state, onDone, onEnd, onTalkAgain, onLeave }: Props
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [live, asking, state.phase, onDone]);
+
+  // A talk with at least one turn goes to the Coach's debrief (DBF); an empty one keeps the plain summary.
+  if (state.phase === "ended" && state.talkId && (state.summary?.turns ?? 0) > 0 && !noDebrief) {
+    return <CoachFlow talkId={state.talkId} onTalkAgain={onTalkAgain} onDone={onLeave} onNoDebrief={() => setNoDebrief(true)} />;
+  }
 
   const left = Math.max(0, 1 - (now - startedAt) / (state.minutes * 60_000));
   const yourTurn = state.phase === "your_turn";
