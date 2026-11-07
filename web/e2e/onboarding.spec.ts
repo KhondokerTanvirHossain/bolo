@@ -21,10 +21,11 @@ type ProfileBody = { goal: string; fearedMoment: string; talkMinutes: number };
 
 /** Stubs the Java API so the browser flow is pinned on its own; LearnerAcceptanceTest pins the real API.
  *  Like the real API, GET /api/me is 401 until POST /api/session has created the guest. */
-async function stubApi(page: Page, opts: { consent?: boolean; profile?: boolean; consentFailures?: number[] } = {}) {
+async function stubApi(page: Page, opts: { consent?: boolean; profile?: boolean; consentFailures?: number[]; profileFailures?: number[] } = {}) {
   const sent: ConsentBody[] = [];
   const profiles: ProfileBody[] = [];
   const failures = [...(opts.consentFailures ?? [])];
+  const profileFailures = [...(opts.profileFailures ?? [])];
   let sessions = 0;
   let hasSession = Boolean(opts.consent || opts.profile);
   let consent = opts.consent ? { keepRecordings: true, policyVersion: "2026-11-v1" } : null;
@@ -35,6 +36,8 @@ async function stubApi(page: Page, opts: { consent?: boolean; profile?: boolean;
   await page.route("**/api/session", (r) => { sessions++; hasSession = true; return r.fulfill({ json: learner() }); });
   await page.route("**/api/profile", async (r) => {
     expect(r.request().method()).toBe("PUT");
+    const pf = profileFailures.shift();
+    if (pf) { await r.fulfill({ status: pf, json: { code: pf === 401 ? "signed-out" : "oops" } }); return; }
     const body = r.request().postDataJSON() as ProfileBody;
     profiles.push(body);
     profile = body;
@@ -43,7 +46,11 @@ async function stubApi(page: Page, opts: { consent?: boolean; profile?: boolean;
   await page.route("**/api/consent", async (r) => {
     expect(r.request().headers()["x-bolo"]).toBe("1");
     const failure = failures.shift();
-    if (failure) { await r.fulfill({ status: failure, json: { code: failure === 401 ? "signed-out" : "oops" } }); return; }
+    if (failure) {
+      const code = failure === 401 ? "signed-out" : failure === 429 ? "slow-down" : "oops";
+      await r.fulfill({ status: failure, json: { code } });
+      return;
+    }
     if (!hasSession) { await r.fulfill({ status: 401, json: { code: "signed-out" } }); return; }
     const body = r.request().postDataJSON() as ConsentBody;
     sent.push(body);
@@ -218,4 +225,81 @@ test("a remembered microphone that is gone falls back to the default one", async
   await page.reload();
   await expect(page.locator("[data-mic-status]")).toHaveAttribute("data-mic-status", "live");
   await expect(page.getByRole("heading", { name: "Choose your microphone" })).toBeVisible();
+});
+
+/** Lands on the Day 1 card with consent and answers already on the server. */
+async function atDay1(page: Page) {
+  await stubApi(page, { consent: true, profile: true });
+  await page.goto("/");
+  await page.evaluate(() => localStorage.setItem("bolo.onboarding.v1", JSON.stringify({ step: "day1", over13: true,
+    keepRecordings: true, micDeviceId: null, headphones: false, micCheck: "great", questionIndex: 2, answers: {} })));
+  await page.reload();
+}
+
+test("two starts in one tick open one mic, and Stop releases it", async ({ page }) => {
+  // Count every stream the page opens, so a leaked second mic shows up as a live track after Stop.
+  await page.addInitScript(() => {
+    const md = navigator.mediaDevices;
+    const open = md.getUserMedia.bind(md);
+    const w = window as unknown as { __streams: MediaStream[] };
+    w.__streams = [];
+    md.getUserMedia = async (c?: MediaStreamConstraints) => { const s = await open(c); w.__streams.push(s); return s; };
+  });
+  await atDay1(page);
+  await page.evaluate(() => {
+    const start = document.querySelector<HTMLButtonElement>('[aria-label="Start recording"]')!;
+    start.click();
+    start.click();
+  });
+  await expect(page.getByRole("button", { name: "Stop recording" })).toBeVisible();
+  await page.waitForTimeout(1500);
+  await page.getByRole("button", { name: "Stop recording" }).click();
+  await expect(page.getByRole("heading", { name: "Want to say a bit more?" })).toBeVisible();
+  const live = await page.evaluate(() => (window as unknown as { __streams: MediaStream[] }).__streams
+    .flatMap((s) => s.getTracks()).filter((t) => t.readyState === "live").length);
+  expect(live).toBe(0);
+});
+
+test("leaving the tab mid-recording throws the clip away (US-1.7)", async ({ page }) => {
+  await atDay1(page);
+  await page.getByRole("button", { name: "Start recording" }).click();
+  await expect(page.getByRole("button", { name: "Stop recording" })).toBeVisible();
+  await page.evaluate(() => {
+    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  await expect(page.getByRole("button", { name: "Start recording" })).toBeVisible();
+});
+
+test("a clip of 10 seconds or more can still be recorded again (US-1.6)", async ({ page }) => {
+  test.setTimeout(45_000);
+  await atDay1(page);
+  await page.getByRole("button", { name: "Start recording" }).click();
+  await page.waitForTimeout(10_500);
+  await page.getByRole("button", { name: "Stop recording" }).click();
+  await expect(page.getByText("Saved. We'll play this back to you on Day 7.")).toBeVisible();
+  await page.getByRole("button", { name: "Record again" }).click();
+  await expect(page.getByRole("button", { name: "Stop recording" })).toBeVisible();
+});
+
+test("a session lost during the questions goes back to consent, never past it", async ({ page }) => {
+  await stubApi(page, { consent: true, profileFailures: [401] });
+  await page.goto("/");
+  await page.evaluate(() => localStorage.setItem("bolo.onboarding.v1", JSON.stringify({ step: "setup", over13: true,
+    keepRecordings: true, micDeviceId: null, headphones: false, micCheck: "great", questionIndex: 2,
+    answers: { goal: "work_meetings", fearedMoment: "small_talk" } })));
+  await page.reload();
+  await page.getByRole("button", { name: "5 minutes" }).click();
+  await page.getByRole("button", { name: "Next" }).click();
+  await expect(page.getByRole("heading", { name: "Bolo listens only while you practise." })).toBeVisible();
+});
+
+test("a busy server at consent says so in plain words", async ({ page }) => {
+  await stubApi(page, { consentFailures: [429] });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Meet Bolo" }).click();
+  await page.getByRole("button", { name: "Skip intro" }).click();
+  await page.getByText("I'm 13 or older").click();
+  await page.getByRole("button", { name: "Yes, keep them" }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "Lots of people are joining" })).toBeVisible();
 });

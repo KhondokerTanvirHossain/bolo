@@ -20,8 +20,11 @@ export function startRecording(stream: MediaStream): Recording {
   return {
     stop: () =>
       new Promise<Blob>((resolve) => {
-        recorder.addEventListener("stop", () => resolve(new Blob(chunks, { type: recorder.mimeType || mimeType })), { once: true });
-        if (recorder.state !== "inactive") recorder.stop();
+        const done = () => resolve(new Blob(chunks, { type: recorder.mimeType || mimeType }));
+        // A recorder whose track ended (headset unplugged) has already stopped and fired "stop": don't wait for it.
+        if (recorder.state === "inactive") { done(); return; }
+        recorder.addEventListener("stop", done, { once: true });
+        recorder.stop();
       }),
     cancel: () => {
       chunks.length = 0;

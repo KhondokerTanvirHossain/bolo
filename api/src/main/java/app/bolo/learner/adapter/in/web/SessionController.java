@@ -38,9 +38,12 @@ class SessionController {
         return started.learner();
     }
 
+    /** Every app start reads this, so it is also where a returning learner's cookie gets its fresh 90 days. */
     @GetMapping("/api/me")
-    LearnerView me(@RequestAttribute(name = SessionCookie.LEARNER_ATTRIBUTE, required = false) LearnerId learner) {
+    LearnerView me(@RequestAttribute(name = SessionCookie.LEARNER_ATTRIBUTE, required = false) LearnerId learner,
+                   HttpServletRequest req, HttpServletResponse res) {
         if (learner == null) throw new SignedOutException();
+        res.addHeader(HttpHeaders.SET_COOKIE, SessionCookie.header(SessionCookie.read(req, secureCookie), secureCookie));
         return current.view(learner);
     }
 }

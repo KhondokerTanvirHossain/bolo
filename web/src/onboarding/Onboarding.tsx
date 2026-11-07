@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { api, POLICY_VERSION, type ApiResult, type LearnerView } from "@/api/browser";
+import { toSaveFailure, type SaveFailure } from "./saveFailure";
 import { initialState, isLastQuestion, load, onboarding, reconcile, save, type OnboardingState } from "./steps";
 import { StartScreen } from "./screens/StartScreen";
 import { WelcomeScreen } from "./screens/WelcomeScreen";
@@ -20,7 +21,7 @@ export default function Onboarding() {
   );
   const [boot, setBoot] = useState<Boot>({ kind: "loading" });
   const [busy, setBusy] = useState(false);
-  const [failed, setFailed] = useState(false);
+  const [failure, setFailure] = useState<SaveFailure>(null);
   const hasSession = useRef(false);
 
   // Resume the stored step only if the server agrees (US-1.7). Reading /api/me creates nothing: a guest is created
@@ -39,28 +40,32 @@ export default function Onboarding() {
     })();
   }, []);
 
-  /** A write that needs a session: starts one first if there is none, and once more if it expired meanwhile. */
-  const withSession = useCallback(async (write: () => Promise<ApiResult<void>>): Promise<boolean> => {
-    const start = async () => {
+  /** The consent write is the one that may create the guest: start a session first if there is none, and once more
+   *  if it expired meanwhile. (Later writes never create a session: see the profile save.) */
+  const withSession = useCallback(async (write: () => Promise<ApiResult<void>>): Promise<ApiResult<void>> => {
+    const start = async (): Promise<ApiResult<unknown>> => {
       const started = await api.post<LearnerView>("/api/session");
       hasSession.current = started.kind === "ok";
-      return hasSession.current;
+      return started;
     };
-    if (!hasSession.current && !(await start())) return false;
+    if (!hasSession.current) {
+      const started = await start();
+      if (started.kind !== "ok") return started as ApiResult<void>;
+    }
     let res = await write();
-    if (res.kind === "signed-out" && (await start())) res = await write();
-    return res.kind === "ok";
+    if (res.kind === "signed-out" && (await start()).kind === "ok") res = await write();
+    return res;
   }, []);
 
   useEffect(() => { if (boot.kind === "ready") save(window.localStorage, state); }, [state, boot]);
 
   const chooseConsent = useCallback(async (keep: boolean) => {
     setBusy(true);
-    setFailed(false);
-    const ok = await withSession(() =>
+    setFailure(null);
+    const res = await withSession(() =>
       api.post<void>("/api/consent", { keepRecordings: keep, over13: state.over13, policyVersion: POLICY_VERSION }));
     setBusy(false);
-    if (ok) dispatch({ type: "chooseConsent", keep }); else setFailed(true);
+    if (res.kind === "ok") dispatch({ type: "chooseConsent", keep }); else setFailure(toSaveFailure(res));
   }, [state.over13, withSession]);
 
   const next = useCallback(async () => {
@@ -68,12 +73,18 @@ export default function Onboarding() {
     const { goal, fearedMoment, talkMinutes } = state.answers;
     if (!goal || !fearedMoment || !talkMinutes) return;
     setBusy(true);
-    setFailed(false);
-    const ok = await withSession(() =>
-      api.put<void>("/api/profile", { goal, fearedMoment, talkMinutes: Number(talkMinutes) }));
+    setFailure(null);
+    const res = await api.put<void>("/api/profile", { goal, fearedMoment, talkMinutes: Number(talkMinutes) });
     setBusy(false);
-    if (ok) dispatch({ type: "profileSaved" }); else setFailed(true);
-  }, [state, withSession]);
+    if (res.kind === "ok") { dispatch({ type: "profileSaved" }); return; }
+    if (res.kind === "signed-out") {
+      // The session (and with it the consent) is gone: never create a new guest here, ask for consent again.
+      hasSession.current = false;
+      dispatch({ type: "replace", state: reconcile(state, { consent: false, profile: false }) });
+      return;
+    }
+    setFailure(toSaveFailure(res));
+  }, [state]);
   const answer = useCallback((value: string) => dispatch({ type: "answer", value }), []);
 
   const toConsent = useCallback(() => dispatch({ type: "go", step: "consent" }), []);
@@ -99,7 +110,7 @@ export default function Onboarding() {
     case "welcome":
       return <WelcomeScreen onDone={toConsent} />;
     case "consent":
-      return <ConsentScreen over13={state.over13} busy={busy} failed={failed}
+      return <ConsentScreen over13={state.over13} busy={busy} failure={failure}
         onToggleOver13={() => dispatch({ type: "toggleOver13" })} onChoose={(k) => void chooseConsent(k)} />;
     case "mic":
       return <MicScreen deviceId={state.micDeviceId} headphones={state.headphones}
@@ -108,7 +119,7 @@ export default function Onboarding() {
         onHeadphones={(h) => dispatch({ type: "setHeadphones", headphones: h })}
         onContinue={(verdict) => { dispatch({ type: "micChecked", result: verdict }); dispatch({ type: "go", step: "setup" }); }} />;
     case "setup":
-      return <SetupScreen state={state} busy={busy} failed={failed} onAnswer={answer} onNext={() => void next()}
+      return <SetupScreen state={state} busy={busy} failure={failure} onAnswer={answer} onNext={() => void next()}
         onBack={() => dispatch({ type: "prevQuestion" })} />;
     case "day1":
       return <Day1Screen deviceId={state.micDeviceId} onSaved={toTalk} />;

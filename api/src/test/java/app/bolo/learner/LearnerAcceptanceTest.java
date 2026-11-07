@@ -172,6 +172,16 @@ class LearnerAcceptanceTest extends PostgresTestBase {
     }
 
     @Test
+    void aReturningLearnerGetsTheCookieRefreshedOnMe() throws Exception {
+        Cookie cookie = startSession();
+        MvcResult me = mvc.perform(get("/api/me").cookie(cookie)).andExpect(status().isOk()).andReturn();
+        Cookie refreshed = me.getResponse().getCookie("__Host-bolo_session");
+        assertThat(refreshed).isNotNull();
+        assertThat(refreshed.getValue()).isEqualTo(cookie.getValue());
+        assertThat(refreshed.getMaxAge()).isEqualTo(90 * 24 * 3600);
+    }
+
+    @Test
     void anEncodedApiPathCannotSkipTheWriteGuard() throws Exception {
         mvc.perform(post(java.net.URI.create("/%61pi/session")).contentType(MediaType.TEXT_PLAIN).content("x"))
                 .andExpect(status().isForbidden());

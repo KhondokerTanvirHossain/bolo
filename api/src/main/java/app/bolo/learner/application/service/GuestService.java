@@ -38,13 +38,14 @@ public class GuestService implements StartGuestUseCase, CurrentLearnerUseCase {
     private final GuestRateLimiter newGuests;
 
     public GuestService(LearnerPort learners, ConsentLedgerPort consents, SessionPort sessions, ProfilePort profiles,
-                        BoloClock clock, @Value("${bolo.guests-per-ip-per-hour}") int guestsPerIpPerHour) {
+                        BoloClock clock, @Value("${bolo.guests-per-ip-per-hour}") int guestsPerIpPerHour,
+                        @Value("${bolo.guests-per-hour}") int guestsPerHour) {
         this.learners = learners;
         this.consents = consents;
         this.sessions = sessions;
         this.profiles = profiles;
         this.clock = clock;
-        this.newGuests = new GuestRateLimiter(guestsPerIpPerHour, Duration.ofHours(1));
+        this.newGuests = new GuestRateLimiter(guestsPerIpPerHour, guestsPerHour, Duration.ofHours(1));
     }
 
     @Override

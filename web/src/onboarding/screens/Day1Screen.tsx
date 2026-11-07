@@ -4,7 +4,7 @@ import { saveClip } from "@/audio/clipStore";
 import { openMic } from "@/audio/openMic";
 import { startRecording, type Recording } from "@/audio/recorder";
 import { Icon, Scene } from "@/scene/Scene";
-import { afterRecording, canRecordAgain, DAY1 } from "../day1";
+import { afterRecording, canRecordAgain, DAY1, startClip } from "../day1";
 
 type Phase = "ready" | "recording" | "short" | "saved";
 const ARC = 502.7;
@@ -18,6 +18,7 @@ export function Day1Screen({ deviceId, onSaved }: { deviceId: string | null; onS
   const [micProblem, setMicProblem] = useState(false);
   const rec = useRef<{ recording: Recording; stream: MediaStream; started: number; timer: ReturnType<typeof setInterval> } | null>(null);
   const lastClip = useRef<Blob | null>(null);
+  const starting = useRef(false);
 
   const finish = useCallback(async () => {
     const r = rec.current;
@@ -34,15 +35,18 @@ export function Day1Screen({ deviceId, onSaved }: { deviceId: string | null; onS
   }, [prompted]);
 
   const begin = useCallback(async () => {
+    // One recording at a time: a double click or click + Space must not open a second mic and timer.
+    if (starting.current || rec.current) return;
+    starting.current = true;
     let stream: MediaStream;
     let recording: Recording;
     try {
-      stream = (await openMic(deviceId)).stream;
-      recording = startRecording(stream);
-    } catch (e) {
-      console.error("day1 record failed", e instanceof Error ? `${e.name}: ${e.message}` : e);
+      ({ stream, recording } = await startClip(async () => (await openMic(deviceId)).stream, startRecording));
+    } catch {
       setMicProblem(true);
       return;
+    } finally {
+      starting.current = false;
     }
     setMicProblem(false);
     const started = performance.now();
@@ -75,9 +79,28 @@ export function Day1Screen({ deviceId, onSaved }: { deviceId: string | null; onS
 
   useEffect(() => {
     if (phase !== "saved") return;
-    const t = setTimeout(onSaved, DAY1.savedToastMs);
+    const t = setTimeout(onSaved, DAY1.savedMs);
     return () => clearTimeout(t);
   }, [phase, onSaved]);
+
+  /** Throws the recording in progress away (nothing partial is ever stored) and goes back to "ready". */
+  const discard = useCallback(() => {
+    const r = rec.current;
+    if (!r) return;
+    rec.current = null;
+    clearInterval(r.timer);
+    r.recording.cancel();
+    r.stream.getTracks().forEach((t) => t.stop());
+    setLeft(DAY1.maxSeconds);
+    setPhase("ready");
+  }, []);
+
+  // US-1.7: leaving mid-recording (a call, another tab) discards the partial clip; the step restarts on return.
+  useEffect(() => {
+    const onVisibility = () => { if (document.visibilityState === "hidden") discard(); };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, [discard]);
 
   // Leaving mid-recording throws the partial clip away (US-1.7); nothing is stored before stop().
   useEffect(() => () => {
@@ -134,6 +157,9 @@ export function Day1Screen({ deviceId, onSaved }: { deviceId: string | null; onS
                 </button>
               )}
             </div>
+            {phase === "saved" && canRecordAgain(recordings) && (
+              <button className="bl-quiet-link" onClick={() => void begin()}>Record again</button>
+            )}
             {micProblem && (
               <p className="bl-result" role="alert">
                 <Icon name="info" size="sm" />Bolo can&apos;t hear your mic. Check it is plugged in and allowed, then try again.

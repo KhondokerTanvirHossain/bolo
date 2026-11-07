@@ -1,18 +1,19 @@
 "use client";
 import { useState } from "react";
 import { Icon, Scene } from "@/scene/Scene";
+import { failureCopy, type SaveFailure } from "../saveFailure";
 
 type Props = {
   over13: boolean;
   busy: boolean;
-  /** Shown when saving the choice failed; the buttons stay usable to try again. */
-  failed: boolean;
+  /** Why saving the choice failed, if it did; the buttons stay usable to try again. */
+  failure: SaveFailure;
   onToggleOver13: () => void;
   onChoose: (keep: boolean) => void;
 };
 
 /** US-1.1a: decide what Bolo keeps, before it listens. Nothing is pre-selected; both choices look equal. */
-export function ConsentScreen({ over13, busy, failed, onToggleOver13, onChoose }: Props) {
+export function ConsentScreen({ over13, busy, failure, onToggleOver13, onChoose }: Props) {
   const [under13, setUnder13] = useState(false);
   return (
     <section className="dk-screen on" data-screen="consent">
@@ -46,9 +47,9 @@ export function ConsentScreen({ over13, busy, failed, onToggleOver13, onChoose }
                 No, just feedback
               </button>
             </div>
-            {failed && (
+            {failure && (
               <p className="bl-result" role="alert" style={{ marginTop: 12 }}>
-                That didn&apos;t save. Check your connection, then choose again.
+                {failureCopy(failure)}
               </p>
             )}
             <p className="bo-footnote" style={{ marginTop: 14 }}>You can change this any time in Me → Privacy.</p>

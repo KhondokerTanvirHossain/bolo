@@ -13,7 +13,7 @@ class GuestRateLimiterTest {
 
     @Test
     void allowsUpToTheLimitPerKeyThenRefuses() {
-        GuestRateLimiter limiter = new GuestRateLimiter(2, Duration.ofHours(1));
+        GuestRateLimiter limiter = new GuestRateLimiter(2, 1000, Duration.ofHours(1));
         assertThat(limiter.tryAcquire("a", T0)).isTrue();
         assertThat(limiter.tryAcquire("a", T0.plusSeconds(1))).isTrue();
         assertThat(limiter.tryAcquire("a", T0.plusSeconds(2))).isFalse();
@@ -22,9 +22,18 @@ class GuestRateLimiterTest {
 
     @Test
     void allowsAgainOnceTheWindowHasPassed() {
-        GuestRateLimiter limiter = new GuestRateLimiter(1, Duration.ofHours(1));
+        GuestRateLimiter limiter = new GuestRateLimiter(1, 1000, Duration.ofHours(1));
         assertThat(limiter.tryAcquire("a", T0)).isTrue();
         assertThat(limiter.tryAcquire("a", T0.plus(Duration.ofMinutes(59)))).isFalse();
         assertThat(limiter.tryAcquire("a", T0.plus(Duration.ofMinutes(61)))).isTrue();
+    }
+
+    @Test
+    void aGlobalCapStopsAFloodFromManyAddresses() {
+        GuestRateLimiter limiter = new GuestRateLimiter(100, 3, Duration.ofHours(1));
+        assertThat(limiter.tryAcquire("a", T0)).isTrue();
+        assertThat(limiter.tryAcquire("b", T0)).isTrue();
+        assertThat(limiter.tryAcquire("c", T0)).isTrue();
+        assertThat(limiter.tryAcquire("d", T0)).isFalse();
     }
 }

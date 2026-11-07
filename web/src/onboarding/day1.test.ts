@@ -25,3 +25,13 @@ describe("Day 1 clip rules (US-1.6)", () => {
     expect(canRecordAgain(4)).toBe(false);
   });
 });
+
+describe("startClip", () => {
+  it("releases the mic when the recorder can't start", async () => {
+    const { startClip } = await import("./day1");
+    let stopped = 0;
+    const stream = { getTracks: () => [{ stop: () => { stopped++; } }] } as unknown as MediaStream;
+    await expect(startClip(async () => stream, () => { throw new Error("NotSupportedError"); })).rejects.toThrow();
+    expect(stopped).toBe(1);
+  });
+});
