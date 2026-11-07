@@ -24,6 +24,8 @@ public interface TalkSessionPort {
 
     void endAllOpen(EndReason reason, Instant at);
 
+    boolean anyAttachedLive(Instant liveSince);
+
     /** Ended talks whose audio is due for deletion (NFR-14), not yet purged. */
     List<TalkSessionId> audioDue(Instant noConsentEndedBefore, Instant anyEndedBefore);
 

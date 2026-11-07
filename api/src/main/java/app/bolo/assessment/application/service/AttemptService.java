@@ -16,6 +16,8 @@ import app.bolo.common.time.BoloClock;
 import app.bolo.learner.application.port.in.CurrentLearnerUseCase;
 import app.bolo.speech.application.port.in.AssessPronunciationUseCase;
 import app.bolo.speech.application.port.in.PronunciationResult;
+import app.bolo.speech.application.port.in.SpeechBusyException;
+import app.bolo.talk.application.port.in.StartTalkUseCase;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.json.JsonMapper;
@@ -33,7 +35,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * One read-aloud attempt: checked (consent, a real 16 kHz mono WAV of ≤ 10 s, a reference of ≤ 30 words, at most
+ * One read-aloud attempt: checked (consent, a real 16 kHz mono WAV of ≤ 15 s, a reference of ≤ 30 words, at most
  * N attempts a minute), assessed against the reference by the speech vendor, scored for clarity, stored (scores only).
  */
 @Service
@@ -41,17 +43,20 @@ public class AttemptService implements AttemptUseCase {
 
     private static final JsonMapper JSON = JsonMapper.builder().build();
     static final int MAX_WORDS = 30;
-    static final int MAX_DATA_BYTES = 10 * 16000 * 2;
+    /** 15 s of reading, plus half a second of slack for the browser's stop timer. */
+    static final int MAX_DATA_BYTES = 15_500 * 32;
 
     private final AssessPronunciationUseCase vendor;
     private final AttemptPort attempts;
     private final CurrentLearnerUseCase learners;
     private final BoloClock clock;
+    private final StartTalkUseCase talks;
     private final int perMinute;
     private final Map<LearnerId, Deque<Instant>> recent = new ConcurrentHashMap<>();
 
     public AttemptService(AssessPronunciationUseCase vendor, AttemptPort attempts, CurrentLearnerUseCase learners, BoloClock clock,
-                          @Value("${bolo.assessment.attempts-per-minute}") int perMinute) {
+                          StartTalkUseCase talks, @Value("${bolo.assessment.attempts-per-minute}") int perMinute) {
+        this.talks = talks;
         this.vendor = vendor;
         this.attempts = attempts;
         this.learners = learners;
@@ -60,18 +65,20 @@ public class AttemptService implements AttemptUseCase {
     }
 
     @Override
-    public Outcome attempt(LearnerId learner, byte[] wav, String reference) {
+    public Outcome attempt(LearnerId learner, byte[] wav, String reference, boolean upgrade) {
         if (learners.view(learner).consent() == null) throw new RefusedException("no-consent");
         String ref = reference == null ? "" : reference.trim();
         if (ref.isEmpty() || ref.split("\\s+").length > MAX_WORDS) throw new RefusedException("bad-reference");
         if (!isShortWav16kMono(wav)) throw new RefusedException("bad-audio");
         throttle(learner);
+        // Azure's free tier allows one recognition at a time; a live talk needs it more than practice does.
+        if (talks.anyLive()) throw new SpeechBusyException();
 
         PronunciationResult r = vendor.assess(new TalkContext(learner, null), wav, ref);
         AttemptResult scored = AttemptScorer.score(r.words().stream()
                 .map(w -> new SpokenWord(w.word(), w.startMs(), w.endMs(), w.accuracy(), w.errorType(),
                         w.phonemes().stream().map(p -> new SpokenSound(p.symbol(), p.accuracy())).toList()))
-                .toList());
+                .toList(), upgrade);
         List<Focus> focus = scored.focus().stream().map(f -> new Focus(f.word(), f.kind().name(),
                 f.pattern() == null ? "Say every word" : f.pattern().title(), f.tip())).toList();
         Outcome outcome = new Outcome(r.heard() ? scored.level().name() : AttemptResult.Level.ONCE_MORE.name(), r.heard(), focus);
@@ -95,7 +102,7 @@ public class AttemptService implements AttemptUseCase {
         }
     }
 
-    /** RIFF/WAVE, PCM, mono, 16 kHz, 16-bit, with at most 10 s of audio. */
+    /** RIFF/WAVE, PCM, mono, 16 kHz, 16-bit, with at most 15 s of audio (plus half a second of slack). */
     static boolean isShortWav16kMono(byte[] wav) {
         if (wav == null || wav.length < 44) return false;
         if (!"RIFF".equals(new String(wav, 0, 4, StandardCharsets.US_ASCII))

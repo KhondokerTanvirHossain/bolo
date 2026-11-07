@@ -31,10 +31,11 @@ class AttemptController {
     /** US-4.3 "Try it" and the practice page: a short WAV (16 kHz mono) read against {@code reference}. */
     @PostMapping("/api/attempts")
     AttemptUseCase.Outcome attempt(@RequestAttribute(name = CurrentLearner.ATTRIBUTE, required = false) LearnerId learner,
-                                   @RequestParam("audio") MultipartFile audio, @RequestParam("reference") String reference)
+                                   @RequestParam("audio") MultipartFile audio, @RequestParam("reference") String reference,
+                                   @RequestParam(value = "mode", required = false) String mode)
             throws IOException {
         if (learner == null) throw new SignedOutException();
-        return attempts.attempt(learner, audio.getBytes(), reference);
+        return attempts.attempt(learner, audio.getBytes(), reference, "upgrade".equals(mode));
     }
 
     @GetMapping("/api/practice")

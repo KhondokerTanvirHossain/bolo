@@ -72,6 +72,11 @@ public class TalkSessionService implements StartTalkUseCase {
     }
 
     @Override
+    public boolean anyLive() {
+        return sessions.anyAttachedLive(clock.now().minus(SLOT_HOLD));
+    }
+
+    @Override
     public void endAllOpen() {
         sessions.endAllOpen(EndReason.DISCONNECTED, clock.now());
     }

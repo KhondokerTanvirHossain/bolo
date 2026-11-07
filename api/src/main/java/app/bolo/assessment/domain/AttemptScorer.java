@@ -7,7 +7,7 @@ import java.util.Locale;
 /**
  * Scores a scripted attempt (US-3.2, US-4.3), judging clarity, not accent. A word is in focus when a pattern sound
  * scores under 60 inside a word under 75, when it was left out, or when an extra vowel came before its s + consonant
- * start ("ischool"). Nailed: nothing in focus and words average 85+. Closer: at most one, averaging 70+.
+ * start ("ischool"). Nailed: nothing in focus and words average 70+. Closer: at most one, averaging 70+.
  */
 public final class AttemptScorer {
 
@@ -19,6 +19,14 @@ public final class AttemptScorer {
     }
 
     public static AttemptResult score(List<SpokenWord> words) {
+        return score(words, false);
+    }
+
+    /**
+     * {@code upgrade}: Try it on a sentence upgrade is judged on clarity and flow, not word for word (US-4.4), so a
+     * dropped word isn't marked.
+     */
+    public static AttemptResult score(List<SpokenWord> words, boolean upgrade) {
         List<AttemptResult.Focus> focus = new ArrayList<>();
         double sum = 0;
         int counted = 0;
@@ -27,12 +35,15 @@ public final class AttemptScorer {
             switch (w.errorType() == null ? "None" : w.errorType()) {
                 case "Insertion" -> {
                     SpokenWord next = nextSpoken(words, i);
-                    if (next != null && startsWithSCluster(next.word()) && focus.stream().noneMatch(f -> f.word().equals(next.word()))) {
+                    // Only a lone short vowel ("i school") is the extra vowel; a re-read word ("the the station") isn't.
+                    if (next != null && isLoneShortVowel(w.word()) && startsWithSCluster(next.word()) && focus.stream().noneMatch(f -> f.word().equals(next.word()))) {
                         focus.add(new AttemptResult.Focus(next.word(), SoundPattern.S_CLUSTER_VOWEL, AttemptResult.Kind.EXTRA_VOWEL,
                                 SoundPattern.S_CLUSTER_VOWEL.tip()));
                     }
                 }
-                case "Omission" -> focus.add(new AttemptResult.Focus(w.word(), null, AttemptResult.Kind.MISSING, MISSING_TIP));
+                case "Omission" -> {
+                    if (!upgrade) focus.add(new AttemptResult.Focus(w.word(), null, AttemptResult.Kind.MISSING, MISSING_TIP));
+                }
                 default -> {
                     sum += w.accuracy();
                     counted++;
@@ -46,7 +57,8 @@ public final class AttemptScorer {
         }
         if (counted == 0) return new AttemptResult(AttemptResult.Level.ONCE_MORE, List.copyOf(focus));
         double mean = sum / counted;
-        AttemptResult.Level level = focus.isEmpty() && mean >= 85 ? AttemptResult.Level.NAILED
+        // Nothing to work on and clear enough is "Nailed it" — a higher bar on the overall score would grade the accent.
+        AttemptResult.Level level = focus.isEmpty() && mean >= 70 ? AttemptResult.Level.NAILED
                 : focus.size() <= 1 && mean >= 70 ? AttemptResult.Level.CLOSER : AttemptResult.Level.ONCE_MORE;
         return new AttemptResult(level, List.copyOf(focus));
     }
@@ -56,6 +68,11 @@ public final class AttemptScorer {
             if (!"Insertion".equals(words.get(k).errorType())) return words.get(k);
         }
         return null;
+    }
+
+    static boolean isLoneShortVowel(String word) {
+        String w = word.toLowerCase(Locale.ROOT).replaceAll("[^a-z]", "");
+        return !w.isEmpty() && w.length() <= 2 && w.chars().allMatch(c -> "aeiouh".indexOf(c) >= 0) && "aeiou".indexOf(w.charAt(0)) >= 0;
     }
 
     static boolean startsWithSCluster(String word) {

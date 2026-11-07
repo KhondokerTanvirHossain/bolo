@@ -5,9 +5,11 @@ export type Pattern = { key: string; title: string; example: string; tip: string
 export type AttemptReply = { kind: "ok"; outcome: Outcome } | { kind: "busy" } | { kind: "slow-down" } | { kind: "failed" };
 
 /** POST /api/attempts: the WAV and the sentence the learner read (US-4.3). */
-export async function postAttempt(wav: Blob, reference: string): Promise<AttemptReply> {
+export async function postAttempt(wav: Blob, reference: string, mode?: "upgrade"): Promise<AttemptReply> {
   const form = new FormData();
   form.append("reference", reference);
+  // A sentence upgrade is judged on clarity and flow, not word for word (US-4.4).
+  if (mode) form.append("mode", mode);
   form.append("audio", wav, "attempt.wav");
   try {
     const res = await fetch("/api/attempts", { method: "POST", credentials: "same-origin", headers: { "X-Bolo": "1" }, body: form });

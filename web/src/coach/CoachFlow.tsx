@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { ReadAloud } from "@/practice/ReadAloud";
+import { TryIt } from "./TryIt";
 import { Icon } from "@/scene/Scene";
 import { Clip } from "./Clip";
 import { fetchDebrief, pollDebrief, disputeFix, type Debrief, type Fix, type Level } from "./debrief";
@@ -199,21 +199,12 @@ function FixCard({ fix, n, of, disputing, deviceId, onDispute, playRef }: { fix:
           </>
         )}
         {(fix.kind === "sound" || fix.kind === "upgrade") && fix.better && (
-          <div style={{ marginTop: 18 }}><TryIt reference={fix.better} deviceId={deviceId} /></div>
+          <div style={{ marginTop: 18 }}><TryIt reference={fix.better} deviceId={deviceId} kind={fix.kind} /></div>
         )}
         <div style={{ display: "flex", justifyContent: "center", marginTop: 18 }}>{disputeButton}</div>
       </article>
     </div>
   );
-}
-
-/** US-4.3: say the better version; after 3 tries that aren't "Nailed it", it moves on kindly. */
-function TryIt({ reference, deviceId }: { reference: string; deviceId: string | null }) {
-  const [tries, setTries] = useState(0);
-  const [nailed, setNailed] = useState(false);
-  if (tries >= 3 && !nailed) return <p className="bo-footnote" style={{ textAlign: "center" }}>This one takes practice. Come back to it any time.</p>;
-  return <ReadAloud reference={reference} deviceId={deviceId} showSentence={false}
-    onOutcome={(o) => { setTries((t) => t + 1); if (o.level === "NAILED") setNailed(true); }} />;
 }
 
 function Tip({ text }: { text?: string }) {

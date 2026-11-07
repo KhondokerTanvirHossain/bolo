@@ -7,25 +7,37 @@ import { postAttempt, RESULT, type Outcome } from "./attempts";
 
 type Phase = "idle" | "recording" | "checking" | "done" | "error";
 
+/** The server's cap is 15 s; the recording stops itself there. */
+const MAX_MS = 15_000;
+
 /**
- * Say a sentence and see how it went (US-4.3): Start → Stop (or 10 s) → "Nailed it" / "Closer" / "Let's try once
+ * Say a sentence and see how it went (US-4.3): Start → Stop (or 15 s) → "Nailed it" / "Closer" / "Let's try once
  * more", with the words to work on highlighted and their tips. One request per attempt, however fast the taps.
+ * A new sentence (or leaving) drops whatever the last one still had in flight: its recording and its result.
  */
-export function ReadAloud({ reference, deviceId, showSentence = true, onOutcome }: {
-  reference: string; deviceId: string | null; showSentence?: boolean; onOutcome?: (o: Outcome) => void;
+export function ReadAloud({ reference, deviceId, showSentence = true, mode, onOutcome }: {
+  reference: string; deviceId: string | null; showSentence?: boolean; mode?: "upgrade"; onOutcome?: (o: Outcome) => void;
 }) {
   const [phase, setPhase] = useState<Phase>("idle");
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [error, setError] = useState<string | null>(null);
   const rec = useRef<PcmRecording | null>(null);
   const busy = useRef(false);
+  const gen = useRef(0);
 
-  useEffect(() => () => rec.current?.cancel(), []);
-  useEffect(() => { setPhase("idle"); setOutcome(null); setError(null); }, [reference]);
+  const drop = () => {
+    gen.current++;
+    busy.current = false;
+    rec.current?.cancel();
+    rec.current = null;
+  };
+  useEffect(() => drop, []);
+  useEffect(() => { drop(); setPhase("idle"); setOutcome(null); setError(null); }, [reference]);
 
-  const check = async (wav: Blob) => {
+  const check = async (wav: Blob, g: number) => {
     setPhase("checking");
-    const reply = await postAttempt(wav, reference);
+    const reply = await postAttempt(wav, reference, mode);
+    if (g !== gen.current) return;
     busy.current = false;
     if (reply.kind === "ok") {
       setOutcome(reply.outcome);
@@ -41,12 +53,20 @@ export function ReadAloud({ reference, deviceId, showSentence = true, onOutcome 
   const start = async () => {
     if (busy.current) return;
     busy.current = true;
+    const g = gen.current;
     setOutcome(null);
     setError(null);
     try {
-      rec.current = await startPcmRecording(deviceId, 10_000, (wav) => { rec.current = null; void check(wav); });
+      const r = await startPcmRecording(deviceId, MAX_MS, (wav) => {
+        if (g !== gen.current) return;
+        rec.current = null;
+        void check(wav, g);
+      });
+      if (g !== gen.current) { r.cancel(); return; }
+      rec.current = r;
       setPhase("recording");
     } catch {
+      if (g !== gen.current) return;
       busy.current = false;
       setError("Bolo can't hear your microphone. Check it, then try again.");
       setPhase("error");
@@ -56,7 +76,8 @@ export function ReadAloud({ reference, deviceId, showSentence = true, onOutcome 
     const r = rec.current;
     if (!r) return;
     rec.current = null;
-    await check(await r.stop());
+    const g = gen.current;
+    await check(await r.stop(), g);
   };
 
   const focusWords = outcome?.focus.map((f) => f.word) ?? [];

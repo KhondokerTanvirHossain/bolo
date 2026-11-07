@@ -67,4 +67,28 @@ class AttemptScorerTest {
     void theDeckHasThreeSentencesForEachPattern() {
         for (SoundPattern p : SoundPattern.values()) assertThat(PracticeDeck.sentences(p)).hasSize(3);
     }
+
+    /** Review #1: an upgrade is about saying it fluently and clearly, not word for word (US-4.4). */
+    @Test
+    void anUpgradeIgnoresADroppedWord() {
+        AttemptResult r = AttemptScorer.score(List.of(word("i", 0, 100, 95),
+                new SpokenWord("a", 0, 0, 0, "Omission", List.of()), word("fixed", 100, 400, 95), word("bug", 400, 700, 95)), true);
+        assertThat(r.focus()).isEmpty();
+        assertThat(r.level()).isEqualTo(AttemptResult.Level.NAILED);
+    }
+
+    /** Review #6: re-reading a word is not the "ischool" vowel — only a lone short vowel counts. */
+    @Test
+    void aRepeatedWordBeforeStationIsNotAnExtraVowel() {
+        AttemptResult r = AttemptScorer.score(List.of(word("near", 0, 300, 95), word("the", 300, 400, 95),
+                new SpokenWord("the", 400, 500, 95, "Insertion", List.of()), word("station", 500, 900, 95)));
+        assertThat(r.focus()).isEmpty();
+    }
+
+    /** Review #8: nothing to work on and clear enough is "Nailed it", whatever the accent (US-3.2). */
+    @Test
+    void clearWithNothingToFixIsNailed() {
+        AttemptResult r = AttemptScorer.score(List.of(word("it", 0, 100, 78), word("is", 100, 200, 80), word("good", 200, 500, 76)));
+        assertThat(r.level()).isEqualTo(AttemptResult.Level.NAILED);
+    }
 }

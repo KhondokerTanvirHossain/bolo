@@ -75,7 +75,7 @@ prints nothing; `caddy validate`; `caddy reload`; compare the three status codes
 
 ## Practice and "Try it" (scripted pronunciation)
 
-- `POST /api/attempts` (multipart WAV 16 kHz mono ≤ 10 s + `reference`) runs Azure's scripted assessment (REST,
+- `POST /api/attempts` (multipart WAV 16 kHz mono ≤ 15 s + `reference`, optional `mode=upgrade`) runs Azure's scripted assessment (REST,
   en-US, miscues on) and returns Nailed it / Closer / Let's try once more with the words to work on. The s-cluster
   extra vowel ("ischool") is found from Azure's Insertion miscue. 20 attempts per learner per minute.
 - `attempt` table keeps scores only (no audio yet) — the start of the accuracy-gate data.

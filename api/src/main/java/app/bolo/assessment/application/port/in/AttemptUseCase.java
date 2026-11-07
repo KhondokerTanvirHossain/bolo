@@ -17,8 +17,8 @@ public interface AttemptUseCase {
     record Practice(String key, String title, String example, String tip, List<String> sentences) {
     }
 
-    /** Refused: "no-consent", "bad-audio" (not a 16 kHz mono WAV of at most 10 s), "bad-reference" (empty or over 30 words). */
-    Outcome attempt(LearnerId learner, byte[] wav, String reference);
+    /** Refused: "no-consent", "bad-audio" (not a 16 kHz mono WAV of at most 15 s), "bad-reference" (empty or over 30 words). */
+    Outcome attempt(LearnerId learner, byte[] wav, String reference, boolean upgrade);
 
     List<Practice> practice();
 }

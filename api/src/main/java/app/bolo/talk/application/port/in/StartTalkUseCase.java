@@ -23,6 +23,9 @@ public interface StartTalkUseCase {
     /** Ends a live talk and frees its slot; does nothing if it already ended. */
     void end(TalkSessionId id, EndReason reason);
 
+    /** Is any talk live right now (attached to a socket)? Practice waits for it (the vendor's single slot). */
+    boolean anyLive();
+
     /** After a restart no talk is running: end every open one so none holds a slot. */
     void endAllOpen();
 }

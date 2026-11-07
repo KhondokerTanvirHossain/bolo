@@ -57,6 +57,12 @@ class JdbcTalkSessionAdapter implements TalkSessionPort {
     }
 
     @Override
+    public boolean anyAttachedLive(Instant liveSince) {
+        return jdbc.sql("select exists (select 1 from talk_session where ended_at is null and attached_at is not null and started_at > ?)")
+                .param(Timestamp.from(liveSince)).query(Boolean.class).single();
+    }
+
+    @Override
     public void endAllOpen(EndReason reason, Instant at) {
         jdbc.sql("update talk_session set ended_at = ?, end_reason = ? where ended_at is null")
                 .params(Timestamp.from(at), reason.dbValue())
