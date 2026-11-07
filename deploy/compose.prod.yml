@@ -1,10 +1,15 @@
 # Bolo on the shared elioo EC2 box (see docs/RUNBOOK.md). Run with:
 #   IMAGE_TAG=<sha> docker-compose --env-file bolo.env -p bolo -f compose.yml up -d
-# Hard memory caps protect the other tenants on a 3.8 GB box with no swap.
+# Hard memory caps and rotated logs protect the other tenants on a 3.8 GB box with no swap and a shared disk.
+x-logging: &logging
+  driver: json-file
+  options: { max-size: "10m", max-file: "3" }
+
 services:
   bolo-db:
     image: postgres:17-alpine
     container_name: bolo-db
+    logging: *logging
     restart: unless-stopped
     environment:
       POSTGRES_DB: bolo
@@ -22,6 +27,8 @@ services:
   bolo-api:
     image: bolo-api:${IMAGE_TAG:?set IMAGE_TAG}
     container_name: bolo-api
+    logging: *logging
+    cpus: 1.0
     restart: unless-stopped
     env_file: bolo.env
     environment:
@@ -36,6 +43,7 @@ services:
   bolo-web:
     image: bolo-web:${IMAGE_TAG:?set IMAGE_TAG}
     container_name: bolo-web
+    logging: *logging
     restart: unless-stopped
     networks: [n8n_edge]
     mem_limit: 256m

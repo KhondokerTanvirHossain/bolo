@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { saveClip } from "@/audio/clipStore";
+import { openMic } from "@/audio/openMic";
 import { startRecording, type Recording } from "@/audio/recorder";
 import { Icon, Scene } from "@/scene/Scene";
 import { afterRecording, canRecordAgain, DAY1 } from "../day1";
@@ -36,9 +37,7 @@ export function Day1Screen({ deviceId, onSaved }: { deviceId: string | null; onS
     let stream: MediaStream;
     let recording: Recording;
     try {
-      stream = await navigator.mediaDevices.getUserMedia({
-        audio: { deviceId: deviceId ? { exact: deviceId } : undefined, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-      });
+      stream = (await openMic(deviceId)).stream;
       recording = startRecording(stream);
     } catch (e) {
       console.error("day1 record failed", e instanceof Error ? `${e.name}: ${e.message}` : e);

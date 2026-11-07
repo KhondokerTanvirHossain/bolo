@@ -6,13 +6,14 @@ import { currentQuestion, isAnswered, type OnboardingState } from "../steps";
 type Props = {
   state: OnboardingState;
   busy: boolean;
+  failed: boolean;
   onAnswer: (value: string) => void;
   onNext: () => void;
   onBack: () => void;
 };
 
 /** "Bolo asks" (prototype setup card): one question at a time, chips or keys 1–4, no typing (R3). */
-export function SetupScreen({ state, busy, onAnswer, onNext, onBack }: Props) {
+export function SetupScreen({ state, busy, failed, onAnswer, onNext, onBack }: Props) {
   const q = currentQuestion(state);
   const chosen = state.answers[q.field];
 
@@ -54,6 +55,9 @@ export function SetupScreen({ state, busy, onAnswer, onNext, onBack }: Props) {
           disabled={!isAnswered(state) || busy} onClick={onNext}>
           Next
         </button>
+        {failed && (
+          <p className="bl-result" role="alert">That didn&apos;t save. Check your connection, then press Next again.</p>
+        )}
         {state.questionIndex > 0 && (
           <button className="bl-quiet-link" onClick={onBack}>Back</button>
         )}

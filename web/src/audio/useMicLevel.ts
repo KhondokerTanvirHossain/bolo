@@ -1,7 +1,9 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { classifyMicError } from "./micErrors";
+import { errorName, openMic } from "./openMic";
 
-export type MicStatus = "starting" | "live" | "blocked" | "no-device";
+export type MicStatus = "starting" | "live" | "blocked" | "busy" | "no-device";
 
 export type MicLevel = {
   status: MicStatus;
@@ -18,8 +20,9 @@ export type MicLevel = {
 const SAMPLE_MS = 100;
 const HISTORY = 50;
 
-/** Opens the mic with Bolo's capture settings (echo cancellation, noise suppression, auto gain) and meters it. */
-export function useMicLevel(deviceId: string | null): MicLevel {
+/** Opens the mic with Bolo's capture settings (echo cancellation, noise suppression, auto gain) and meters it.
+ *  {@code onDeviceGone} fires when a remembered device is no longer there and the default mic was used instead. */
+export function useMicLevel(deviceId: string | null, onDeviceGone: () => void): MicLevel {
   const [status, setStatus] = useState<MicStatus>("starting");
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [activeDeviceId, setActive] = useState<string | null>(null);
@@ -27,6 +30,8 @@ export function useMicLevel(deviceId: string | null): MicLevel {
   const [history, setHistory] = useState<number[]>([]);
   const [attempt, setAttempt] = useState(0);
   const historyRef = useRef<number[]>([]);
+  const goneRef = useRef(onDeviceGone);
+  goneRef.current = onDeviceGone;
 
   useEffect(() => {
     let stream: MediaStream | null = null;
@@ -38,18 +43,12 @@ export function useMicLevel(deviceId: string | null): MicLevel {
     async function open() {
       setStatus("starting");
       try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          audio: {
-            deviceId: deviceId ? { exact: deviceId } : undefined,
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true,
-          },
-        });
+        const opened = await openMic(deviceId);
+        stream = opened.stream;
+        if (opened.deviceGone) goneRef.current();
       } catch (e) {
         if (cancelled) return;
-        const name = e instanceof DOMException ? e.name : "";
-        setStatus(name === "NotFoundError" || name === "OverconstrainedError" ? "no-device" : "blocked");
+        setStatus(classifyMicError(errorName(e)));
         return;
       }
       if (cancelled) { stream.getTracks().forEach((t) => t.stop()); return; }
@@ -100,15 +99,26 @@ export function useMicLevel(deviceId: string | null): MicLevel {
     };
   }, [deviceId, attempt]);
 
-  // US-1.3: when the learner unblocks the mic in the browser, continue with no extra click.
+  // US-1.3: once the learner fixes it (unblocks the mic, or closes the app holding it), carry on with no extra
+  // click: on a permission change, and as a fallback whenever the tab regains focus.
   useEffect(() => {
-    if (status !== "blocked" || !navigator.permissions) return;
+    if (status !== "blocked" && status !== "busy") return;
     let perm: PermissionStatus | null = null;
-    const onChange = () => { if (perm?.state === "granted") setAttempt((a) => a + 1); };
-    navigator.permissions.query({ name: "microphone" as PermissionName })
-      .then((p) => { perm = p; p.addEventListener("change", onChange); })
+    let disposed = false;
+    const retry = () => setAttempt((a) => a + 1);
+    const onChange = () => { if (perm?.state === "granted") retry(); };
+    const onVisible = () => { if (document.visibilityState === "visible") retry(); };
+    navigator.permissions?.query({ name: "microphone" as PermissionName })
+      .then((p) => { if (disposed) return; perm = p; p.addEventListener("change", onChange); })
       .catch(() => {});
-    return () => perm?.removeEventListener("change", onChange);
+    window.addEventListener("focus", retry);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      disposed = true;
+      perm?.removeEventListener("change", onChange);
+      window.removeEventListener("focus", retry);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [status]);
 
   return { status, devices, activeDeviceId, levelDb, history, retry: () => setAttempt((a) => a + 1) };

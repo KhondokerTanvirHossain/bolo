@@ -15,7 +15,7 @@ check "title is just Bolo" yes "$(curl -s --max-time 15 "$BOLO_URL/" | grep -q '
 check "api health" '{"status":"UP"}' "$(curl -s --max-time 15 "$BOLO_URL/api/actuator/health")"
 headers=$(curl -s -D - -o /dev/null --max-time 15 -X POST "$BOLO_URL/api/session" \
   -H 'Content-Type: application/json' -H 'X-Bolo: 1' -H "Origin: $BOLO_URL" -d '{}')
-check "session sets a Secure HttpOnly cookie" yes "$(grep -i '^set-cookie: bolo_session=' <<<"$headers" | grep -qi 'secure' && grep -i '^set-cookie: bolo_session=' <<<"$headers" | grep -qi 'httponly' && echo yes || echo no)"
+check "session sets a Secure HttpOnly cookie" yes "$(grep -i '^set-cookie: __Host-bolo_session=' <<<"$headers" | grep -qi 'secure' && grep -i '^set-cookie: __Host-bolo_session=' <<<"$headers" | grep -qi 'httponly' && echo yes || echo no)"
 check "write without X-Bolo is refused" 403 "$(code -X POST "$BOLO_URL/api/session" -H 'Content-Type: application/json' -H "Origin: $BOLO_URL" -d '{}')"
 check "HSTS header" yes "$(curl -s -I --max-time 15 "$BOLO_URL/" | grep -qi '^strict-transport-security' && echo yes || echo no)"
 

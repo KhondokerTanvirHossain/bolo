@@ -1,5 +1,7 @@
 "use client";
-import { classifyMicCheck } from "@/audio/micCheck";
+import { useEffect, useState } from "react";
+import { classifyMicCheck, stickyVerdict, type MicCheckResult } from "@/audio/micCheck";
+import { unblockGuidance } from "@/audio/micErrors";
 import { useMicLevel } from "@/audio/useMicLevel";
 import { Icon, Scene } from "@/scene/Scene";
 
@@ -7,8 +9,9 @@ type Props = {
   deviceId: string | null;
   headphones: boolean;
   onChooseMic: (id: string) => void;
+  onForgetMic: () => void;
   onHeadphones: (on: boolean) => void;
-  onContinue: () => void;
+  onContinue: (verdict: "great" | "noisy" | "quiet" | "skipped") => void;
 };
 
 const BARS = [6, 10, 18, 28, 40, 52, 60, 66, 58, 46, 34, 26, 18, 12, 8];
@@ -31,9 +34,13 @@ const RESULT_COPY = {
 } as const;
 
 /** "Choose your microphone" (prototype step 2 of 5): picker, live level, read-aloud check (US-1.2, US-1.3, US-1.5). */
-export function MicScreen({ deviceId, headphones, onChooseMic, onHeadphones, onContinue }: Props) {
-  const mic = useMicLevel(deviceId);
-  const result = classifyMicCheck(mic.history);
+export function MicScreen({ deviceId, headphones, onChooseMic, onForgetMic, onHeadphones, onContinue }: Props) {
+  const mic = useMicLevel(deviceId, onForgetMic);
+  const live = classifyMicCheck(mic.history);
+  const [result, setResult] = useState<MicCheckResult>("idle");
+  useEffect(() => { setResult((prev) => stickyVerdict(prev, live)); }, [live]);
+  const [guidance, setGuidance] = useState("");
+  useEffect(() => { setGuidance(unblockGuidance(navigator.userAgent)); }, []);
   const lit = litBars(mic.levelDb);
   const copy = RESULT_COPY[result];
 
@@ -46,10 +53,16 @@ export function MicScreen({ deviceId, headphones, onChooseMic, onHeadphones, onC
         {mic.status === "blocked" ? (
           <>
             <h1 className="bo-flow__title" id="mic-title">Bolo needs your mic to hear you</h1>
-            <p className="bo-flow__body">
-              Click the icon beside the address bar, then allow the microphone for this site. Bolo carries on by itself.
-            </p>
+            <p className="bo-flow__body">{guidance} Bolo carries on by itself.</p>
             <p className="bo-flow__bn">ঠিকানা বারের পাশের আইকনে ক্লিক করে মাইক্রোফোন চালু করুন।</p>
+            <button className="bo-btn bo-btn--primary bo-btn--block" style={{ marginTop: 20 }} onClick={mic.retry} autoFocus>
+              Try again
+            </button>
+          </>
+        ) : mic.status === "busy" ? (
+          <>
+            <h1 className="bo-flow__title" id="mic-title">Another app is using your mic</h1>
+            <p className="bo-flow__body">Close Zoom, Teams or any other call, then come back. Bolo carries on by itself.</p>
             <button className="bo-btn bo-btn--primary bo-btn--block" style={{ marginTop: 20 }} onClick={mic.retry} autoFocus>
               Try again
             </button>
@@ -93,8 +106,9 @@ export function MicScreen({ deviceId, headphones, onChooseMic, onHeadphones, onC
                 </label>
               </span>
             </div>
-            <button className="bo-btn bo-btn--primary bo-btn--block" style={{ marginTop: 20 }} onClick={onContinue}>
-              {result === "noisy" || result === "quiet" ? "Continue anyway" : "Sounds good, continue"}
+            <button className="bo-btn bo-btn--primary bo-btn--block" style={{ marginTop: 20 }}
+              onClick={() => onContinue(result === "idle" ? "skipped" : result)}>
+              {result === "great" ? "Sounds good, continue" : result === "idle" ? "Continue" : "Continue anyway"}
             </button>
             <p className="bo-footnote" style={{ marginTop: 12 }}>
               Your browser asked for the mic once. Bolo listens only while you practise.

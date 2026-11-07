@@ -19,14 +19,20 @@ test.beforeEach(async ({ page, browserName }) => {
 type ConsentBody = { keepRecordings: boolean; over13: boolean; policyVersion: string };
 type ProfileBody = { goal: string; fearedMoment: string; talkMinutes: number };
 
-/** Stubs the Java API so the browser flow is pinned on its own; LearnerAcceptanceTest pins the real API. */
-async function stubApi(page: Page, opts: { consent?: boolean; profile?: boolean } = {}) {
+/** Stubs the Java API so the browser flow is pinned on its own; LearnerAcceptanceTest pins the real API.
+ *  Like the real API, GET /api/me is 401 until POST /api/session has created the guest. */
+async function stubApi(page: Page, opts: { consent?: boolean; profile?: boolean; consentFailures?: number[] } = {}) {
   const sent: ConsentBody[] = [];
   const profiles: ProfileBody[] = [];
+  const failures = [...(opts.consentFailures ?? [])];
+  let sessions = 0;
+  let hasSession = Boolean(opts.consent || opts.profile);
   let consent = opts.consent ? { keepRecordings: true, policyVersion: "2026-11-v1" } : null;
   let profile = opts.profile ? { goal: "work_meetings", fearedMoment: "small_talk", talkMinutes: 5 } : null;
-  await page.route("**/api/session", (r) =>
-    r.fulfill({ json: { learnerId: "00000000-0000-0000-0000-000000000001", kind: "guest", consent, profile } }));
+  const learner = () => ({ learnerId: "00000000-0000-0000-0000-000000000001", kind: "guest", consent, profile });
+  await page.route("**/api/me", (r) =>
+    hasSession ? r.fulfill({ json: learner() }) : r.fulfill({ status: 401, json: { code: "signed-out" } }));
+  await page.route("**/api/session", (r) => { sessions++; hasSession = true; return r.fulfill({ json: learner() }); });
   await page.route("**/api/profile", async (r) => {
     expect(r.request().method()).toBe("PUT");
     const body = r.request().postDataJSON() as ProfileBody;
@@ -36,24 +42,31 @@ async function stubApi(page: Page, opts: { consent?: boolean; profile?: boolean 
   });
   await page.route("**/api/consent", async (r) => {
     expect(r.request().headers()["x-bolo"]).toBe("1");
+    const failure = failures.shift();
+    if (failure) { await r.fulfill({ status: failure, json: { code: failure === 401 ? "signed-out" : "oops" } }); return; }
+    if (!hasSession) { await r.fulfill({ status: 401, json: { code: "signed-out" } }); return; }
     const body = r.request().postDataJSON() as ConsentBody;
     sent.push(body);
     consent = { keepRecordings: body.keepRecordings, policyVersion: body.policyVersion };
     await r.fulfill({ status: 204 });
   });
-  return { consents: sent, profiles };
+  return { consents: sent, profiles, sessions: () => sessions };
 }
 
-/** True when an AudioContext's clock advances in this browser environment. */
+/** True when an AudioContext's clock advances in this browser environment. Bounded: with no audio output,
+ *  resume() and close() can hang forever, so nothing here is awaited without a deadline. */
 async function audioRenders(page: Page): Promise<boolean> {
-  return page.evaluate(async () => {
+  return page.evaluate(() => {
+    const deadline = <T,>(p: Promise<T>, ms: number, fallback: T) =>
+      Promise.race([p, new Promise<T>((r) => setTimeout(() => r(fallback), ms))]);
     const ctx = new AudioContext();
-    await ctx.resume().catch(() => {});
-    const start = ctx.currentTime;
-    await new Promise((r) => setTimeout(r, 600));
-    const advanced = ctx.currentTime > start;
-    await ctx.close();
-    return advanced;
+    return deadline(ctx.resume().then(() => true, () => true), 1000, false).then(async () => {
+      const start = ctx.currentTime;
+      await new Promise((r) => setTimeout(r, 600));
+      const advanced = ctx.currentTime > start;
+      void deadline(ctx.close(), 500, undefined);
+      return advanced;
+    });
   });
 }
 
@@ -72,9 +85,11 @@ test("Meet Bolo through consent to the microphone check", async ({ page }) => {
   await expect(page.getByRole("button", { name: "No, just feedback" })).toBeDisabled();
   await page.getByText("I'm 13 or older").click();
   await keep.click();
-  expect(sent.consents).toEqual([{ keepRecordings: true, over13: true, policyVersion: "2026-11-v1" }]);
-
   await expect(page.getByRole("heading", { name: "Choose your microphone" })).toBeVisible();
+  expect(sent.consents).toEqual([{ keepRecordings: true, over13: true, policyVersion: "2026-11-v1" }]);
+  // The guest is created at consent, not on page load.
+  expect(sent.sessions()).toBe(1);
+
   await expect(page.locator("[data-mic-status]")).toHaveAttribute("data-mic-status", "live");
   await expect(page.getByRole("combobox", { name: "Microphone" })).not.toHaveValue("");
   // The fake device plays a tone, so the meter lights up — where Web Audio renders at all. Headless Linux
@@ -161,4 +176,46 @@ test("under 13 stops onboarding kindly", async ({ page }) => {
   await page.getByRole("button", { name: "Skip intro" }).click();
   await page.getByRole("button", { name: "I'm under 13" }).click();
   await expect(page.getByText("Bolo is for ages 13 and up")).toBeVisible();
+});
+
+test("page views alone create no guest", async ({ page }) => {
+  const api = await stubApi(page);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Meet Bolo" }).click();
+  await page.getByRole("button", { name: "Skip intro" }).click();
+  await expect(page.getByRole("heading", { name: "Bolo listens only while you practise." })).toBeVisible();
+  expect(api.sessions()).toBe(0);
+});
+
+test("a consent that fails to save says so, and choosing again works", async ({ page }) => {
+  await stubApi(page, { consent: false, consentFailures: [500] });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Meet Bolo" }).click();
+  await page.getByRole("button", { name: "Skip intro" }).click();
+  await page.getByText("I'm 13 or older").click();
+  await page.getByRole("button", { name: "Yes, keep them" }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "That didn't save" })).toBeVisible();
+  await page.getByRole("button", { name: "Yes, keep them" }).click();
+  await expect(page.getByRole("heading", { name: "Choose your microphone" })).toBeVisible();
+});
+
+test("an expired session at consent starts a new one and carries on", async ({ page }) => {
+  const api = await stubApi(page, { consentFailures: [401] });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Meet Bolo" }).click();
+  await page.getByRole("button", { name: "Skip intro" }).click();
+  await page.getByText("I'm 13 or older").click();
+  await page.getByRole("button", { name: "No, just feedback" }).click();
+  await expect(page.getByRole("heading", { name: "Choose your microphone" })).toBeVisible();
+  expect(api.consents).toHaveLength(1);
+});
+
+test("a remembered microphone that is gone falls back to the default one", async ({ page }) => {
+  await stubApi(page, { consent: true });
+  await page.goto("/");
+  await page.evaluate(() => localStorage.setItem("bolo.onboarding.v1", JSON.stringify({ step: "mic", over13: true,
+    keepRecordings: true, micDeviceId: "unplugged-usb-headset", headphones: false, questionIndex: 0, answers: {} })));
+  await page.reload();
+  await expect(page.locator("[data-mic-status]")).toHaveAttribute("data-mic-status", "live");
+  await expect(page.getByRole("heading", { name: "Choose your microphone" })).toBeVisible();
 });

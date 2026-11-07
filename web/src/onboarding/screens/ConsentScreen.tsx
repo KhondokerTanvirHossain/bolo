@@ -5,12 +5,14 @@ import { Icon, Scene } from "@/scene/Scene";
 type Props = {
   over13: boolean;
   busy: boolean;
+  /** Shown when saving the choice failed; the buttons stay usable to try again. */
+  failed: boolean;
   onToggleOver13: () => void;
   onChoose: (keep: boolean) => void;
 };
 
 /** US-1.1a: decide what Bolo keeps, before it listens. Nothing is pre-selected; both choices look equal. */
-export function ConsentScreen({ over13, busy, onToggleOver13, onChoose }: Props) {
+export function ConsentScreen({ over13, busy, failed, onToggleOver13, onChoose }: Props) {
   const [under13, setUnder13] = useState(false);
   return (
     <section className="dk-screen on" data-screen="consent">
@@ -44,6 +46,11 @@ export function ConsentScreen({ over13, busy, onToggleOver13, onChoose }: Props)
                 No, just feedback
               </button>
             </div>
+            {failed && (
+              <p className="bl-result" role="alert" style={{ marginTop: 12 }}>
+                That didn&apos;t save. Check your connection, then choose again.
+              </p>
+            )}
             <p className="bo-footnote" style={{ marginTop: 14 }}>You can change this any time in Me → Privacy.</p>
             <button className="bl-quiet-link" onClick={() => setUnder13(true)}>I&apos;m under 13</button>
           </>

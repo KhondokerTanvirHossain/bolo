@@ -27,3 +27,8 @@ export function classifyMicCheck(levelsDb: number[]): MicCheckResult {
   if (voice - floor < MIC_CHECK.minSnrDb) return "noisy";
   return "great";
 }
+
+/** Once the learner has spoken, keep the verdict when they fall silent; new speech can replace it. */
+export function stickyVerdict(previous: MicCheckResult, next: MicCheckResult): MicCheckResult {
+  return next === "idle" ? previous : next;
+}

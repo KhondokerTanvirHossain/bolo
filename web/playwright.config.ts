@@ -7,8 +7,8 @@ export default defineConfig({
   timeout: 30_000,
   use: { baseURL: "http://localhost:3100" },
   projects: [
-    {
-      // Linux CI. On macOS Chromium's capture waits for the OS mic permission even with a fake device, so it hangs.
+    // Chromium runs on Linux only: on macOS its capture waits for the OS mic permission even with a fake device.
+    ...(process.platform === "linux" ? [{
       name: "chromium",
       use: {
         ...devices["Desktop Chrome"],
@@ -17,7 +17,7 @@ export default defineConfig({
         permissions: ["microphone"],
         launchOptions: { args: ["--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream"] },
       },
-    },
+    }] : []),
     {
       // Runs everywhere, macOS included: Firefox's fake stream never touches the hardware.
       name: "firefox",

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Build both images locally for linux/amd64, ship them over SSH and restart Bolo on the shared box.
-# Usage: scripts/deploy.sh [sha]   (default: current HEAD; refuses a dirty tree so the tag means something)
+# Usage: scripts/deploy.sh   Deploys the current HEAD (refuses a dirty tree, so the tag means what was built).
+#        To roll back, don't pass an old sha here — see docs/RUNBOOK.md → Rollback (it reuses the image on the box).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 source scripts/box.sh
@@ -8,7 +9,10 @@ source scripts/box.sh
 if [[ -n "$(git status --porcelain -- api web deploy)" ]]; then
   echo "Refusing to deploy: api/, web/ or deploy/ has uncommitted changes." >&2; exit 1
 fi
-SHA="${1:-$(git rev-parse --short HEAD)}"
+SHA="$(git rev-parse --short HEAD)"
+if [[ $# -gt 0 && "$1" != "$SHA" ]]; then
+  echo "Refusing: this builds HEAD ($SHA), so it can't be tagged '$1'. For a rollback see docs/RUNBOOK.md." >&2; exit 1
+fi
 echo "==> Building $SHA"
 (cd api && ./gradlew bootJar -q --console=plain)
 (cd web && pnpm build > /dev/null)
@@ -32,8 +36,10 @@ box "set -e; cd ~/bolo; test -f bolo.env || { echo 'missing ~/bolo/bolo.env (see
   done
   echo $SHA > TAG
   # Keep the current and previous tags for rollback; remove older Bolo images only, never another tenant's.
+  # A redeploy of the same sha keeps the true previous tag (PREV is only advanced when the sha changes).
+  if [ \"\$PREV\" = '$SHA' ]; then PREV=\$(cat PREV_TAG 2>/dev/null || true); else echo \"\$PREV\" > PREV_TAG; fi
   for repo in bolo-api bolo-web; do
-    docker images \"\$repo\" --format '{{.Tag}}' | grep -v -x -e '$SHA' -e \"\$PREV\" | xargs -r -I{} docker rmi \"\$repo:{}\" >/dev/null || true
+    docker images \"\$repo\" --format '{{.Tag}}' | grep -v -x -e '$SHA' -e \"\$PREV\" -e '<none>' | xargs -r -I{} docker rmi \"\$repo:{}\" >/dev/null || true
   done
   free -m | awk '/Mem:/ {print \"box memory available: \" \$7 \" MB\"}'"
 echo "==> Deployed $SHA"

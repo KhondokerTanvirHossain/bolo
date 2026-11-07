@@ -12,6 +12,8 @@ export type OnboardingState = {
   micDeviceId: string | null;
   /** Barge-in is allowed only when this is true (TLK-15). */
   headphones: boolean;
+  /** The mic check's verdict; "noisy"/"quiet"/"skipped" later hides low-confidence feedback (US-1.5). */
+  micCheck: "great" | "noisy" | "quiet" | "skipped" | null;
   /** Which setup question is showing (0–2) and the stable keys chosen so far. */
   questionIndex: number;
   answers: Partial<Record<Field, string>>;
@@ -23,6 +25,8 @@ export type OnboardingAction =
   | { type: "chooseConsent"; keep: boolean }
   | { type: "chooseMic"; deviceId: string }
   | { type: "setHeadphones"; headphones: boolean }
+  | { type: "forgetMic" }
+  | { type: "micChecked"; result: "great" | "noisy" | "quiet" | "skipped" }
   | { type: "answer"; value: string }
   | { type: "nextQuestion" }
   | { type: "prevQuestion" }
@@ -34,6 +38,7 @@ export const initialState: OnboardingState = {
   keepRecordings: null,
   micDeviceId: null,
   headphones: false,
+  micCheck: null,
   questionIndex: 0,
   answers: {},
 };
@@ -67,6 +72,10 @@ export function onboarding(state: OnboardingState, action: OnboardingAction): On
       return { ...state, micDeviceId: action.deviceId };
     case "setHeadphones":
       return { ...state, headphones: action.headphones };
+    case "forgetMic":
+      return { ...state, micDeviceId: null };
+    case "micChecked":
+      return { ...state, micCheck: action.result };
     case "answer":
       return { ...state, answers: { ...state.answers, [currentQuestion(state).field]: action.value } };
     case "nextQuestion":

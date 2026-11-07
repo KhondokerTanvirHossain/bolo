@@ -97,3 +97,14 @@ describe("setup questions (US-1.4)", () => {
     expect(s.step).toBe("setup");
   });
 });
+
+describe("microphone memory", () => {
+  it("records the mic check verdict for the debrief's noise rule (US-1.5)", () => {
+    const s = onboarding({ ...initialState, step: "mic" }, { type: "micChecked", result: "noisy" });
+    expect(s.micCheck).toBe("noisy");
+  });
+  it("forgets a remembered microphone that is no longer there", () => {
+    const s = onboarding({ ...initialState, step: "mic", micDeviceId: "usb-1" }, { type: "forgetMic" });
+    expect(s.micDeviceId).toBeNull();
+  });
+});

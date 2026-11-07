@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { classifyMicCheck } from "./micCheck";
+import { classifyMicCheck, stickyVerdict } from "./micCheck";
 
 /** Builds a level history: `quietCount` samples at the room floor, then `voiceCount` samples of speech. */
 function history(floorDb: number, voiceDb: number, quietCount = 30, voiceCount = 20): number[] {
@@ -25,5 +25,18 @@ describe("classifyMicCheck", () => {
 
   it("waits until there are enough samples to judge", () => {
     expect(classifyMicCheck([-25, -25, -60])).toBe("idle");
+  });
+});
+
+describe("stickyVerdict", () => {
+  it("keeps a verdict once the learner stops speaking", () => {
+    expect(stickyVerdict("great", "idle")).toBe("great");
+    expect(stickyVerdict("noisy", "idle")).toBe("noisy");
+  });
+  it("takes a new verdict from new speech", () => {
+    expect(stickyVerdict("noisy", "great")).toBe("great");
+  });
+  it("stays idle until the first speech", () => {
+    expect(stickyVerdict("idle", "idle")).toBe("idle");
   });
 });
