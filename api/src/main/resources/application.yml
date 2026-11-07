@@ -5,6 +5,10 @@ spring:
     url: ${BOLO_DB_URL:jdbc:postgresql://localhost:5434/bolo}
     username: ${BOLO_DB_USER:bolo}
     password: ${BOLO_DB_PASSWORD:bolo}
+    hikari:
+      # Every table lives in the bolo schema; set it per connection so it holds for any URL (Testcontainers too).
+      connection-init-sql: set search_path to bolo
+      maximum-pool-size: 10
   flyway:
     schemas: bolo
     default-schema: bolo
