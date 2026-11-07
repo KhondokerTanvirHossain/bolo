@@ -84,4 +84,20 @@ class TurnTakerTest {
         t.reset();
         assertThat(run(t, 3600, 20_000, false)).isEmpty();
     }
+
+    /** Speech the recogniser made no words of (Bangla, mumbling): the turn ends as UNCLEAR instead of hanging. */
+    @Test
+    void speechWithoutWordsIsUnclear() {
+        TurnTaker t = new TurnTaker(POLICY);
+        run(t, 0, 1000, true);
+        assertThat(run(t, 1000, 6000, false)).containsExactly(new At(3500, TurnTaker.Decision.UNCLEAR));
+    }
+
+    /** A cough or a door is not a turn: under 0.8 s of wordless sound stays quiet. */
+    @Test
+    void aShortWordlessSoundIsNotATurn() {
+        TurnTaker t = new TurnTaker(POLICY);
+        run(t, 0, 200, true);
+        assertThat(run(t, 200, 6000, false)).isEmpty();
+    }
 }
