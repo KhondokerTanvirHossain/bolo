@@ -334,7 +334,7 @@ final class TalkConversation implements TalkConnection {
 
         boolean wrap = elapsedMs() >= limitMs();
         Reply reply;
-        if (!wrap && speculation != null && speculation.forTranscript.equals(said)) {
+        if (!wrap && speculation != null && sameWords(speculation.forTranscript, said)) {
             reply = speculation;
         } else {
             cancel(speculation);
@@ -515,6 +515,15 @@ final class TalkConversation implements TalkConnection {
             log.warn("talk {} turn {} audio not kept: {}", talk.id(), idx, e.getClass().getSimpleName());
             return null;
         }
+    }
+
+    /** The recogniser's final text adds capitals and punctuation to the partial a speculation started from. */
+    static boolean sameWords(String a, String b) {
+        return words(a).equals(words(b));
+    }
+
+    private static String words(String s) {
+        return s == null ? "" : s.toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z0-9' ]", " ").replaceAll("\\s+", " ").trim();
     }
 
     private static void cancel(Reply r) {

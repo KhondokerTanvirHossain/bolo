@@ -56,4 +56,13 @@ class TalkConversationTest {
         c.onClosed();
         assertThat(outClosed).isTrue();
     }
+
+    /** Live finding: the recogniser's final text adds capitals and punctuation to the partial the speculation used. */
+    @Test
+    void theSameWordsWithDifferentPunctuationAreTheSameUtterance() {
+        assertThat(TalkConversation.sameWords("yesterday i fix her but in the payment service",
+                "Yesterday I fix her but, in the payment service.")).isTrue();
+        assertThat(TalkConversation.sameWords("i like cricket", "I like cricket and football.")).isFalse();
+        assertThat(TalkConversation.sameWords("", "")).isTrue();
+    }
 }

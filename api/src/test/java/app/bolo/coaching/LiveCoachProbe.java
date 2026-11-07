@@ -78,11 +78,11 @@ class LiveCoachProbe {
         String body = "";
         while (System.currentTimeMillis() - endedAt < 60_000) {
             body = send("GET", "/api/talk/" + id + "/debrief", cookie, null).body();
-            if (!body.contains("\"scoring\"")) break;
+            if (!body.matches("(?s).*\"status\"\\s*:\\s*\"scoring\".*")) break;
             Thread.sleep(1000);
         }
         System.out.println("debrief after " + (System.currentTimeMillis() - endedAt) + " ms: " + body);
-        assertThat(body).contains("\"status\":\"ready\"");
+        assertThat(body).containsPattern("\"status\"\\s*:\\s*\"ready\"");
     }
 
     void await(long ms, String fragment) throws InterruptedException {
