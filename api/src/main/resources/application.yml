@@ -1,0 +1,31 @@
+spring:
+  application.name: bolo-api
+  threads.virtual.enabled: true
+  datasource:
+    url: ${BOLO_DB_URL:jdbc:postgresql://localhost:5434/bolo}
+    username: ${BOLO_DB_USER:bolo}
+    password: ${BOLO_DB_PASSWORD:bolo}
+  flyway:
+    schemas: bolo
+    default-schema: bolo
+    create-schemas: true
+
+server:
+  port: 8080
+  shutdown: graceful
+
+management:
+  endpoints.web:
+    base-path: /api/actuator
+    exposure.include: health
+  endpoint.health.probes.enabled: false
+
+bolo:
+  # The browser origin allowed to write to /api (WriteGuardFilter). Production sets BOLO_PUBLIC_ORIGIN.
+  public-origin: ${BOLO_PUBLIC_ORIGIN:http://localhost:3000}
+  # Consent policy in force (NFR-16). A new version means every learner is asked again.
+  policy-version: 2026-11-v1
+  # Session cookie Secure flag; off only for plain-http local development.
+  secure-cookie: ${BOLO_SECURE_COOKIE:true}
+
+logging.level.root: INFO

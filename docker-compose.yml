@@ -1,0 +1,15 @@
+# Local development only. Production lives in deploy/compose.prod.yml.
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: bolo
+      POSTGRES_USER: bolo
+      POSTGRES_PASSWORD: bolo
+    ports:
+      - "5434:5432"
+    volumes:
+      - bolo_local_pg:/var/lib/postgresql/data
+
+volumes:
+  bolo_local_pg:
