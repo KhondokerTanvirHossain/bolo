@@ -19,3 +19,5 @@
 .bl-quiet-link { background: none; border: 0; padding: 0; margin-top: 10px; font: 500 15px/22px var(--font-sans);
   color: var(--ink-secondary); text-decoration: underline; cursor: pointer; }
 .bl-tip-check { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-weight: 600; cursor: pointer; }
+/* The countdown ring sits on top of the record button (absolute vs static); let clicks reach the button. */
+.bo-rec svg.arc { pointer-events: none; }

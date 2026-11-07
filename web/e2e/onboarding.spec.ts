@@ -105,6 +105,35 @@ test("Meet Bolo through consent to the microphone check", async ({ page }) => {
   await page.getByRole("button", { name: "Next" }).click();
   expect(sent.profiles).toEqual([{ goal: "job_interviews", fearedMoment: "phone_calls", talkMinutes: 10 }]);
   await expect(page.getByRole("heading", { name: "Introduce yourself, like at a new job" })).toBeVisible();
+
+  // Day 1 clip (US-1.6): a short clip gets one "say a bit more?" prompt; Keep it saves it on this device.
+  await page.getByRole("button", { name: "Start recording" }).click();
+  await expect(page.getByRole("button", { name: "Stop recording" })).toBeVisible();
+  await page.waitForTimeout(2500);
+  await page.keyboard.press("Space");
+  await expect(page.getByRole("heading", { name: "Want to say a bit more?" })).toBeVisible();
+  await page.getByRole("button", { name: "Keep it" }).click();
+  await expect(page.getByText("Saved. We'll play this back to you on Day 7.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Play my Day 1 clip" })).toBeVisible({ timeout: 5000 });
+  const audio = page.getByTestId("day1-audio");
+  await expect.poll(() => audio.evaluate((a: HTMLAudioElement) => a.readyState)).toBeGreaterThanOrEqual(1);
+  if (await audioRenders(page)) {
+    await page.getByRole("button", { name: "Play my Day 1 clip" }).click();
+    await expect.poll(() => audio.evaluate((a: HTMLAudioElement) => a.currentTime)).toBeGreaterThan(0);
+  }
+});
+
+test("a reload on the Day 1 step comes back to an empty recorder", async ({ page }) => {
+  await stubApi(page, { consent: true, profile: true });
+  await page.goto("/");
+  await page.evaluate(() => localStorage.setItem("bolo.onboarding.v1", JSON.stringify({ step: "day1", over13: true,
+    keepRecordings: true, micDeviceId: null, headphones: false, questionIndex: 2, answers: {} })));
+  await page.reload();
+  await page.getByRole("button", { name: "Start recording" }).click();
+  await expect(page.getByRole("button", { name: "Stop recording" })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("button", { name: "Start recording" })).toBeVisible();
+  await expect(page.getByText("0:30")).toHaveCount(0);
 });
 
 test("a reload on the microphone step resumes there", async ({ page }) => {

@@ -8,6 +8,7 @@ import { ConsentScreen } from "./screens/ConsentScreen";
 import { MicScreen } from "./screens/MicScreen";
 import { SetupScreen } from "./screens/SetupScreen";
 import { Day1Screen } from "./screens/Day1Screen";
+import { FirstTalkScreen } from "./screens/FirstTalkScreen";
 
 type Boot = { kind: "loading" } | { kind: "ready" } | { kind: "offline" };
 
@@ -52,6 +53,7 @@ export default function Onboarding() {
   const answer = useCallback((value: string) => dispatch({ type: "answer", value }), []);
 
   const toConsent = useCallback(() => dispatch({ type: "go", step: "consent" }), []);
+  const toTalk = useCallback(() => dispatch({ type: "go", step: "talk" }), []);
 
   if (boot.kind === "offline") {
     return (
@@ -83,7 +85,8 @@ export default function Onboarding() {
       return <SetupScreen state={state} busy={busy} onAnswer={answer} onNext={() => void next()}
         onBack={() => dispatch({ type: "prevQuestion" })} />;
     case "day1":
+      return <Day1Screen deviceId={state.micDeviceId} onSaved={toTalk} />;
     case "talk":
-      return <Day1Screen />;
+      return <FirstTalkScreen />;
   }
 }
