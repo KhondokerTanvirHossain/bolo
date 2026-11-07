@@ -43,7 +43,7 @@ class TalkConversationTest {
             }
         };
         var usage = (app.bolo.common.usage.UsageRecorder) (l, s, v, k, u, t) -> { };
-        var speech = new SpeechService(new FakeSpeechToText(), new FakeTextToSpeech(), usage);
+        var speech = new SpeechService(new FakeSpeechToText(), new FakeTextToSpeech(), usage, new app.bolo.speech.adapter.out.fake.FakeScriptedAssessment());
         var settings = new TalkSettings(new TurnPolicy(100, 300, 500, Set.of()), "fake", 100, 60_000, 60_000, 20_000,
                 15_000, 30_000, 8_000, 15_000, 45_000, 1_800_000);
         TalkView talk = new TalkView(TalkSessionId.newId(), 5, null, null);

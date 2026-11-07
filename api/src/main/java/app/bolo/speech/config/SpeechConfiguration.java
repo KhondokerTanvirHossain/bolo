@@ -1,9 +1,12 @@
 package app.bolo.speech.config;
 
+import app.bolo.speech.adapter.out.azure.AzureScriptedAssessment;
 import app.bolo.speech.adapter.out.azure.AzureSpeechToText;
 import app.bolo.speech.adapter.out.azure.AzureTextToSpeech;
+import app.bolo.speech.adapter.out.fake.FakeScriptedAssessment;
 import app.bolo.speech.adapter.out.fake.FakeSpeechToText;
 import app.bolo.speech.adapter.out.fake.FakeTextToSpeech;
+import app.bolo.speech.application.port.out.ScriptedAssessmentPort;
 import app.bolo.speech.application.port.out.SpeechToTextPort;
 import app.bolo.speech.application.port.out.TextToSpeechPort;
 import org.springframework.beans.factory.annotation.Value;
@@ -35,6 +38,12 @@ class SpeechConfiguration {
             return new AzureTextToSpeech(requireKey(key), region, voice, rate, coachVoice);
         }
 
+        @Bean
+        ScriptedAssessmentPort azureScriptedAssessment(@Value("${bolo.speech.azure.key}") String key,
+                                                       @Value("${bolo.speech.azure.region}") String region) {
+            return new AzureScriptedAssessment(requireKey(key), "https://" + region + ".stt.speech.microsoft.com");
+        }
+
         private static String requireKey(String key) {
             if (key == null || key.isBlank()) {
                 throw new IllegalStateException("bolo.speech.vendor=azure but BOLO_AZURE_SPEECH_KEY is empty");
@@ -55,6 +64,11 @@ class SpeechConfiguration {
         @Bean
         FakeTextToSpeech fakeTextToSpeech() {
             return new FakeTextToSpeech();
+        }
+
+        @Bean
+        FakeScriptedAssessment fakeScriptedAssessment() {
+            return new FakeScriptedAssessment();
         }
     }
 }
