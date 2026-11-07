@@ -37,6 +37,10 @@ services:
       # Real vendors in production; the app's defaults are fakes so tests and keyless dev never call them.
       BOLO_SPEECH_VENDOR: azure
       BOLO_LLM_VENDOR: anthropic
+      # Learner audio, AES-256-GCM encrypted with BOLO_MEDIA_KEY (bolo.env); deleted by the retention sweep (NFR-14).
+      BOLO_MEDIA_DIR: /data/media
+    volumes:
+      - bolo_media:/data/media
     depends_on:
       bolo-db:
         condition: service_healthy
@@ -53,6 +57,7 @@ services:
 
 volumes:
   bolo_pgdata:
+  bolo_media:
 
 networks:
   bolo_internal:

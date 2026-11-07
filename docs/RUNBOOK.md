@@ -51,6 +51,17 @@ prints nothing; `caddy validate`; `caddy reload`; compare the three status codes
   `docker exec bolo-db psql -U bolo -d bolo -c "select count(*), percentile_cont(array[0.5,0.9]) within group (order by heard_ms) from bolo.talk_turn where heard_ms is not null and at > now() - interval '1 day'"`
 - Cost per talk: `select session_id, vendor, kind, unit_type, sum(units) from bolo.usage group by 1,2,3,4`.
 
+## The Coach (debrief after a talk)
+
+- When a talk with at least one learner turn ends, the Coach composes its debrief (`debrief` table: scoring → ready |
+  too_short | failed). Claude `claude-sonnet-5-5` writes the strength and sentence upgrades; Azure's live pronunciation
+  scores (en-US, IPA) find sound patterns; the Coach's voice is `en-US-AndrewNeural`.
+- Learner audio lives in the `bolo_media` volume, encrypted with `BOLO_MEDIA_KEY` (generated on the box, in bolo.env;
+  losing it makes old clips unreadable, never garbage). Retention: hourly sweep, 24 h after the talk if the learner
+  said "No" to keeping recordings, 90 days otherwise.
+- `scripts/coach-probe.sh` runs a real ~2-minute talk (4 spoken turns) and prints the debrief and its time to ready.
+- Disputed fixes: `select kind, count(*) from bolo.fix_dispute group by 1`.
+
 ## Logs and health
 
 ```bash
