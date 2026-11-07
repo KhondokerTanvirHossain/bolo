@@ -35,5 +35,8 @@ bolo:
   # per hour (bounds disk growth on the shared box whatever the addresses).
   guests-per-ip-per-hour: ${BOLO_GUESTS_PER_IP_PER_HOUR:300}
   guests-per-hour: ${BOLO_GUESTS_PER_HOUR:3000}
+  talk:
+    # Live talks at once. Azure Speech's free tier allows one live recognition, so 1 until we move to S0.
+    max-live-sessions: ${BOLO_TALK_MAX_LIVE:1}
 
 logging.level.root: INFO

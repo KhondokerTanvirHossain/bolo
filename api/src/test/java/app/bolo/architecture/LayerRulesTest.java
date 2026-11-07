@@ -52,6 +52,20 @@ class LayerRulesTest {
     }
 
     @Test
+    void onlySpeechAdaptersTouchTheAzureSdk() {
+        noClasses().that().resideOutsideOfPackage("app.bolo.speech.adapter.out..")
+                .should().dependOnClassesThat().resideInAPackage("com.microsoft.cognitiveservices..")
+                .check(classes);
+    }
+
+    @Test
+    void onlyLlmAdaptersTouchTheAnthropicSdk() {
+        noClasses().that().resideOutsideOfPackage("app.bolo.llm.adapter.out..")
+                .should().dependOnClassesThat().resideInAPackage("com.anthropic..")
+                .check(classes);
+    }
+
+    @Test
     void modulesMeetOnlyThroughInboundPorts() {
         List<String> violations = new ArrayList<>();
         classes.forEach(origin -> {

@@ -9,12 +9,12 @@ import java.time.Duration;
 /**
  * The session cookie: HttpOnly, SameSite=Lax, Path=/, 90 days, re-issued on every visit so an active learner never
  * expires (NFR-17). Over HTTPS it is {@code __Host-bolo_session}: the prefix forbids a Domain attribute, so a sibling
- * site under the same parent domain (any other *.sslip.io host) can neither set nor shadow it. Plain-http local
+ * site under the same parent domain (another *.eliooo.org tenant) can neither set nor shadow it. Plain-http local
  * development uses {@code bolo_session}, because browsers refuse __Host- cookies without Secure.
  */
 final class SessionCookie {
 
-    static final String LEARNER_ATTRIBUTE = "bolo.learner";
+    static final String LEARNER_ATTRIBUTE = app.bolo.common.web.CurrentLearner.ATTRIBUTE;
     static final Duration MAX_AGE = Duration.ofDays(90);
 
     private SessionCookie() {

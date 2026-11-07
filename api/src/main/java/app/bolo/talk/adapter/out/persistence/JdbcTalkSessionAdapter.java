@@ -1,0 +1,58 @@
+package app.bolo.talk.adapter.out.persistence;
+
+import app.bolo.common.id.LearnerId;
+import app.bolo.common.id.TalkSessionId;
+import app.bolo.talk.application.port.out.TalkSessionPort;
+import app.bolo.talk.domain.EndReason;
+import app.bolo.talk.domain.TalkSession;
+import lombok.RequiredArgsConstructor;
+import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.sql.Timestamp;
+import java.time.Instant;
+import java.util.Optional;
+import java.util.UUID;
+
+@Repository
+@RequiredArgsConstructor
+class JdbcTalkSessionAdapter implements TalkSessionPort {
+
+    /** Serialises "count live talks, then insert" across concurrent starts. */
+    private static final long START_LOCK = 0x7a1c_0001L;
+
+    private final JdbcClient jdbc;
+
+    @Override
+    @Transactional
+    public boolean insertIfBelowCap(TalkSession s, int cap, Instant liveSince) {
+        jdbc.sql("select pg_advisory_xact_lock(?)").param(START_LOCK).query().singleRow();
+        return jdbc.sql("""
+                insert into talk_session (id, learner_id, minutes, started_at)
+                select ?, ?, ?, ?
+                where (select count(*) from talk_session where ended_at is null and started_at > ?) < ?""")
+                .params(s.id().value(), s.learnerId().value(), s.minutes(), Timestamp.from(s.startedAt()),
+                        Timestamp.from(liveSince), cap)
+                .update() == 1;
+    }
+
+    @Override
+    public Optional<TalkSession> findLive(TalkSessionId id, LearnerId learner) {
+        return jdbc.sql("""
+                select id, learner_id, minutes, started_at from talk_session
+                where id = ? and learner_id = ? and ended_at is null""")
+                .params(id.value(), learner.value())
+                .query((rs, n) -> new TalkSession(new TalkSessionId(rs.getObject("id", UUID.class)),
+                        new LearnerId(rs.getObject("learner_id", UUID.class)), rs.getInt("minutes"),
+                        rs.getTimestamp("started_at").toInstant(), null))
+                .optional();
+    }
+
+    @Override
+    public void end(TalkSessionId id, EndReason reason, Instant at) {
+        jdbc.sql("update talk_session set ended_at = ?, end_reason = ? where id = ? and ended_at is null")
+                .params(Timestamp.from(at), reason.dbValue(), id.value())
+                .update();
+    }
+}
