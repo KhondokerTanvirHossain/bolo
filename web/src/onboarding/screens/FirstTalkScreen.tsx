@@ -24,7 +24,8 @@ export function FirstTalkScreen({ deviceId }: { deviceId: string | null }) {
 
   if (conversation.state.phase !== "idle") {
     return <TalkScreen state={conversation.state} onDone={conversation.done} onEnd={conversation.end}
-      onTalkAgain={() => void conversation.start()} onLeave={conversation.reset} />;
+      onTalkAgain={() => void conversation.start()} onLeave={conversation.reset} onPause={conversation.pause}
+      onResume={conversation.resume} onRepeat={conversation.repeat} />;
   }
 
   return (

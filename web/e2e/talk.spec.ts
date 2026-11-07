@@ -183,3 +183,60 @@ test("End with no answer from Bolo returns to the start within a few seconds", a
   await page.getByRole("dialog").getByRole("button", { name: "End", exact: true }).click();
   await expect(page.getByRole("button", { name: "Start talking" })).toBeVisible({ timeout: 6000 });
 });
+
+async function liveTalk(page: Page) {
+  await stubApi(page);
+  const fake = await fakeTalkServer(page);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Start talking" }).click();
+  await expect.poll(fake.opened).toBe(true);
+  return fake;
+}
+
+test("15 s of silence shows two starters to read aloud", async ({ page }) => {
+  const fake = await liveTalk(page);
+  send(fake.ws(), { type: "caption", turn: 0, text: "What did you do today?" });
+  send(fake.ws(), { type: "state", value: "your_turn" });
+  send(fake.ws(), { type: "hint", starters: ["Today I…", "This morning I…"] });
+  await expect(page.getByText("Try starting with")).toBeVisible();
+  await expect(page.getByText("This morning I…")).toBeVisible();
+});
+
+test("P pauses; Continue resumes", async ({ page }) => {
+  const fake = await liveTalk(page);
+  send(fake.ws(), { type: "state", value: "your_turn" });
+  await expect(page.getByRole("button", { name: "Done, end my turn" })).toBeEnabled();
+  await page.keyboard.press("p");
+  await expect.poll(() => fake.texts.includes('{"type":"pause"}')).toBe(true);
+  send(fake.ws(), { type: "paused", reason: "learner" });
+  await expect(page.getByText("Paused. Tap to continue.")).toBeVisible();
+  await page.getByRole("button", { name: "Continue" }).click();
+  await expect.poll(() => fake.texts.includes('{"type":"resume"}')).toBe(true);
+});
+
+test("a crisis shows care and local help", async ({ page }) => {
+  const fake = await liveTalk(page);
+  send(fake.ws(), { type: "crisis", title: "You're not alone",
+    lines: ["I'm really glad you told me.", "Please talk to someone who can help right now."],
+    help: [{ name: "Kaan Pete Roi (emotional support)", number: "09612-119911", hours: "3 PM – 3 AM, every day" },
+      { name: "National emergency", number: "999", hours: "Any time" }] });
+  send(fake.ws(), { type: "ended", reason: "crisis", turns: 1, p50Ms: null, p90Ms: null });
+  await expect(page.getByRole("heading", { name: "You're not alone" })).toBeVisible();
+  await expect(page.getByRole("link", { name: /09612-119911/ })).toHaveAttribute("href", "tel:09612119911");
+  await expect(page.getByRole("link", { name: /999/ })).toHaveAttribute("href", "tel:999");
+  await expect(page.getByText("Your coach is listening back")).toBeHidden();
+});
+
+test("R asks Bolo to repeat; CC hides the caption; a long wait says Bolo is thinking", async ({ page }) => {
+  const fake = await liveTalk(page);
+  send(fake.ws(), { type: "caption", turn: 0, text: "What did you do today?" });
+  send(fake.ws(), { type: "state", value: "your_turn" });
+  await expect(page.getByText("What did you do today?")).toBeVisible();
+  await page.keyboard.press("r");
+  await expect.poll(() => fake.texts.includes('{"type":"repeat"}')).toBe(true);
+  await page.getByRole("button", { name: "Captions" }).click();
+  await expect(page.getByText("What did you do today?")).toBeHidden();
+  await page.getByRole("button", { name: "Captions" }).click();
+  send(fake.ws(), { type: "state", value: "thinking" });
+  await expect(page.getByText("Bolo is thinking…")).toBeVisible({ timeout: 6000 });
+});

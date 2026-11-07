@@ -41,3 +41,33 @@ describe("talk state", () => {
     expect(s.phase).toBe("ended");
   });
 });
+
+describe("pilot-safe talk messages", () => {
+  it("shows starters until the learner's turn is over", () => {
+    let s = talk(initialTalk, { type: "state", value: "your_turn" });
+    s = talk(s, { type: "hint", starters: ["I think that…", "For example, …"] });
+    expect(s.hint).toEqual(["I think that…", "For example, …"]);
+    s = talk(s, { type: "state", value: "thinking" });
+    expect(s.hint).toBeNull();
+  });
+
+  it("pauses and resumes", () => {
+    let s = talk(initialTalk, { type: "state", value: "your_turn" });
+    s = talk(s, { type: "paused", reason: "quiet" });
+    expect(s.phase).toBe("paused");
+    s = talk(s, { type: "resumed" });
+    expect(s.phase).toBe("thinking");
+  });
+
+  it("a crisis stays on screen, through the end of the talk and a closed socket", () => {
+    let s = talk(initialTalk, { type: "state", value: "thinking" });
+    s = talk(s, { type: "crisis", title: "You're not alone", lines: ["I'm really glad you told me."],
+      help: [{ name: "National emergency", number: "999", hours: "Any time" }] });
+    expect(s.phase).toBe("crisis");
+    s = talk(s, { type: "ended", reason: "crisis", turns: 1, p50Ms: null, p90Ms: null });
+    expect(s.phase).toBe("crisis");
+    s = talk(s, { type: "socket_closed" });
+    expect(s.phase).toBe("crisis");
+    expect(s.crisis?.help[0].number).toBe("999");
+  });
+});

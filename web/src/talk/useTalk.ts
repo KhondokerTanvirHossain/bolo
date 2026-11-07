@@ -17,6 +17,7 @@ type Live = {
   heardTurn: number | null;
   pendingPlayed: number | null;
   ended: boolean;
+  paused: boolean;
   endedByServer: boolean;
   endTimer: ReturnType<typeof setTimeout> | null;
 };
@@ -67,7 +68,7 @@ export function useTalk(deviceId: string | null) {
     const ctx = new AudioContext();
     void ctx.resume().catch(() => {});
     const l: Live = { ws: null, ctx, mic: null, node: null, player: createPlayer(ctx), turnEndAt: 0, heardTurn: null,
-      pendingPlayed: null, ended: false, endedByServer: false, endTimer: null };
+      pendingPlayed: null, ended: false, paused: false, endedByServer: false, endTimer: null };
     live.current = l;
 
     try {
@@ -151,6 +152,7 @@ export function useTalk(deviceId: string | null) {
           l.node = node;
           const down = createDownsampler(ctx.sampleRate);
           node.port.onmessage = (ev: MessageEvent<Float32Array>) => {
+            if (l.paused) return;
             for (const frame of downsampleTo16k(ev.data, down)) {
               if (ws.readyState === WebSocket.OPEN) ws.send(frame.buffer);
             }
@@ -179,5 +181,34 @@ export function useTalk(deviceId: string | null) {
   }, [teardown]);
   const reset = useCallback(() => { teardown(); dispatch({ type: "reset" }); }, [teardown]);
 
-  return { state, start, done, end, reset };
+  /** TLK-10: the mic stops sending and Bolo's voice stops; the server keeps the talk for 30 minutes. */
+  const pause = useCallback(() => {
+    const l = live.current;
+    if (!l || l.paused) return;
+    l.paused = true;
+    l.pendingPlayed = null;
+    l.player.stop();
+    sendJson(l, { type: "pause" });
+  }, []);
+  /** From a click, so the browser lets audio play again. */
+  const resume = useCallback(() => {
+    const l = live.current;
+    if (!l) return;
+    l.paused = false;
+    void l.ctx.resume().catch(() => {});
+    sendJson(l, { type: "resume" });
+  }, []);
+  const repeat = useCallback(() => { if (live.current) sendJson(live.current, { type: "repeat" }); }, []);
+
+  // Leaving the tab pauses the talk (US-2.10); coming back shows "Paused. Tap to continue."
+  useEffect(() => {
+    const onVisibility = () => {
+      const live = ["buddy_speaking", "your_turn", "thinking"];
+      if (document.visibilityState === "hidden" && live.includes(state.phase)) pause();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, [state.phase, pause]);
+
+  return { state, start, done, end, reset, pause, resume, repeat };
 }
