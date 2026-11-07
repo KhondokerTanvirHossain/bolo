@@ -246,6 +246,7 @@ test("two starts in one tick open one mic, and Stop releases it", async ({ page 
     md.getUserMedia = async (c?: MediaStreamConstraints) => { const s = await open(c); w.__streams.push(s); return s; };
   });
   await atDay1(page);
+  await expect(page.getByRole("button", { name: "Start recording" })).toBeVisible();
   await page.evaluate(() => {
     const start = document.querySelector<HTMLButtonElement>('[aria-label="Start recording"]')!;
     start.click();
