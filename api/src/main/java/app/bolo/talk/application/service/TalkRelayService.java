@@ -3,6 +3,7 @@ package app.bolo.talk.application.service;
 import app.bolo.common.id.LearnerId;
 import app.bolo.common.id.TalkContext;
 import app.bolo.llm.application.port.in.LlmClient;
+import app.bolo.media.application.port.in.AudioStoreUseCase;
 import app.bolo.speech.application.port.in.StreamTranscriptionUseCase;
 import app.bolo.speech.application.port.in.SynthesizeUseCase;
 import app.bolo.talk.application.port.in.StartTalkUseCase;
@@ -27,10 +28,11 @@ public class TalkRelayService implements TalkRelayUseCase {
     private final LlmClient llm;
     private final StartTalkUseCase talks;
     private final TurnPort turns;
+    private final AudioStoreUseCase audioStore;
     private final TalkSettings settings;
 
     public TalkRelayService(StreamTranscriptionUseCase recogniser, SynthesizeUseCase voice, LlmClient llm,
-                            StartTalkUseCase talks, TurnPort turns,
+                            StartTalkUseCase talks, TurnPort turns, AudioStoreUseCase audioStore,
                             @Value("${bolo.talk.speculate-after-ms}") long speculateAfterMs,
                             @Value("${bolo.talk.end-after-ms}") long endAfterMs,
                             @Value("${bolo.talk.unfinished-end-after-ms}") long unfinishedEndAfterMs,
@@ -47,6 +49,7 @@ public class TalkRelayService implements TalkRelayUseCase {
         this.llm = llm;
         this.talks = talks;
         this.turns = turns;
+        this.audioStore = audioStore;
         var words = Arrays.stream(unfinishedWords.split(",")).map(w -> w.trim().toLowerCase(Locale.ROOT))
                 .filter(w -> !w.isEmpty()).collect(Collectors.toUnmodifiableSet());
         this.settings = new TalkSettings(new TurnPolicy(speculateAfterMs, endAfterMs, unfinishedEndAfterMs, words),
@@ -57,7 +60,7 @@ public class TalkRelayService implements TalkRelayUseCase {
     @Override
     public TalkConnection open(TalkView talk, LearnerId learner, TalkOutput out) {
         TalkConversation c = new TalkConversation(talk, new TalkContext(learner, talk.id()), out, recogniser, voice, llm,
-                talks, turns, settings, () -> System.nanoTime() / 1_000_000);
+                talks, turns, audioStore, settings, () -> System.nanoTime() / 1_000_000);
         c.start();
         return c;
     }

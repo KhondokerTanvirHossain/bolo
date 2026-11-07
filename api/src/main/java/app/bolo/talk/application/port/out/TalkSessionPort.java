@@ -6,6 +6,7 @@ import app.bolo.talk.domain.EndReason;
 import app.bolo.talk.domain.TalkSession;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 public interface TalkSessionPort {
@@ -22,6 +23,11 @@ public interface TalkSessionPort {
     void endOpenFor(LearnerId learner, EndReason reason, Instant at);
 
     void endAllOpen(EndReason reason, Instant at);
+
+    /** Ended talks whose audio is due for deletion (NFR-14), not yet purged. */
+    List<TalkSessionId> audioDue(Instant noConsentEndedBefore, Instant anyEndedBefore);
+
+    void markAudioPurged(TalkSessionId id, Instant at);
 
     Optional<TalkSession> findLive(TalkSessionId id, LearnerId learner);
 

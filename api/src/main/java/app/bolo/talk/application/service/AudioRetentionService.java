@@ -1,0 +1,35 @@
+package app.bolo.talk.application.service;
+
+import app.bolo.common.time.BoloClock;
+import app.bolo.media.application.port.in.AudioStoreUseCase;
+import app.bolo.talk.application.port.in.AudioRetentionUseCase;
+import app.bolo.talk.application.port.out.TalkSessionPort;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
+import java.time.Duration;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class AudioRetentionService implements AudioRetentionUseCase {
+
+    static final Duration NO_CONSENT_KEEP = Duration.ofHours(24);
+    static final Duration MAX_KEEP = Duration.ofDays(90);
+
+    private final TalkSessionPort sessions;
+    private final AudioStoreUseCase audio;
+    private final BoloClock clock;
+
+    @Override
+    public void sweep() {
+        var now = clock.now();
+        var due = sessions.audioDue(now.minus(NO_CONSENT_KEEP), now.minus(MAX_KEEP));
+        for (var id : due) {
+            audio.deletePrefix("talk/" + id + "/");
+            sessions.markAudioPurged(id, now);
+        }
+        if (!due.isEmpty()) log.info("audio retention: purged {} talks", due.size());
+    }
+}

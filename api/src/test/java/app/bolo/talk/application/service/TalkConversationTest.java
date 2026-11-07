@@ -48,7 +48,8 @@ class TalkConversationTest {
                 15_000, 30_000);
         TalkView talk = new TalkView(TalkSessionId.newId(), 5, null, null);
         var c = new TalkConversation(talk, new TalkContext(LearnerId.newId(), talk.id()), out, speech, speech,
-                new MeteredLlmClient(new FakeLlm(), usage), mock(StartTalkUseCase.class), mock(TurnPort.class), settings,
+                new MeteredLlmClient(new FakeLlm(), usage), mock(StartTalkUseCase.class), mock(TurnPort.class),
+                mock(app.bolo.media.application.port.in.AudioStoreUseCase.class), settings,
                 () -> System.nanoTime() / 1_000_000);
         c.start();
         Thread.sleep(100);

@@ -1,11 +1,15 @@
 package app.bolo.talk.application.service;
 
 import app.bolo.common.id.TalkContext;
+import app.bolo.common.audio.Wav;
 import app.bolo.llm.application.port.in.LlmClient;
 import app.bolo.llm.application.port.in.LlmMessage;
 import app.bolo.llm.application.port.in.LlmRequest;
 import app.bolo.llm.application.port.in.LlmStream;
 import app.bolo.llm.application.port.in.LlmUnavailableException;
+import app.bolo.media.application.port.in.AudioStoreUseCase;
+import app.bolo.speech.application.port.in.ScoredSegment;
+import app.bolo.speech.application.port.in.ScoredWord;
 import app.bolo.speech.application.port.in.StreamTranscriptionUseCase;
 import app.bolo.speech.application.port.in.SynthesizeUseCase;
 import app.bolo.speech.application.port.in.TranscriptListener;
@@ -24,6 +28,7 @@ import app.bolo.talk.domain.SentenceSplitter;
 import app.bolo.talk.domain.TurnTaker;
 import lombok.extern.slf4j.Slf4j;
 
+import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
@@ -61,6 +66,8 @@ final class TalkConversation implements TalkConnection {
     private static final long WATCHDOG_TICK_MS = 250;
     /** Audio may arrive this much faster than real time (plus the burst allowance) before frames are dropped. */
     private static final double MAX_AUDIO_RATE = 1.2;
+    /** A learner turn's audio is kept up to this long (90 s of 16 kHz PCM). */
+    private static final int MAX_TURN_BYTES = 90 * 1000 * BYTES_PER_MS;
 
     private record Failed(Throwable cause) {
     }
@@ -88,6 +95,7 @@ final class TalkConversation implements TalkConnection {
     private final LlmClient llm;
     private final StartTalkUseCase talks;
     private final TurnPort turns;
+    private final AudioStoreUseCase audioStore;
     private final TalkSettings settings;
     private final LongSupplier nowMs;
 
@@ -116,10 +124,18 @@ final class TalkConversation implements TalkConnection {
     private long startedMs;
     private Reply speculation;
     private Reply speaking;
+    /** Audio ms written to the recogniser so far: word times come back in this clock. */
+    private long streamMs;
+    private long turnStreamStartMs;
+    private final ByteArrayOutputStream turnPcm = new ByteArrayOutputStream();
+    private final List<ScoredWord> turnWords = new ArrayList<>();
+    private int lastLearnerIdx = -1;
+    private long lastTurnStreamStartMs;
+    private final List<ScoredWord> lastTurnWords = new ArrayList<>();
 
     TalkConversation(TalkView talk, TalkContext ctx, TalkOutput out, StreamTranscriptionUseCase recogniser,
                      SynthesizeUseCase voice, LlmClient llm, StartTalkUseCase talks, TurnPort turns,
-                     TalkSettings settings, LongSupplier nowMs) {
+                     AudioStoreUseCase audioStore, TalkSettings settings, LongSupplier nowMs) {
         this.talk = talk;
         this.ctx = ctx;
         this.out = out;
@@ -128,6 +144,7 @@ final class TalkConversation implements TalkConnection {
         this.llm = llm;
         this.talks = talks;
         this.turns = turns;
+        this.audioStore = audioStore;
         this.settings = settings;
         this.nowMs = nowMs;
         this.taker = new TurnTaker(settings.policy());
@@ -185,8 +202,10 @@ final class TalkConversation implements TalkConnection {
             long allowed = (long) ((now - startedMs) * MAX_AUDIO_RATE) + settings.burstAllowanceMs();
             if (acceptedAudioMs + ms > allowed) return;
             acceptedAudioMs += ms;
+            streamMs += ms;
             judge = phase == Phase.YOUR_TURN;
             toRecogniser = judge ? pcm : new byte[pcm.length];
+            if (judge && turnPcm.size() + pcm.length <= MAX_TURN_BYTES) turnPcm.writeBytes(pcm);
         } finally {
             lock.unlock();
         }
@@ -233,6 +252,9 @@ final class TalkConversation implements TalkConnection {
                 transcript = "";
                 audioMs = 0;
                 taker.reset();
+                turnStreamStartMs = streamMs;
+                turnPcm.reset();
+                turnWords.clear();
                 // Marked inside the lock but the utterance never calls back while holding its own lock (no cycle).
                 TranscriptionStream s = stt;
                 if (s != null) s.mark();
@@ -299,7 +321,11 @@ final class TalkConversation implements TalkConnection {
         int learnerIdx = nextIdx++;
         out.send(message("turn_end", "turn", learnerIdx));
         out.send(message("state", "value", "thinking"));
-        turns.save(talk.id(), learnerIdx, "learner", said, null, null);
+        turns.saveLearner(talk.id(), learnerIdx, said, keepTurnAudio(learnerIdx), turnStreamStartMs, List.copyOf(turnWords));
+        lastLearnerIdx = learnerIdx;
+        lastTurnStreamStartMs = turnStreamStartMs;
+        lastTurnWords.clear();
+        lastTurnWords.addAll(turnWords);
         history.add(new Exchange(Exchange.Speaker.LEARNER, said));
 
         boolean wrap = elapsedMs() >= limitMs();
@@ -468,6 +494,18 @@ final class TalkConversation implements TalkConnection {
         out.close(error);
     }
 
+    /** Stores the learner turn's audio encrypted; a storage failure loses the clip, never the talk. */
+    private String keepTurnAudio(int idx) {
+        String key = "talk/" + talk.id() + "/turn-" + idx + ".wav";
+        try {
+            audioStore.put(key, Wav.wrap(turnPcm.toByteArray(), 16000));
+            return key;
+        } catch (RuntimeException e) {
+            log.warn("talk {} turn {} audio not kept: {}", talk.id(), idx, e.getClass().getSimpleName());
+            return null;
+        }
+    }
+
     private static void cancel(Reply r) {
         if (r != null) r.cancel();
     }
@@ -520,6 +558,23 @@ final class TalkConversation implements TalkConnection {
         @Override
         public void onFailure(Exception e) {
             fail(e);
+        }
+
+        /** Scores belong to the turn being spoken, or to the last saved turn when they lag its end. */
+        @Override
+        public void onScored(ScoredSegment segment) {
+            lock.lock();
+            try {
+                if (ended || segment.words().isEmpty()) return;
+                if (phase == Phase.YOUR_TURN) {
+                    turnWords.addAll(segment.words());
+                } else if (lastLearnerIdx >= 0 && segment.words().getFirst().startMs() >= lastTurnStreamStartMs) {
+                    lastTurnWords.addAll(segment.words());
+                    turns.updateScored(talk.id(), lastLearnerIdx, List.copyOf(lastTurnWords));
+                }
+            } finally {
+                lock.unlock();
+            }
         }
     }
 }

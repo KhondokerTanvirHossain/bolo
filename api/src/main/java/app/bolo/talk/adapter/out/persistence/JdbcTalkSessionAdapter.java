@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -79,5 +80,24 @@ class JdbcTalkSessionAdapter implements TalkSessionPort {
         jdbc.sql("update talk_session set ended_at = ?, end_reason = ? where id = ? and ended_at is null")
                 .params(Timestamp.from(at), reason.dbValue(), id.value())
                 .update();
+    }
+
+    @Override
+    public List<TalkSessionId> audioDue(Instant noConsentEndedBefore, Instant anyEndedBefore) {
+        return jdbc.sql("""
+                select s.id from talk_session s
+                where s.ended_at is not null and s.media_purged_at is null
+                  and (s.ended_at < ?
+                       or (s.ended_at < ? and not coalesce((select c.keep_recordings from consent_record c
+                                                            where c.learner_id = s.learner_id
+                                                            order by c.id desc limit 1), false)))""")
+                .params(Timestamp.from(anyEndedBefore), Timestamp.from(noConsentEndedBefore))
+                .query((rs, n) -> new TalkSessionId(rs.getObject("id", UUID.class)))
+                .list();
+    }
+
+    @Override
+    public void markAudioPurged(TalkSessionId id, Instant at) {
+        jdbc.sql("update talk_session set media_purged_at = ? where id = ?").params(Timestamp.from(at), id.value()).update();
     }
 }

@@ -66,6 +66,10 @@ bolo:
       stt-language: en-US
       buddy-voice: en-IN-NeerjaNeural
       buddy-rate: "-5%"
+  media:
+    # Encrypted learner audio (AES-256-GCM). Production mounts a volume here and sets BOLO_MEDIA_KEY.
+    dir: ${BOLO_MEDIA_DIR:${java.io.tmpdir}/bolo-media}
+    key: ${BOLO_MEDIA_KEY:}
   llm:
     # anthropic | fake. Production sets anthropic in deploy/compose.prod.yml.
     vendor: ${BOLO_LLM_VENDOR:fake}
