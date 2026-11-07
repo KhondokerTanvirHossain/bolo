@@ -1,12 +1,13 @@
 "use client";
 import { useCallback, useEffect, useReducer, useState } from "react";
 import { api, POLICY_VERSION, type LearnerView } from "@/api/browser";
-import { initialState, load, onboarding, reconcile, save, type OnboardingState } from "./steps";
+import { initialState, isLastQuestion, load, onboarding, reconcile, save, type OnboardingState } from "./steps";
 import { StartScreen } from "./screens/StartScreen";
 import { WelcomeScreen } from "./screens/WelcomeScreen";
 import { ConsentScreen } from "./screens/ConsentScreen";
 import { MicScreen } from "./screens/MicScreen";
-import { SetupNextScreen } from "./screens/SetupNextScreen";
+import { SetupScreen } from "./screens/SetupScreen";
+import { Day1Screen } from "./screens/Day1Screen";
 
 type Boot = { kind: "loading" } | { kind: "ready" } | { kind: "offline" };
 
@@ -25,7 +26,7 @@ export default function Onboarding() {
       const stored = load(window.localStorage);
       const session = await api.post<LearnerView>("/api/session");
       if (session.kind !== "ok") { setBoot({ kind: "offline" }); return; }
-      dispatch({ type: "replace", state: reconcile(stored, session.value.consent !== null) });
+      dispatch({ type: "replace", state: reconcile(stored, { consent: session.value.consent !== null, profile: session.value.profile !== null }) });
       setBoot({ kind: "ready" });
     })();
   }, []);
@@ -38,6 +39,17 @@ export default function Onboarding() {
     setBusy(false);
     if (res.kind === "ok") dispatch({ type: "chooseConsent", keep });
   }, [state.over13]);
+
+  const next = useCallback(async () => {
+    if (!isLastQuestion(state)) { dispatch({ type: "nextQuestion" }); return; }
+    const { goal, fearedMoment, talkMinutes } = state.answers;
+    if (!goal || !fearedMoment || !talkMinutes) return;
+    setBusy(true);
+    const res = await api.put<void>("/api/profile", { goal, fearedMoment, talkMinutes: Number(talkMinutes) });
+    setBusy(false);
+    if (res.kind === "ok") dispatch({ type: "profileSaved" });
+  }, [state]);
+  const answer = useCallback((value: string) => dispatch({ type: "answer", value }), []);
 
   const toConsent = useCallback(() => dispatch({ type: "go", step: "consent" }), []);
 
@@ -68,6 +80,10 @@ export default function Onboarding() {
         onHeadphones={(h) => dispatch({ type: "setHeadphones", headphones: h })}
         onContinue={() => dispatch({ type: "go", step: "setup" })} />;
     case "setup":
-      return <SetupNextScreen onBack={() => dispatch({ type: "go", step: "mic" })} />;
+      return <SetupScreen state={state} busy={busy} onAnswer={answer} onNext={() => void next()}
+        onBack={() => dispatch({ type: "prevQuestion" })} />;
+    case "day1":
+    case "talk":
+      return <Day1Screen />;
   }
 }

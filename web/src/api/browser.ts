@@ -5,13 +5,13 @@ export type ApiResult<T> =
   | { kind: "signed-out" }
   | { kind: "offline" };
 
-async function call<T>(method: "GET" | "POST", path: string, body?: unknown): Promise<ApiResult<T>> {
+async function call<T>(method: "GET" | "POST" | "PUT", path: string, body?: unknown): Promise<ApiResult<T>> {
   let res: Response;
   try {
     res = await fetch(path, {
       method,
       credentials: "same-origin",
-      headers: method === "POST" ? { "Content-Type": "application/json", "X-Bolo": "1" } : {},
+      headers: method !== "GET" ? { "Content-Type": "application/json", "X-Bolo": "1" } : {},
       body: body === undefined ? undefined : JSON.stringify(body),
     });
   } catch {
@@ -29,12 +29,14 @@ async function call<T>(method: "GET" | "POST", path: string, body?: unknown): Pr
 export const api = {
   get: <T>(path: string) => call<T>("GET", path),
   post: <T>(path: string, body: unknown = {}) => call<T>("POST", path, body),
+  put: <T>(path: string, body: unknown) => call<T>("PUT", path, body),
 };
 
 export type LearnerView = {
   learnerId: string;
   kind: "guest" | "account";
   consent: { keepRecordings: boolean; policyVersion: string } | null;
+  profile: { goal: string; fearedMoment: string; talkMinutes: 5 | 10 } | null;
 };
 
 export const POLICY_VERSION = "2026-11-v1";

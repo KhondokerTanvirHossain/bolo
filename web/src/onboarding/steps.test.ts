@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { initialState, load, onboarding, reconcile, save, type OnboardingState } from "./steps";
+import { currentQuestion, initialState, load, onboarding, reconcile, save, type OnboardingState } from "./steps";
 
 function memoryStorage(): Storage {
   const data = new Map<string, string>();
@@ -54,13 +54,46 @@ describe("resume (US-1.7)", () => {
   });
 
   it("sends a learner back to consent when the server has none", () => {
-    const s = reconcile({ ...initialState, step: "mic", over13: true, keepRecordings: true }, false);
+    const s = reconcile({ ...initialState, step: "mic", over13: true, keepRecordings: true }, { consent: false, profile: false });
     expect(s.step).toBe("consent");
     expect(s.keepRecordings).toBeNull();
   });
 
   it("leaves the step alone when the server has the consent", () => {
-    const s = reconcile({ ...initialState, step: "mic", over13: true, keepRecordings: true }, true);
+    const s = reconcile({ ...initialState, step: "mic", over13: true, keepRecordings: true }, { consent: true, profile: false });
     expect(s.step).toBe("mic");
+  });
+});
+
+describe("setup questions (US-1.4)", () => {
+  const atSetup: OnboardingState = { ...initialState, step: "setup", over13: true, keepRecordings: true };
+
+  it("blocks Next until the question is answered", () => {
+    const s = onboarding(atSetup, { type: "nextQuestion" });
+    expect(s.questionIndex).toBe(0);
+  });
+
+  it("keeps an earlier answer when going back", () => {
+    let s = onboarding(atSetup, { type: "answer", value: "job_interviews" });
+    s = onboarding(s, { type: "nextQuestion" });
+    expect(currentQuestion(s).field).toBe("fearedMoment");
+    s = onboarding(s, { type: "answer", value: "phone_calls" });
+    s = onboarding(s, { type: "prevQuestion" });
+    expect(s.questionIndex).toBe(0);
+    expect(s.answers).toEqual({ goal: "job_interviews", fearedMoment: "phone_calls" });
+  });
+
+  it("stays on the last question until the server has saved the answers", () => {
+    let s: OnboardingState = { ...atSetup, questionIndex: 2, answers: { goal: "work_meetings", fearedMoment: "small_talk" } };
+    s = onboarding(s, { type: "answer", value: "10" });
+    s = onboarding(s, { type: "nextQuestion" });
+    expect(s.step).toBe("setup");
+    s = onboarding(s, { type: "profileSaved" });
+    expect(s.step).toBe("day1");
+  });
+
+  it("sends a learner back to the questions when the server has no profile", () => {
+    const s = reconcile({ ...atSetup, step: "day1" }, { consent: true, profile: false });
+    expect(s.step).toBe("setup");
   });
 });

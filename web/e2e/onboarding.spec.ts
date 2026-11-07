@@ -17,13 +17,23 @@ test.beforeEach(async ({ page, browserName }) => {
 });
 
 type ConsentBody = { keepRecordings: boolean; over13: boolean; policyVersion: string };
+type ProfileBody = { goal: string; fearedMoment: string; talkMinutes: number };
 
 /** Stubs the Java API so the browser flow is pinned on its own; LearnerAcceptanceTest pins the real API. */
-async function stubApi(page: Page, opts: { consent?: boolean } = {}) {
+async function stubApi(page: Page, opts: { consent?: boolean; profile?: boolean } = {}) {
   const sent: ConsentBody[] = [];
+  const profiles: ProfileBody[] = [];
   let consent = opts.consent ? { keepRecordings: true, policyVersion: "2026-11-v1" } : null;
+  let profile = opts.profile ? { goal: "work_meetings", fearedMoment: "small_talk", talkMinutes: 5 } : null;
   await page.route("**/api/session", (r) =>
-    r.fulfill({ json: { learnerId: "00000000-0000-0000-0000-000000000001", kind: "guest", consent } }));
+    r.fulfill({ json: { learnerId: "00000000-0000-0000-0000-000000000001", kind: "guest", consent, profile } }));
+  await page.route("**/api/profile", async (r) => {
+    expect(r.request().method()).toBe("PUT");
+    const body = r.request().postDataJSON() as ProfileBody;
+    profiles.push(body);
+    profile = body;
+    await r.fulfill({ status: 204 });
+  });
   await page.route("**/api/consent", async (r) => {
     expect(r.request().headers()["x-bolo"]).toBe("1");
     const body = r.request().postDataJSON() as ConsentBody;
@@ -31,7 +41,7 @@ async function stubApi(page: Page, opts: { consent?: boolean } = {}) {
     consent = { keepRecordings: body.keepRecordings, policyVersion: body.policyVersion };
     await r.fulfill({ status: 204 });
   });
-  return sent;
+  return { consents: sent, profiles };
 }
 
 /** True when an AudioContext's clock advances in this browser environment. */
@@ -62,7 +72,7 @@ test("Meet Bolo through consent to the microphone check", async ({ page }) => {
   await expect(page.getByRole("button", { name: "No, just feedback" })).toBeDisabled();
   await page.getByText("I'm 13 or older").click();
   await keep.click();
-  expect(sent).toEqual([{ keepRecordings: true, over13: true, policyVersion: "2026-11-v1" }]);
+  expect(sent.consents).toEqual([{ keepRecordings: true, over13: true, policyVersion: "2026-11-v1" }]);
 
   await expect(page.getByRole("heading", { name: "Choose your microphone" })).toBeVisible();
   await expect(page.locator("[data-mic-status]")).toHaveAttribute("data-mic-status", "live");
@@ -77,7 +87,24 @@ test("Meet Bolo through consent to the microphone check", async ({ page }) => {
 
   await page.getByRole("checkbox", { name: "I'm using headphones" }).check();
   await page.getByRole("button", { name: /continue/i }).click();
-  await expect(page.getByRole("heading", { name: "Next: three quick questions" })).toBeVisible();
+
+  // Setup questions (US-1.4): keys pick chips, Back keeps answers.
+  await expect(page.getByRole("heading", { name: "What do you need English for most?" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Next" })).toBeDisabled();
+  await page.keyboard.press("2");
+  await expect(page.getByRole("button", { name: "Job interviews" })).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "Next" }).click();
+  await expect(page.getByRole("heading", { name: "Which moment feels hardest?" })).toBeVisible();
+  await page.getByRole("button", { name: "Phone calls" }).click();
+  await page.getByRole("button", { name: "Back" }).click();
+  await expect(page.getByRole("button", { name: "Job interviews" })).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "Next" }).click();
+  await expect(page.getByRole("button", { name: "Phone calls" })).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "Next" }).click();
+  await page.getByRole("button", { name: "10 minutes" }).click();
+  await page.getByRole("button", { name: "Next" }).click();
+  expect(sent.profiles).toEqual([{ goal: "job_interviews", fearedMoment: "phone_calls", talkMinutes: 10 }]);
+  await expect(page.getByRole("heading", { name: "Introduce yourself, like at a new job" })).toBeVisible();
 });
 
 test("a reload on the microphone step resumes there", async ({ page }) => {
