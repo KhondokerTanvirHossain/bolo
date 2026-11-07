@@ -1,0 +1,44 @@
+<!-- @dsCard group="Screens" height=820 subtitle="bKash or card, then straight back to talking" page -->
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>ScreenPlanPay — Bolo</title></head>
+<body>
+<div class="bo-stage bo-stage--center" style="padding:24px 0">
+<div class="bo-phone">
+<div class="bo-statusbar"><span>9:41</span><span><span class="bo-icon bo-icon--sm" aria-hidden="true">signal_cellular_alt</span> <span class="bo-icon bo-icon--sm" aria-hidden="true">battery_5_bar</span></span></div>
+<div class="bo-flow">
+    <div class="bo-flow__top"><button class="bo-back" aria-label="Back"><span class="bo-icon" aria-hidden="true">arrow_back</span></button></div>
+    <h1 class="bo-flow__title" style="margin-top:var(--space-2)">Choose a plan</h1>
+    <p class="bo-flow__body">Each talk is up to 5 minutes, then your coach's feedback.</p>
+    <div style="height:var(--space-5)"></div>
+    <div class="bo-plans" role="radiogroup" aria-label="Plan">
+      <div class="bo-plan bo-plan--current" role="radio" aria-checked="false" aria-disabled="true"><span class="bo-plan__body"><span class="bo-plan__name">Free <span class="bo-tag bo-tag--steady">Your plan</span></span><span class="bo-plan__meta">7 talks in your first week, then 2 a month</span></span><span class="bo-plan__price">৳0</span></div>
+      <button class="bo-plan" role="radio" aria-checked="true"><span class="bo-radio"></span><span class="bo-plan__body"><span class="bo-plan__name">Basic</span><span class="bo-plan__meta">20 talks a month</span></span><span class="bo-plan__price">৳300<small>a month</small></span></button>
+      <button class="bo-plan" role="radio" aria-checked="false"><span class="bo-radio"></span><span class="bo-plan__body"><span class="bo-plan__name">Premium</span><span class="bo-plan__meta">50 talks a month</span></span><span class="bo-plan__price">৳500<small>a month</small></span></button>
+      <button class="bo-plan" role="radio" aria-checked="false"><span class="bo-radio"></span><span class="bo-plan__body"><span class="bo-plan__name">Ultimate</span><span class="bo-plan__meta">100 talks a month</span></span><span class="bo-plan__price">৳1000<small>a month</small></span></button>
+    </div>
+    <p class="bo-footnote" style="text-align:left;margin-top:var(--space-4)">Every plan has both scenes, Standup Rehearsal, drills and your full history.</p>
+    <div style="flex:1"></div>
+    <div class="bo-flow__actions" style="gap:var(--space-2)">
+      <button class="bo-btn bo-btn--primary bo-btn--block">Get Basic · ৳300 a month</button>
+      <p class="bo-footnote">Renews monthly. Cancel any time in 2 taps.</p>
+    </div>
+  </div>
+
+<div class="bo-sheet-scrim"></div>
+  <div class="bo-sheet" role="dialog" aria-modal="true" aria-labelledby="pay-t">
+    <div class="bo-sheet__grabber"></div>
+    <h2 class="bo-sheet__title" id="pay-t">Pay ৳300 a month</h2>
+    <p class="bo-sheet__body" style="margin-bottom:var(--space-3)">Basic · 20 talks a month</p>
+    <div class="bo-group" role="radiogroup" aria-label="Payment method" style="box-shadow:none;background:var(--surface-sunken)">
+      <div class="bo-row" role="radio" aria-checked="true"><span class="bo-radio"></span><div class="bo-row__body"><div class="bo-row__title">bKash</div><div class="bo-row__sub">Pay from your bKash account</div></div></div>
+      <div class="bo-row" role="radio" aria-checked="false"><span class="bo-radio"></span><div class="bo-row__body"><div class="bo-row__title">Card</div><div class="bo-row__sub">Visa, Mastercard or Amex</div></div><span class="bo-icon bo-chev" aria-hidden="true">credit_card</span></div>
+    </div>
+    <div style="height:var(--space-3)"></div>
+    <button class="bo-btn bo-btn--primary bo-btn--block">Pay with bKash</button>
+    <p class="bo-footnote" style="margin-top:var(--space-2)">Renews on the 6th of each month. Cancel any time in Me → Plan.</p>
+  </div>
+</div>
+</div>
+</body>
+</html>

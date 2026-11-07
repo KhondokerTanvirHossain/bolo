@@ -1,0 +1,145 @@
+/* Bolo — generated from tokens.json */
+:root, [data-theme="daylight"] {
+  --canvas: #f7f4fb;
+  --surface: #ffffff;
+  --surface-sunken: #efedf2;
+  --material-bar: rgba(247, 244, 251, 0.86);
+  --scrim: rgba(31, 20, 51, 0.40);
+  --ink: #1f1433;
+  --ink-secondary: #5a4e6e;
+  --ink-tertiary: #706479;
+  --separator: #e6e1ee;
+  --line-strong: #857a94;
+  --sun: #f4b942;
+  --on-sun: #2a1a00;
+  --sun-edge: #9a6a0a;
+  --sun-ink: #6e4a00;
+  --sun-soft: #fdefcc;
+  --hills: #5b3f8c;
+  --on-hills: #ffffff;
+  --hills-ink: #5b3f8c;
+  --hills-soft: #e3d8f6;
+  --rose: #c98aa3;
+  --on-rose: #2a0f1f;
+  --rose-ink: #8e4364;
+  --rose-soft: #f6e4ec;
+  --buddy: var(--rose);
+  --coach: var(--hills);
+  --clip-you: var(--ink-secondary);
+  --clip-model: var(--hills);
+  --nailed: #22743f;
+  --nailed-soft: #dff1e4;
+  --closer: #8a5a00;
+  --closer-soft: #fbeccb;
+  --once-more: var(--ink-secondary);
+  --critical: #b3261e;
+  --mouth-flesh: #e9dbe3;
+  --mouth-move: #d6c8ef;
+  --mouth-tooth: #ffffff;
+  --provider-fill: #ffffff;
+  --provider-line: #747775;
+  --provider-ink: #1f1f1f;
+  --focus-ring: var(--hills-ink);
+  --scene-sky-high: #2b1b4e;
+  --scene-sky-mid: #5b3f8c;
+  --scene-sky-low: #c98aa3;
+  --scene-sun: #f4b942;
+  --scene-star: #fff8ef;
+  --scene-hill-far: #5b3f8c;
+  --scene-hill-near: #1a0f2e;
+  --scene-plate: rgba(20, 12, 38, 0.62);
+  --on-scene: #fff8ef;
+  --on-scene-secondary: #e3d8ca;
+  --shadow-card: 0 1px 2px rgba(31, 20, 51, 0.06), 0 6px 20px rgba(31, 20, 51, 0.07);
+  --shadow-glow: 0 10px 28px rgba(196, 138, 26, 0.32);
+  --shadow-sheet: 0 -8px 40px rgba(31, 20, 51, 0.14);
+}
+[data-theme="dusk"] {
+  --canvas: #1d1236;
+  --surface: #2a1d48;
+  --surface-sunken: #3a2b5e;
+  --material-bar: rgba(29, 18, 54, 0.86);
+  --scrim: rgba(0, 0, 0, 0.56);
+  --ink: #fbf5ff;
+  --ink-secondary: #c9bde0;
+  --ink-tertiary: #9b8fb3;
+  --separator: #33264f;
+  --line-strong: #8a7fa6;
+  --sun: #f4b942;
+  --on-sun: #2a1a00;
+  --sun-edge: #f4b942;
+  --sun-ink: #ffd27a;
+  --sun-soft: #4a3a12;
+  --hills: #b8a2e8;
+  --on-hills: #160b2e;
+  --hills-ink: #c4b0f0;
+  --hills-soft: #33255a;
+  --rose: #c98aa3;
+  --on-rose: #2a0f1f;
+  --rose-ink: #dcaabf;
+  --rose-soft: #2f2142;
+  --buddy: var(--rose);
+  --coach: var(--hills);
+  --clip-you: var(--ink-secondary);
+  --clip-model: var(--hills);
+  --nailed: #72d492;
+  --nailed-soft: #143521;
+  --closer: #f0c05a;
+  --closer-soft: #3b2d0e;
+  --once-more: var(--ink-secondary);
+  --critical: #ffb4ab;
+  --mouth-flesh: #453566;
+  --mouth-move: #7a63b3;
+  --mouth-tooth: #f4eefc;
+  --provider-fill: #131314;
+  --provider-line: #8e918f;
+  --provider-ink: #e3e3e3;
+  --focus-ring: var(--hills-ink);
+  --shadow-card: 0 0 0 1px rgba(255, 255, 255, 0.06);
+  --shadow-glow: 0 10px 36px rgba(244, 185, 66, 0.34);
+  --shadow-sheet: 0 -8px 40px rgba(0, 0, 0, 0.55);
+}
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --radius-xs: 6px;
+  --radius-sm: 12px;
+  --radius-md: 18px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+  --radius-full: 999px;
+  --tap-min: 48px;
+  --button-height: 56px;
+  --talk-size: 128px;
+  --mic-ring: 96px;
+  --play-disc: 40px;
+  --icon-md: 24px;
+  --tabbar-height: 64px;
+  --screen-min: 360px;
+  --font-sans: "Anek Bangla", "Noto Sans Bengali", system-ui, sans-serif;
+  --font-bangla: "Anek Bangla", "Noto Sans Bengali", sans-serif;
+}
+.display { font-family: var(--font-sans); font-size: 40px; line-height: 44px; font-weight: 750; letter-spacing: -0.02em; }
+.large-title { font-family: var(--font-sans); font-size: 32px; line-height: 38px; font-weight: 700; letter-spacing: -0.015em; }
+.title-1 { font-family: var(--font-sans); font-size: 26px; line-height: 32px; font-weight: 650; letter-spacing: -0.01em; }
+.title-2 { font-family: var(--font-sans); font-size: 22px; line-height: 28px; font-weight: 650; letter-spacing: -0.005em; }
+.buddy-line { font-family: var(--font-sans); font-size: 22px; line-height: 30px; font-weight: 500; letter-spacing: 0; }
+.sentence { font-family: var(--font-sans); font-size: 19px; line-height: 28px; font-weight: 500; letter-spacing: 0; }
+.headline { font-family: var(--font-sans); font-size: 17px; line-height: 24px; font-weight: 650; letter-spacing: 0; }
+.body { font-family: var(--font-sans); font-size: 17px; line-height: 26px; font-weight: 400; letter-spacing: 0; }
+.callout { font-family: var(--font-sans); font-size: 16px; line-height: 22px; font-weight: 500; letter-spacing: 0; }
+.subhead { font-family: var(--font-sans); font-size: 15px; line-height: 20px; font-weight: 500; letter-spacing: 0.005em; }
+.footnote { font-family: var(--font-sans); font-size: 13px; line-height: 18px; font-weight: 500; letter-spacing: 0.01em; }
+.micro { font-family: var(--font-sans); font-size: 12px; line-height: 16px; font-weight: 650; letter-spacing: 0.02em; }
+.label-talk { font-family: var(--font-sans); font-size: 22px; line-height: 26px; font-weight: 750; letter-spacing: -0.01em; }
+.label { font-family: var(--font-sans); font-size: 17px; line-height: 22px; font-weight: 650; letter-spacing: 0; }
+.bangla-helper { font-family: var(--font-bangla); font-size: 14px; line-height: 22px; font-weight: 400; letter-spacing: 0; }
+.bangla-body { font-family: var(--font-bangla); font-size: 17px; line-height: 28px; font-weight: 500; letter-spacing: 0; }

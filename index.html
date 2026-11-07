@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Bolo Drive — PoC</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  #road { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  /* soft windscreen vignette so it feels like you're inside a car */
+  #vignette { position: fixed; inset: 0; pointer-events: none;
+    background: radial-gradient(ellipse at 50% 45%, transparent 55%, rgba(0,0,0,.55) 100%); }
+  /* fade layer used at the loop point ("tunnel") */
+  #fade { position: fixed; inset: 0; background: #000; opacity: 0; transition: opacity 1.2s ease; pointer-events: none; }
+  /* driver silhouette on the right (Bangladesh: driver sits on the right) */
+  #driver { position: fixed; right: -2vw; bottom: 0; height: 78vh; opacity: .82; pointer-events: none; transition: opacity .4s; }
+  #driver.hidden { opacity: 0; }
+  #start { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 18px; background: rgba(0,0,0,.72); color: #fff; text-align: center; z-index: 10; }
+  #start h1 { margin: 0; font-size: 28px; font-weight: 600; }
+  #start p { margin: 0; max-width: 420px; line-height: 1.5; color: #ddd; }
+  #start button { font-size: 18px; padding: 14px 28px; border: 0; border-radius: 999px; background: #fff; color: #000; cursor: pointer; }
+  #pick { font-size: 14px; color: #bbb; }
+  #pick label { text-decoration: underline; cursor: pointer; }
+  #hint { position: fixed; left: 16px; bottom: 16px; color: rgba(255,255,255,.6); font-size: 12px; z-index: 5; }
+</style>
+</head>
+<body>
+
+<video id="road" src="road.mp4" muted playsinline preload="auto"></video>
+<div id="vignette"></div>
+
+<!-- Simple driver silhouette in profile, looking ahead (left). Press D to hide if your video already shows a driver. -->
+<svg id="driver" class="hidden" viewBox="0 0 300 600" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <path fill="#0b0b0d" d="M210 70c-38 0-66 30-66 70 0 20 6 36 16 48-6 8-12 16-14 24-2 10 6 14 12 14 4 18 14 30 30 34v26
+    c-40 8-86 26-112 60C50 390 40 470 38 600h262V60c-24 0-58 6-90 10z"/>
+  <!-- arm reaching to the steering wheel -->
+  <path fill="#0b0b0d" d="M120 420c-30 30-60 70-80 120l30 10c22-44 50-80 78-106z"/>
+</svg>
+
+<div id="fade"></div>
+
+<div id="start">
+  <h1>Get in. Let's drive.</h1>
+  <p>Sit back and talk with your driver in English. Nobody is judging — just talk.</p>
+  <button id="go">Start the drive</button>
+  <div id="pick">No road.mp4 next to this page? <label for="file">Choose a video file</label>
+    <input id="file" type="file" accept="video/*" hidden></div>
+</div>
+
+<div id="hint">Press D to show/hide the driver · M to mute road sound</div>
+
+<!-- ElevenLabs voice agent (Bolo Driver) -->
+<elevenlabs-convai agent-id="agent_5501m6rn7y76fafsmhnvpqrfh0nw"></elevenlabs-convai>
+<script src="https://unpkg.com/@elevenlabs/convai-widget-embed" async type="text/javascript"></script>
+
+<script>
+  const video = document.getElementById('road');
+  const fade = document.getElementById('fade');
+  const driver = document.getElementById('driver');
+  let fading = false, audioCtx = null, master = null;
+
+  // Use a local file if road.mp4 isn't there
+  document.getElementById('file').addEventListener('change', e => {
+    const f = e.target.files[0];
+    if (f) video.src = URL.createObjectURL(f);
+  });
+
+  // Fade to black near the end and restart, like passing through a tunnel
+  video.addEventListener('timeupdate', () => {
+    if (!video.duration || fading) return;
+    if (video.duration - video.currentTime < 1.4) {
+      fading = true;
+      fade.style.opacity = 1;
+      setTimeout(() => {
+        video.currentTime = 0;
+        video.playbackRate = 0.9;
+        video.play();
+        fade.style.opacity = 0;
+        fading = false;
+      }, 1300);
+    }
+  });
+
+  // Generated road sound: low engine rumble + soft wind (no audio file needed)
+  function startRoadSound() {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    master = audioCtx.createGain();
+    master.gain.value = 0.18;               // keep it quiet so voices stay clear
+    master.connect(audioCtx.destination);
+
+    // brown noise = wind / tyre noise
+    const len = 2 * audioCtx.sampleRate;
+    const buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+    const d = buf.getChannelData(0);
+    let last = 0;
+    for (let i = 0; i < len; i++) { const w = Math.random() * 2 - 1; last = (last + 0.02 * w) / 1.02; d[i] = last * 3.5; }
+    const noise = audioCtx.createBufferSource();
+    noise.buffer = buf; noise.loop = true;
+    const lp = audioCtx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 500;
+    noise.connect(lp).connect(master);
+    noise.start();
+
+    // engine hum
+    const osc = audioCtx.createOscillator(); osc.type = 'sawtooth'; osc.frequency.value = 42;
+    const oscLp = audioCtx.createBiquadFilter(); oscLp.type = 'lowpass'; oscLp.frequency.value = 120;
+    const oscGain = audioCtx.createGain(); oscGain.gain.value = 0.25;
+    osc.connect(oscLp).connect(oscGain).connect(master);
+    osc.start();
+  }
+
+  document.getElementById('go').addEventListener('click', async () => {
+    video.playbackRate = 0.9;   // slightly slower: calmer and the clip lasts longer
+    try { await video.play(); } catch (e) { /* user may need to pick a file */ }
+    if (!audioCtx) startRoadSound();
+    document.getElementById('start').style.display = 'none';
+  });
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'd' || e.key === 'D') driver.classList.toggle('hidden');
+    if ((e.key === 'm' || e.key === 'M') && master) master.gain.value = master.gain.value > 0 ? 0 : 0.18;
+  });
+</script>
+</body>
+</html>
