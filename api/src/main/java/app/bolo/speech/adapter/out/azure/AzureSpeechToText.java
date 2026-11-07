@@ -97,7 +97,10 @@ public class AzureSpeechToText implements SpeechToTextPort {
         try { c.close(); } catch (Exception ignored) { }
     }
 
-    /** Final segments since the last mark, plus the newest partial. */
+    /**
+     * Final segments since the last mark, plus the newest partial. The listener is called outside this object's lock:
+     * it takes the conversation's lock, and the conversation calls mark() - holding both in opposite orders deadlocks.
+     */
     static final class Utterance {
 
         private final TranscriptListener listener;
@@ -108,15 +111,23 @@ public class AzureSpeechToText implements SpeechToTextPort {
             this.listener = listener;
         }
 
-        synchronized void partial(String text) {
-            partial = text == null ? "" : text;
-            listener.onPartial(textSoFar());
+        void partial(String text) {
+            String now;
+            synchronized (this) {
+                partial = text == null ? "" : text;
+                now = textSoFar();
+            }
+            listener.onPartial(now);
         }
 
-        synchronized void fin(String text) {
-            partial = "";
-            if (text != null && !text.isBlank()) finals.add(text.trim());
-            listener.onPartial(textSoFar());
+        void fin(String text) {
+            String now;
+            synchronized (this) {
+                partial = "";
+                if (text != null && !text.isBlank()) finals.add(text.trim());
+                now = textSoFar();
+            }
+            listener.onPartial(now);
         }
 
         synchronized void mark() {
@@ -124,7 +135,7 @@ public class AzureSpeechToText implements SpeechToTextPort {
             partial = "";
         }
 
-        private String textSoFar() {
+        private synchronized String textSoFar() {
             List<String> parts = new ArrayList<>(finals);
             if (!partial.isBlank()) parts.add(partial.trim());
             return String.join(" ", parts);

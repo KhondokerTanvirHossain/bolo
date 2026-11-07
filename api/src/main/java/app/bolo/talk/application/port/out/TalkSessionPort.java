@@ -10,8 +10,18 @@ import java.util.Optional;
 
 public interface TalkSessionPort {
 
-    /** Inserts the talk unless {@code cap} talks started after {@code liveSince} are still live; atomic. */
-    boolean insertIfBelowCap(TalkSession session, int cap, Instant liveSince);
+    /**
+     * Inserts the talk unless {@code cap} talks still hold a slot; atomic. A live talk holds a slot if it attached a
+     * socket and started after {@code liveSince}, or never attached and started after {@code unattachedSince}.
+     */
+    boolean insertIfBelowCap(TalkSession session, int cap, Instant liveSince, Instant unattachedSince);
+
+    /** Marks the talk attached to a socket; false if it's not this learner's, ended, already attached or too old. */
+    boolean attach(TalkSessionId id, LearnerId learner, Instant unattachedSince, Instant at);
+
+    void endOpenFor(LearnerId learner, EndReason reason, Instant at);
+
+    void endAllOpen(EndReason reason, Instant at);
 
     Optional<TalkSession> findLive(TalkSessionId id, LearnerId learner);
 

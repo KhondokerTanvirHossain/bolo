@@ -24,7 +24,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /** POST /api/talk and the /ws/talk door: consent first, one live talk on the free tier, only your own session. */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = {"bolo.talk.max-live-sessions=1", "bolo.speech.vendor=fake", "bolo.llm.vendor=fake"})
+        properties = {"bolo.talk.max-live-sessions=1", "bolo.speech.vendor=fake", "bolo.llm.vendor=fake",
+        "bolo.talk.attach-within-ms=1500"})
 class TalkSessionAcceptanceTest extends PostgresTestBase {
 
     @LocalServerPort int port;
@@ -86,6 +87,45 @@ class TalkSessionAcceptanceTest extends PostgresTestBase {
 
         talks.end(new TalkSessionId(UUID.fromString(id)), EndReason.LEARNER_ENDED);
         assertRefused(id, mine, TalkTestClient.ORIGIN);
+    }
+
+    /** Review #1: a talk nobody connects to (End tapped while connecting, a failed handshake) frees the slot quickly. */
+    @Test
+    void anUnattachedTalkStopsHoldingTheSlot() throws Exception {
+        assertThat(client.startTalk(client.consentedGuest(5)).status()).isEqualTo(201);
+        String other = client.consentedGuest(5);
+        assertThat(client.startTalk(other).status()).isEqualTo(422);
+        Thread.sleep(1700);
+        assertThat(client.startTalk(other).status()).isEqualTo(201);
+    }
+
+    /** Review #1: "Try again" right after a talk that never connected is not told "busy" by its own leftover. */
+    @Test
+    void startingAgainEndsYourOwnOpenTalk() throws Exception {
+        String cookie = client.consentedGuest(5);
+        String first = TalkTestClient.id(client.startTalk(cookie));
+        assertThat(client.startTalk(cookie).status()).isEqualTo(201);
+        assertThat(jdbc.sql("select end_reason from talk_session where id = ?").param(UUID.fromString(first))
+                .query(String.class).single()).isEqualTo("disconnected");
+    }
+
+    /** Review #5: one socket per talk, so a script can't multiply vendor streams or dodge the cap. */
+    @Test
+    void aTalkAcceptsOneSocket() throws Exception {
+        String cookie = client.consentedGuest(5);
+        String id = TalkTestClient.id(client.startTalk(cookie));
+        WebSocketSession first = connect(id, cookie, TalkTestClient.ORIGIN);
+        assertRefused(id, cookie, TalkTestClient.ORIGIN);
+        first.close();
+    }
+
+    /** Review #1: after a restart no talk is running, so none may hold the slot. */
+    @Test
+    void openTalksAreEndedOnStartup() throws Exception {
+        String id = TalkTestClient.id(client.startTalk(client.consentedGuest(5)));
+        talks.endAllOpen();
+        assertThat(jdbc.sql("select end_reason from talk_session where id = ?").param(UUID.fromString(id))
+                .query(String.class).single()).isEqualTo("disconnected");
     }
 
     @Test

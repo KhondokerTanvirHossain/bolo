@@ -28,15 +28,18 @@ public class TalkSessionService implements StartTalkUseCase {
     private final BoloClock clock;
     private final String policyVersion;
     private final int maxLive;
+    private final Duration attachWithin;
 
     public TalkSessionService(TalkSessionPort sessions, CurrentLearnerUseCase learners, BoloClock clock,
                               @Value("${bolo.policy-version}") String policyVersion,
-                              @Value("${bolo.talk.max-live-sessions}") int maxLive) {
+                              @Value("${bolo.talk.max-live-sessions}") int maxLive,
+                              @Value("${bolo.talk.attach-within-ms}") long attachWithinMs) {
         this.sessions = sessions;
         this.learners = learners;
         this.clock = clock;
         this.policyVersion = policyVersion;
         this.maxLive = maxLive;
+        this.attachWithin = Duration.ofMillis(attachWithinMs);
     }
 
     @Override
@@ -44,8 +47,11 @@ public class TalkSessionService implements StartTalkUseCase {
         LearnerView view = consented(learner).orElseThrow(() -> new RefusedException("no-consent"));
         int minutes = view.profile() == null ? 5 : view.profile().talkMinutes();
         var now = clock.now();
+        sessions.endOpenFor(learner, EndReason.DISCONNECTED, now);
         TalkSession session = new TalkSession(TalkSessionId.newId(), learner, minutes, now, null);
-        if (!sessions.insertIfBelowCap(session, maxLive, now.minus(SLOT_HOLD))) throw new RefusedException("busy");
+        if (!sessions.insertIfBelowCap(session, maxLive, now.minus(SLOT_HOLD), now.minus(attachWithin))) {
+            throw new RefusedException("busy");
+        }
         return toView(session, view);
     }
 
@@ -57,6 +63,17 @@ public class TalkSessionService implements StartTalkUseCase {
     @Override
     public void end(TalkSessionId id, EndReason reason) {
         sessions.end(id, reason, clock.now());
+    }
+
+    @Override
+    public Optional<TalkView> attach(LearnerId learner, TalkSessionId id) {
+        var now = clock.now();
+        return openFor(learner, id).filter(v -> sessions.attach(id, learner, now.minus(attachWithin), now));
+    }
+
+    @Override
+    public void endAllOpen() {
+        sessions.endAllOpen(EndReason.DISCONNECTED, clock.now());
     }
 
     private Optional<LearnerView> consented(LearnerId learner) {

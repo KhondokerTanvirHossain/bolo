@@ -18,7 +18,7 @@ import java.util.Optional;
 /**
  * The door to /ws/talk/{id}: the session cookie (already resolved by the cookie filter), the exact public Origin
  * (a cross-site page can't open a socket with the learner's cookie), consent to the current policy (NFR-16), and
- * the learner's own live talk. Anything else gets 403 before the upgrade.
+ * the learner's own live talk, attached once. Anything else gets 403 before the upgrade.
  */
 class TalkHandshakeInterceptor implements HandshakeInterceptor {
 
@@ -59,7 +59,7 @@ class TalkHandshakeInterceptor implements HandshakeInterceptor {
         } catch (IllegalArgumentException e) {
             return Optional.empty();
         }
-        return talks.openFor(learner, id);
+        return talks.attach(learner, id);
     }
 
     @Override

@@ -73,6 +73,25 @@ class QueuedOutputTest {
         assertThat(closed.get()).isEqualTo(CloseStatus.SESSION_NOT_RELIABLE);
     }
 
+    /** Review #6: every way out stops the writer thread, so a talk can't leak it (and its conversation). */
+    @Test
+    void anOverflowStopsTheWriter() throws Exception {
+        QueuedOutput out = new QueuedOutput(session(true), JsonMapper.builder().build(), 100_000);
+        for (int i = 0; i < 40; i++) out.audio(new byte[4800]);
+        long until = System.currentTimeMillis() + 2000;
+        while (out.writerAlive() && System.currentTimeMillis() < until) Thread.sleep(10);
+        assertThat(out.writerAlive()).isFalse();
+    }
+
+    @Test
+    void closeStopsTheWriter() throws Exception {
+        QueuedOutput out = new QueuedOutput(session(false), JsonMapper.builder().build(), 4 * 1024 * 1024);
+        out.close(false);
+        long until = System.currentTimeMillis() + 2000;
+        while (out.writerAlive() && System.currentTimeMillis() < until) Thread.sleep(10);
+        assertThat(out.writerAlive()).isFalse();
+    }
+
     @Test
     void closeIsSentAfterWhatIsQueued() throws Exception {
         QueuedOutput out = new QueuedOutput(session(false), JsonMapper.builder().build(), 4 * 1024 * 1024);

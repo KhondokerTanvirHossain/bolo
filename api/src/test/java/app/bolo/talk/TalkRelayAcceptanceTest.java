@@ -164,6 +164,33 @@ class TalkRelayAcceptanceTest extends PostgresTestBase {
         assertThat(row.get("heard_ms")).isEqualTo(840);
     }
 
+    /** Review #3: a real browser sends heard as Bolo's voice starts, before buddy_done; it must still count. */
+    @Test
+    void heardBeforeBuddyDoneCounts() throws Exception {
+        try (TalkSocket s = yourTurn()) {
+            s.tone(400);
+            s.zeros(600);
+            s.await(2000, "\"turn_end\"", "\"turn\":1");
+            s.awaitAudio(3000);
+            s.json("{\"type\":\"heard\",\"turn\":2,\"ms\":700}");
+            s.await(3000, "\"buddy_done\"", "\"turn\":2");
+            s.json("{\"type\":\"end\"}");
+            assertThat(s.await(2000, "\"ended\"")).contains("\"p50Ms\":700");
+        }
+        assertThat(jdbc.sql("select heard_ms from talk_turn where session_id = ? and idx = 2")
+                .param(UUID.fromString(id)).query(Integer.class).single()).isEqualTo(700);
+    }
+
+    /** Review #5: audio pushed far faster than real time doesn't reach the (billed) recogniser. */
+    @Test
+    void audioFasterThanRealTimeIsDropped() throws Exception {
+        try (TalkSocket s = yourTurn()) {
+            s.tone(10_000);
+            Thread.sleep(500);
+            assertThat(stt.streams().getLast().loudFrames()).isLessThan(250);
+        }
+    }
+
     String endReason() {
         return jdbc.sql("select end_reason from talk_session where id = ?").param(UUID.fromString(id))
                 .query(String.class).optional().orElse(null);

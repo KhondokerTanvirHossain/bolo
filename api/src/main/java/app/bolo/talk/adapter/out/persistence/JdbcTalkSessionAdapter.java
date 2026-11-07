@@ -26,15 +26,40 @@ class JdbcTalkSessionAdapter implements TalkSessionPort {
 
     @Override
     @Transactional
-    public boolean insertIfBelowCap(TalkSession s, int cap, Instant liveSince) {
+    public boolean insertIfBelowCap(TalkSession s, int cap, Instant liveSince, Instant unattachedSince) {
         jdbc.sql("select pg_advisory_xact_lock(?)").param(START_LOCK).query().singleRow();
         return jdbc.sql("""
                 insert into talk_session (id, learner_id, minutes, started_at)
                 select ?, ?, ?, ?
-                where (select count(*) from talk_session where ended_at is null and started_at > ?) < ?""")
+                where (select count(*) from talk_session
+                       where ended_at is null and started_at > ?
+                         and (attached_at is not null or started_at > ?)) < ?""")
                 .params(s.id().value(), s.learnerId().value(), s.minutes(), Timestamp.from(s.startedAt()),
-                        Timestamp.from(liveSince), cap)
+                        Timestamp.from(liveSince), Timestamp.from(unattachedSince), cap)
                 .update() == 1;
+    }
+
+    @Override
+    public boolean attach(TalkSessionId id, LearnerId learner, Instant unattachedSince, Instant at) {
+        return jdbc.sql("""
+                update talk_session set attached_at = ?
+                where id = ? and learner_id = ? and ended_at is null and attached_at is null and started_at > ?""")
+                .params(Timestamp.from(at), id.value(), learner.value(), Timestamp.from(unattachedSince))
+                .update() == 1;
+    }
+
+    @Override
+    public void endOpenFor(LearnerId learner, EndReason reason, Instant at) {
+        jdbc.sql("update talk_session set ended_at = ?, end_reason = ? where learner_id = ? and ended_at is null")
+                .params(Timestamp.from(at), reason.dbValue(), learner.value())
+                .update();
+    }
+
+    @Override
+    public void endAllOpen(EndReason reason, Instant at) {
+        jdbc.sql("update talk_session set ended_at = ?, end_reason = ? where ended_at is null")
+                .params(Timestamp.from(at), reason.dbValue())
+                .update();
     }
 
     @Override

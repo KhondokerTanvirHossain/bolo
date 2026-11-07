@@ -38,6 +38,8 @@ public class TalkRelayService implements TalkRelayUseCase {
                             @Value("${bolo.talk.minute-ms}") long minuteMs,
                             @Value("${bolo.talk.wrap-grace-ms}") long wrapGraceMs,
                             @Value("${bolo.talk.reply-timeout-ms}") long replyTimeoutMs,
+                            @Value("${bolo.talk.no-audio-timeout-ms}") long noAudioTimeoutMs,
+                            @Value("${bolo.talk.burst-allowance-ms}") long burstAllowanceMs,
                             @Value("${bolo.llm.buddy-model}") String model,
                             @Value("${bolo.llm.max-tokens}") int maxTokens) {
         this.recogniser = recogniser;
@@ -48,7 +50,8 @@ public class TalkRelayService implements TalkRelayUseCase {
         var words = Arrays.stream(unfinishedWords.split(",")).map(w -> w.trim().toLowerCase(Locale.ROOT))
                 .filter(w -> !w.isEmpty()).collect(Collectors.toUnmodifiableSet());
         this.settings = new TalkSettings(new TurnPolicy(speculateAfterMs, endAfterMs, unfinishedEndAfterMs, words),
-                model, maxTokens, minuteMs, wrapGraceMs, replyTimeoutMs);
+                model, maxTokens, minuteMs, wrapGraceMs, replyTimeoutMs,
+                noAudioTimeoutMs, burstAllowanceMs);
     }
 
     @Override

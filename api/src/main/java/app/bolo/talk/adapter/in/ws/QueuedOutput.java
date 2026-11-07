@@ -33,12 +33,17 @@ final class QueuedOutput implements TalkOutput {
     private final BlockingQueue<Object> queue = new LinkedBlockingQueue<>();
     private final AtomicLong queuedBytes = new AtomicLong();
     private final AtomicBoolean closing = new AtomicBoolean();
+    private final Thread writer;
 
     QueuedOutput(WebSocketSession session, JsonMapper json, long maxQueuedBytes) {
         this.session = session;
         this.json = json;
         this.maxQueuedBytes = maxQueuedBytes;
-        Thread.ofVirtual().name("talk-writer").start(this::drain);
+        this.writer = Thread.ofVirtual().name("talk-writer").start(this::drain);
+    }
+
+    boolean writerAlive() {
+        return writer.isAlive();
     }
 
     @Override
@@ -66,6 +71,7 @@ final class QueuedOutput implements TalkOutput {
     private void closeNow(CloseStatus status) {
         if (!closing.compareAndSet(false, true)) return;
         queue.clear();
+        queue.add(new Close(status));
         try {
             session.close(status);
         } catch (Exception e) {

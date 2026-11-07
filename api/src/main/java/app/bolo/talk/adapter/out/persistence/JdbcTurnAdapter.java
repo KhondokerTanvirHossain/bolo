@@ -17,11 +17,11 @@ class JdbcTurnAdapter implements TurnPort {
     private final BoloClock clock;
 
     @Override
-    public void save(TalkSessionId session, int idx, String speaker, String text, Integer serverMs) {
+    public void save(TalkSessionId session, int idx, String speaker, String text, Integer serverMs, Integer heardMs) {
         jdbc.sql("""
-                insert into talk_turn (session_id, idx, speaker, text, server_ms, at) values (?, ?, ?, ?, ?, ?)
+                insert into talk_turn (session_id, idx, speaker, text, server_ms, heard_ms, at) values (?, ?, ?, ?, ?, ?, ?)
                 on conflict (session_id, idx) do nothing""")
-                .params(session.value(), idx, speaker, text, serverMs, Timestamp.from(clock.now()))
+                .params(session.value(), idx, speaker, text, serverMs, heardMs, Timestamp.from(clock.now()))
                 .update();
     }
 
