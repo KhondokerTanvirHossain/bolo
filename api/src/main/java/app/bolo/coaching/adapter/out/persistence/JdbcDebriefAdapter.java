@@ -28,6 +28,11 @@ class JdbcDebriefAdapter implements DebriefPort {
     }
 
     @Override
+    public void delete(TalkSessionId talk) {
+        jdbc.sql("delete from debrief where session_id = ?").param(talk.value()).update();
+    }
+
+    @Override
     public void save(TalkSessionId talk, String status, String body, int attempts, Instant at) {
         jdbc.sql("update debrief set status = ?, body = cast(? as jsonb), attempts = ?, updated_at = ? where session_id = ?")
                 .params(status, body, attempts, Timestamp.from(at), talk.value())

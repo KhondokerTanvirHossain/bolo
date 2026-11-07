@@ -46,7 +46,10 @@ class PilotTalkAcceptanceTest extends PostgresTestBase {
     void reset() {
         stt.nextText(null);
         stt.silentRecogniser(false);
+        stt.openDelayMs(0);
         llm.safetyReply(null);
+        llm.failSafety(false);
+        llm.deltaMs(30);
         tts.voices().clear();
     }
 
@@ -159,6 +162,131 @@ class PilotTalkAcceptanceTest extends PostgresTestBase {
             s.tone(400);
             s.zeros(600);
             assertThat(s.await(5000, "\"crisis\"")).contains("You're not alone");
+        }
+    }
+
+    /** Review C1: crisis words inside a "sorry" are a crisis, not a request to repeat. */
+    @Test
+    void crisisWordsAfterSorryStillGetCare() throws Exception {
+        stt.nextText("Sorry, I want to die.");
+        llm.safetyReply("{\"crisis\":true}");
+        try (TalkSocket s = yourTurn()) {
+            s.tone(400);
+            s.zeros(600);
+            assertThat(s.await(5000, "\"crisis\"")).contains("999");
+        }
+    }
+
+    /** Review C2: on a keyword turn, a classifier that fails counts as a crisis (fail closed). */
+    @Test
+    void aFailingClassifierOnAKeywordTurnStillGetsCare() throws Exception {
+        stt.nextText("Sometimes I want to kill myself");
+        llm.failSafety(true);
+        try (TalkSocket s = yourTurn()) {
+            s.tone(400);
+            s.zeros(600);
+            assertThat(s.await(5000, "\"crisis\"")).contains("09612-119911");
+        }
+    }
+
+    /** Review #4: ending while the safety check is still out still counts as a crisis — no debrief of that turn. */
+    @Test
+    void endingDuringTheSafetyCheckIsStillACrisis() throws Exception {
+        stt.nextText("Sometimes I want to kill myself");
+        llm.safetyReply("{\"crisis\":true}");
+        try (TalkSocket s = yourTurn()) {
+            llm.deltaMs(250);
+            s.tone(400);
+            s.zeros(600);
+            s.await(2000, "\"turn_end\"");
+            s.json("{\"type\":\"end\"}");
+            assertThat(s.await(5000, "\"ended\"")).contains("\"crisis\"");
+        }
+        Thread.sleep(500);
+        assertThat(jdbc.sql("select count(*) from debrief where session_id = ?").param(UUID.fromString(id))
+                .query(Integer.class).single()).isZero();
+    }
+
+    /** Review #5: pausing again while a resume is reopening leaves no recogniser open and no Bolo line. */
+    @Test
+    void pauseDuringResumeLeavesNothingRunning() throws Exception {
+        try (TalkSocket s = yourTurn()) {
+            s.json("{\"type\":\"pause\"}");
+            s.await(2000, "\"paused\"");
+            stt.openDelayMs(400);
+            s.json("{\"type\":\"resume\"}");
+            s.await(2000, "\"resumed\"");
+            s.json("{\"type\":\"pause\"}");
+            s.await(2000, "\"paused\"");
+            Thread.sleep(1000);
+            assertThat(stt.streams()).allMatch(FakeSpeechToText.Stream::closed);
+            assertThat(s.quiet(500, "\"caption\"", "\"turn\":1")).isTrue();
+        }
+    }
+
+    /** Review #6: pausing while the safety check runs means Bolo doesn't then speak into the pause. */
+    @Test
+    void boloDoesNotSpeakIntoAPause() throws Exception {
+        stt.nextText("I want to die of laughter, that film was so funny");
+        llm.safetyReply("{\"crisis\":false}");
+        try (TalkSocket s = yourTurn()) {
+            llm.deltaMs(250);
+            s.tone(400);
+            s.zeros(600);
+            s.await(2000, "\"turn_end\"");
+            s.json("{\"type\":\"pause\"}");
+            s.await(2000, "\"paused\"");
+            assertThat(s.quiet(2500, "\"caption\"", "\"turn\":2")).isTrue();
+        }
+    }
+
+    /** Review #7: tapping replay counts as the learner engaging — the silence stages start again. */
+    @Test
+    void replayStartsTheSilenceStagesAgain() throws Exception {
+        try (TalkSocket s = yourTurn()) {
+            s.zeros(1100);
+            s.await(3000, "\"buddy_done\"", "\"turn\":1");
+            s.json("{\"type\":\"played\",\"turn\":1}");
+            s.await(2000, "\"your_turn\"");
+            s.zeros(1000);
+            s.await(3000, "\"hint\"");
+            s.json("{\"type\":\"repeat\"}");
+            s.await(3000, "\"buddy_done\"", "\"turn\":2");
+            s.json("{\"type\":\"played\",\"turn\":2}");
+            s.await(2000, "\"your_turn\"");
+            s.zeros(1000);
+            assertThat(s.quiet(1500, "\"paused\"")).isTrue();
+        }
+    }
+
+    /** Review #9: after three short answers, one starter card for Bolo's new question — not every turn after. */
+    @Test
+    void threeShortAnswersGetOneStarterCardForTheNewQuestion() throws Exception {
+        stt.nextText("yes");
+        try (TalkSocket s = yourTurn()) {
+            int buddy = 0;
+            int hints = 0;
+            for (int t = 0; t < 4; t++) {
+                if (t > 0) {
+                    s.json("{\"type\":\"played\",\"turn\":" + buddy + "}");
+                    s.await(2000, "\"your_turn\"");
+                }
+                s.tone(400);
+                s.zeros(600);
+                buddy += 2;
+                boolean done = false;
+                long until = System.currentTimeMillis() + 4000;
+                while (!done && System.currentTimeMillis() < until) {
+                    Object m = s.inbox.poll(100, java.util.concurrent.TimeUnit.MILLISECONDS);
+                    if (m instanceof String str) {
+                        if (str.contains("\"hint\"")) hints++;
+                        done = str.contains("\"buddy_done\"") && str.contains("\"turn\":" + buddy);
+                    }
+                }
+                Thread.sleep(300);
+                for (Object m; (m = s.inbox.poll()) != null; ) if (m instanceof String str && str.contains("\"hint\"")) hints++;
+            }
+            assertThat(hints).isEqualTo(1);
         }
     }
 }

@@ -23,6 +23,12 @@ public class FakeSpeechToText implements SpeechToTextPort {
     private volatile List<ScoredWord> nextWords = defaultWords();
     private volatile String nextText = "hello bolo";
     private volatile boolean silent;
+    private volatile long openDelayMs;
+
+    /** Simulates a slow vendor start (Azure takes ~0.5-1 s to open a recognition). */
+    public void openDelayMs(long ms) {
+        this.openDelayMs = ms;
+    }
 
     /** What the fake "hears" (default "hello bolo"). */
     public void nextText(String text) {
@@ -52,6 +58,13 @@ public class FakeSpeechToText implements SpeechToTextPort {
 
     @Override
     public TranscriptionStream open(TranscriptListener listener) {
+        if (openDelayMs > 0) {
+            try {
+                Thread.sleep(openDelayMs);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
         Stream s = new Stream(listener, this);
         streams.add(s);
         return s;

@@ -67,7 +67,8 @@ export function TalkScreen({ state, onDone, onEnd, onTalkAgain, onLeave, onPause
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (!live) return;
+      // Browser shortcuts (Cmd/Ctrl+R reload, Ctrl+P print…) are the browser's.
+      if (!live || e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.key === "Escape") {
         e.preventDefault();
         setAsking((a) => !a);

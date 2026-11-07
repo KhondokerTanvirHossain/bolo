@@ -14,6 +14,13 @@ class CrisisScreenTest {
         assertThat(CrisisScreen.mayBeCrisis("I want to die")).isTrue();
     }
 
+    /** Review: whole words only — "diet" is not "die". */
+    @Test
+    void wordsNotSubstrings() {
+        assertThat(CrisisScreen.mayBeCrisis("I want to diet before the wedding")).isFalse();
+        assertThat(CrisisScreen.mayBeCrisis("Sometimes I want to die.")).isTrue();
+    }
+
     @Test
     void ordinaryTalkIsNotFlagged() {
         assertThat(CrisisScreen.mayBeCrisis("The deadline is killing me, haha")).isFalse();

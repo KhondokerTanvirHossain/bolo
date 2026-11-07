@@ -61,6 +61,8 @@ export function talk(state: TalkState, action: TalkAction): TalkState {
       return initialTalk;
     case "state":
       if (FINAL.includes(state.phase) && state.phase !== "idle") return state;
+      // While paused, only "resumed" brings the talk back (a late Bolo line must not reopen the mic).
+      if (state.phase === "paused") return state;
       return { ...state, phase: action.value, hint: action.value === "your_turn" ? state.hint : null };
     case "hint":
       return { ...state, hint: action.starters };

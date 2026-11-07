@@ -32,6 +32,12 @@ public class FakeLlm implements LlmPort {
     private final java.util.concurrent.atomic.AtomicInteger replyCalls = new java.util.concurrent.atomic.AtomicInteger();
     private volatile String lastReplyRequest = "";
 
+    private volatile boolean failSafety;
+
+    public void failSafety(boolean fail) {
+        this.failSafety = fail;
+    }
+
     public void safetyReply(String json) {
         this.safetyReply = json == null ? SAFE : json;
     }
@@ -85,7 +91,8 @@ public class FakeLlm implements LlmPort {
             lastReplyRequest = request.system() + "\n" + request.messages();
         }
         String text = safety ? safetyReply : starters ? STARTERS : structured ? structuredReply : reply;
-        RuntimeException fail = safety || starters ? null : structured ? (failStructured ? new IllegalStateException("coach down") : null) : failWith;
+        RuntimeException fail = safety ? (failSafety ? new IllegalStateException("classifier down") : null)
+                : starters ? null : structured ? (failStructured ? new IllegalStateException("coach down") : null) : failWith;
         long pause = deltaMs;
         Thread worker = Thread.ofVirtual().start(() -> {
             try {

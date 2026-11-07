@@ -240,3 +240,42 @@ test("R asks Bolo to repeat; CC hides the caption; a long wait says Bolo is thin
   send(fake.ws(), { type: "state", value: "thinking" });
   await expect(page.getByText("Bolo is thinking…")).toBeVisible({ timeout: 6000 });
 });
+
+/** Review #3: a crisis stops Bolo's normal reply, and the crisis script isn't cut off when the server closes. */
+test("a crisis silences the reply and lets the script finish", async ({ page }) => {
+  await page.addInitScript(() => {
+    const w = window as unknown as { __stops: number; __closes: number };
+    w.__stops = 0;
+    w.__closes = 0;
+    const stop = AudioBufferSourceNode.prototype.stop;
+    AudioBufferSourceNode.prototype.stop = function (...a: [number?]) { w.__stops++; return stop.apply(this, a); };
+    const close = AudioContext.prototype.close;
+    AudioContext.prototype.close = function () { w.__closes++; return close.apply(this); };
+  });
+  const fake = await liveTalk(page);
+  const ws = fake.ws();
+  ws.send(pcm24k());
+  send(ws, { type: "crisis", title: "You're not alone", lines: ["I'm really glad you told me."],
+    help: [{ name: "National emergency", number: "999", hours: "Any time" }] });
+  ws.send(pcm24k());
+  send(ws, { type: "ended", reason: "crisis", turns: 1, p50Ms: null, p90Ms: null });
+  await ws.close();
+  await expect(page.getByRole("heading", { name: "You're not alone" })).toBeVisible();
+  const counts = await page.evaluate(() => {
+    const w = window as unknown as { __stops: number; __closes: number };
+    return { stops: w.__stops, closes: w.__closes };
+  });
+  expect(counts.stops).toBeGreaterThan(0);
+  expect(counts.closes).toBe(0);
+});
+
+/** Review: browser shortcuts (Cmd/Ctrl+R reload, Ctrl+P print) are not Bolo's. */
+test("Ctrl+R is the browser's, not a repeat", async ({ page }) => {
+  const fake = await liveTalk(page);
+  send(fake.ws(), { type: "caption", turn: 0, text: "What did you do today?" });
+  send(fake.ws(), { type: "state", value: "your_turn" });
+  await expect(page.getByRole("button", { name: "Done, end my turn" })).toBeEnabled();
+  await page.evaluate(() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "r", ctrlKey: true })));
+  await page.waitForTimeout(300);
+  expect(fake.texts.includes('{"type":"repeat"}')).toBe(false);
+});

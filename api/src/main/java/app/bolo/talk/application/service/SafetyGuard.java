@@ -32,11 +32,16 @@ public class SafetyGuard {
         this.model = model;
     }
 
-    /** Completes false on any failure; callers that must not miss a crisis combine this with the keyword screen. */
+    /**
+     * The classifier's verdict. A failure completes exceptionally, so each caller decides: a keyword-matched turn
+     * treats it as a crisis (fail closed); the parallel check on ordinary turns treats it as no crisis.
+     */
     public CompletableFuture<Boolean> isCrisis(TalkContext ctx, String said) {
         var request = new LlmRequest(model, SYSTEM, List.of(LlmMessage.user(said)), 50, SCHEMA, true);
-        return llm.stream(ctx, request, d -> { }).done()
-                .thenApply(r -> JSON.readTree(r.text()).path("crisis").asBoolean(false))
-                .exceptionally(e -> false);
+        return llm.stream(ctx, request, d -> { }).done().thenApply(r -> {
+            var verdict = JSON.readTree(r.text()).path("crisis");
+            if (!verdict.isBoolean()) throw new IllegalStateException("no verdict");
+            return verdict.asBoolean();
+        });
     }
 }

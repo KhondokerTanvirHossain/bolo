@@ -71,3 +71,14 @@ describe("pilot-safe talk messages", () => {
     expect(s.crisis?.help[0].number).toBe("999");
   });
 });
+
+describe("review fixes", () => {
+  /** Review #5: while paused, server state can't pull the screen back to "your turn" until "resumed". */
+  it("ignores server state while paused", () => {
+    let s = talk(talk(initialTalk, { type: "state", value: "your_turn" }), { type: "paused", reason: "learner" });
+    s = talk(s, { type: "state", value: "your_turn" });
+    expect(s.phase).toBe("paused");
+    s = talk(talk(s, { type: "resumed" }), { type: "state", value: "your_turn" });
+    expect(s.phase).toBe("your_turn");
+  });
+});

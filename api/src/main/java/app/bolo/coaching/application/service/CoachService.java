@@ -97,6 +97,7 @@ public class CoachService implements DebriefUseCase {
     public void onTalkEnded(TalkEnded e) {
         // No debrief after a crisis (TLK-14): the practice stops, and its audio isn't kept.
         if ("crisis".equals(e.reason())) {
+            debriefs.delete(e.id());
             audio.deletePrefix("talk/" + e.id() + "/");
             return;
         }

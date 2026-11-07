@@ -13,6 +13,8 @@ public interface DebriefPort {
 
     void start(TalkSessionId talk, Instant at);
 
+    void delete(TalkSessionId talk);
+
     void save(TalkSessionId talk, String status, String body, int attempts, Instant at);
 
     Optional<Stored> find(TalkSessionId talk);

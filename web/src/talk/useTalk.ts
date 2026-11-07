@@ -18,6 +18,7 @@ type Live = {
   pendingPlayed: number | null;
   ended: boolean;
   paused: boolean;
+  crisis: boolean;
   endedByServer: boolean;
   endTimer: ReturnType<typeof setTimeout> | null;
 };
@@ -68,7 +69,7 @@ export function useTalk(deviceId: string | null) {
     const ctx = new AudioContext();
     void ctx.resume().catch(() => {});
     const l: Live = { ws: null, ctx, mic: null, node: null, player: createPlayer(ctx), turnEndAt: 0, heardTurn: null,
-      pendingPlayed: null, ended: false, paused: false, endedByServer: false, endTimer: null };
+      pendingPlayed: null, ended: false, paused: false, crisis: false, endedByServer: false, endTimer: null };
     live.current = l;
 
     try {
@@ -112,7 +113,7 @@ export function useTalk(deviceId: string | null) {
     l.ws = ws;
     ws.onmessage = (e: MessageEvent<string | ArrayBuffer>) => {
       if (typeof e.data !== "string") {
-        l.player.enqueue(e.data);
+        if (!l.paused) l.player.enqueue(e.data);
         return;
       }
       let m: ServerMessage;
@@ -125,6 +126,10 @@ export function useTalk(deviceId: string | null) {
         l.turnEndAt = performance.now();
         l.heardTurn = m.turn + 1;
         l.player.newTurn();
+      } else if (m.type === "crisis") {
+        // Bolo's ordinary reply stops at once; only the crisis script plays from here.
+        l.crisis = true;
+        l.player.stop();
       } else if (m.type === "ended") {
         l.endedByServer = true;
       } else if (m.type === "buddy_done") {
@@ -135,7 +140,15 @@ export function useTalk(deviceId: string | null) {
     };
     ws.onclose = () => {
       dispatch({ type: "socket_closed" });
-      if (live.current === l) teardown();
+      if (live.current !== l) return;
+      // The server ends a crisis talk once the script is sent; let the learner hear all of it before closing audio.
+      if (l.crisis && !l.player.idle()) {
+        const done = () => { if (live.current === l) teardown(); };
+        l.player.onDrained(done);
+        setTimeout(done, 30_000);
+        return;
+      }
+      teardown();
     };
     ws.onopen = () => {
       void (async () => {

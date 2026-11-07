@@ -16,8 +16,9 @@ public final class CrisisScreen {
     private CrisisScreen() {
     }
 
+    /** Whole words only ("diet" is not "die"). */
     public static boolean mayBeCrisis(String text) {
-        String t = text == null ? "" : text.toLowerCase(Locale.ROOT);
-        return PHRASES.stream().anyMatch(t::contains);
+        String t = " " + (text == null ? "" : text.toLowerCase(Locale.ROOT).replaceAll("[^a-z' -]", " ").replaceAll("\\s+", " ").trim()) + " ";
+        return PHRASES.stream().anyMatch(p -> t.contains(" " + p + " "));
     }
 }

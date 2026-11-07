@@ -124,6 +124,11 @@ final class TalkConversation implements TalkConnection {
     /** Bumped whenever a new Buddy line takes over; an older speaker stops sending (e.g. a crisis replaces a reply). */
     private volatile int speakGen;
     private volatile boolean slow;
+    /** A keyword-matched turn is waiting for the classifier: ending now still counts as a crisis. */
+    private volatile boolean crisisPending;
+    /** Bumped by every pause and resume, so a slow recogniser reopen from an older resume is thrown away. */
+    private int resumeToken;
+    private boolean startersAfterReply;
 
     // Guarded by lock.
     private Phase phase = Phase.BUDDY_SPEAKING;
@@ -142,8 +147,8 @@ final class TalkConversation implements TalkConnection {
     private QuietClock quiet;
     private int shortStreak;
     private String lastBuddyText = "";
-    private long pausedAtMs = -1;
-    private long pausedTotalMs;
+    private volatile long pausedAtMs = -1;
+    private volatile long pausedTotalMs;
     private EndReason endAfterSpeaking;
     /** Audio ms written to the recogniser so far: word times come back in this clock. */
     private long streamMs;
@@ -368,6 +373,29 @@ final class TalkConversation implements TalkConnection {
         lastTurnWords.addAll(turnWords);
         history.add(new Exchange(Exchange.Speaker.LEARNER, said));
 
+        // TLK-14 first: a turn that trips the keyword screen waits for the classifier before Bolo says anything, and a
+        // classifier that fails or is slow counts as a crisis (fail closed).
+        if (CrisisScreen.mayBeCrisis(said)) {
+            cancel(speculation);
+            speculation = null;
+            crisisPending = true;
+            Thread.ofVirtual().start(() -> {
+                boolean crisis;
+                try {
+                    crisis = safety.isCrisis(ctx, said).get(3, TimeUnit.SECONDS);
+                } catch (Exception e) {
+                    crisis = true;
+                }
+                if (crisis) {
+                    crisis();
+                } else {
+                    crisisPending = false;
+                    replyTo(said, commitAt, false);
+                }
+            });
+            return;
+        }
+
         // TLK-13: "Sorry?" and "Slower please" are answered in Java, with no model call.
         TalkIntent intent = TalkIntent.of(said);
         if (intent != TalkIntent.NONE && !lastBuddyText.isBlank()) {
@@ -377,40 +405,33 @@ final class TalkConversation implements TalkConnection {
             history.add(new Exchange(Exchange.Speaker.BUDDY, lastBuddyText));
             buddyTurn = nextIdx++;
             startSpeaker(buddyTurn, fixed(lastBuddyText), commitAt);
-            return;
+        } else {
+            replyTo(said, commitAt, true);
         }
-
-        // TLK-14: a turn that trips the keyword screen waits for the classifier before Bolo says anything.
-        if (CrisisScreen.mayBeCrisis(said)) {
-            cancel(speculation);
-            speculation = null;
-            Thread.ofVirtual().start(() -> {
-                boolean crisis;
-                try {
-                    crisis = safety.isCrisis(ctx, said).get(3, TimeUnit.SECONDS);
-                } catch (Exception e) {
-                    crisis = true;
-                }
-                if (crisis) crisis();
-                else replyTo(said, commitAt, false);
-            });
-            return;
-        }
-        replyTo(said, commitAt, true);
-        // Any other turn is checked in parallel; a late "crisis" stops Bolo mid-reply.
+        // Every other turn is checked in parallel; a late "crisis" stops Bolo mid-reply (or, after the end, withdraws
+        // the debrief). A failed check here means no crisis: the keyword screen already passed.
         var check = safety.isCrisis(ctx, said);
-        if (check != null) check.thenAccept(c -> { if (Boolean.TRUE.equals(c)) crisis(); });
+        if (check != null) check.handle((c, e) -> e == null && Boolean.TRUE.equals(c)).thenAccept(c -> {
+            if (!c) return;
+            if (ended) onEnded.accept(new TalkEnded(talk.id(), ctx.learnerId(), learnerTurns, EndReason.CRISIS.dbValue()));
+            else crisis();
+        });
     }
 
     /** Bolo's reply to a committed learner turn (lock may or may not be held by the caller; it is taken here). */
     private void replyTo(String said, long commitAt, boolean mayReuseSpeculation) {
         lock.lock();
         try {
-            if (ended || endAfterSpeaking != null) return;
+            // Paused while the safety check ran: say nothing now; resume asks the last question again.
+            if (ended || endAfterSpeaking != null || phase == Phase.PAUSED) return;
             boolean wrap = elapsedMs() >= limitMs();
             String sys = wrap ? BuddyPrompt.wrapUpSystem(system) : systemFor(said);
             shortStreak = words(said).split(" ").length < 5 ? shortStreak + 1 : 0;
-            if (shortStreak >= 3) sendStartersAsync();
+            if (shortStreak >= 3) {
+                // One starter card, for the question Bolo is about to ask (sent when that line is done).
+                startersAfterReply = true;
+                shortStreak = 0;
+            }
             Reply reply;
             if (mayReuseSpeculation && !wrap && speculation != null && sameWords(speculation.forTranscript, said)) {
                 reply = speculation;
@@ -575,6 +596,10 @@ final class TalkConversation implements TalkConnection {
             if (!text.isBlank()) lastBuddyText = text;
             out.send(message("buddy_done", "turn", idx));
             thenEnd = endAfterSpeaking;
+            if (startersAfterReply && thenEnd == null) {
+                startersAfterReply = false;
+                sendStartersAsync();
+            }
         } finally {
             lock.unlock();
         }
@@ -590,6 +615,7 @@ final class TalkConversation implements TalkConnection {
         try {
             if (ended || phase == Phase.PAUSED || endAfterSpeaking != null) return;
             phase = Phase.PAUSED;
+            resumeToken++;
             pausedAtMs = nowMs.getAsLong();
             cancel(speculation);
             speculation = null;
@@ -605,9 +631,11 @@ final class TalkConversation implements TalkConnection {
 
     /** Back from a pause: a fresh recogniser, then Bolo welcomes the learner back and asks its last question again. */
     private void resume() {
+        int token;
         lock.lock();
         try {
             if (ended || phase != Phase.PAUSED) return;
+            token = ++resumeToken;
             long now = nowMs.getAsLong();
             pausedTotalMs += now - pausedAtMs;
             pausedAtMs = -1;
@@ -622,7 +650,8 @@ final class TalkConversation implements TalkConnection {
                 TranscriptionStream opened = recogniser.open(ctx, new Listener());
                 lock.lock();
                 try {
-                    if (ended) {
+                    // Paused (or ended) again while this recogniser was opening: it belongs to nobody.
+                    if (ended || token != resumeToken || phase != Phase.THINKING) {
                         opened.close();
                         return;
                     }
@@ -645,6 +674,7 @@ final class TalkConversation implements TalkConnection {
         try {
             if (ended || phase != Phase.YOUR_TURN || lastBuddyText.isBlank()) return;
             phase = Phase.THINKING;
+            quiet.onSpeech();
             history.add(new Exchange(Exchange.Speaker.LEARNER, "(asks you to repeat that)"));
             history.add(new Exchange(Exchange.Speaker.BUDDY, lastBuddyText));
             buddyTurn = nextIdx++;
@@ -668,9 +698,7 @@ final class TalkConversation implements TalkConnection {
             cancel(speaking);
             endAfterSpeaking = EndReason.CRISIS;
             phase = Phase.THINKING;
-            List<Map<String, Object>> help = CrisisScript.HELP.stream()
-                    .map(h -> Map.<String, Object>of("name", h.name(), "number", h.number(), "hours", h.hours())).toList();
-            out.send(message("crisis", "title", CrisisScript.TITLE, "lines", CrisisScript.LINES, "help", help));
+            out.send(crisisMessage());
             buddyTurn = nextIdx++;
             startSpeaker(buddyTurn, fixed(String.join(" ", CrisisScript.LINES)), null);
         } finally {
@@ -715,9 +743,16 @@ final class TalkConversation implements TalkConnection {
         Reply spec;
         Reply spk;
         int turnsTaken;
+        Map<String, Object> crisisCard = null;
         lock.lock();
         try {
             if (ended) return;
+            // Ending while a keyword turn's safety check is still out is treated as a crisis: help is shown and no
+            // debrief is made of that turn.
+            if (crisisPending && reason != EndReason.CRISIS && reason != EndReason.VOICE_UNAVAILABLE) {
+                reason = EndReason.CRISIS;
+                crisisCard = crisisMessage();
+            }
             ended = true;
             phase = Phase.ENDED;
             endedMessage = message("ended", "reason", reason.dbValue(), "turns", learnerTurns);
@@ -730,6 +765,7 @@ final class TalkConversation implements TalkConnection {
             lock.unlock();
         }
         talks.end(talk.id(), reason);
+        if (crisisCard != null && notify) out.send(crisisCard);
         try {
             onEnded.accept(new TalkEnded(talk.id(), ctx.learnerId(), turnsTaken, reason.dbValue()));
         } catch (RuntimeException e) {
@@ -762,6 +798,12 @@ final class TalkConversation implements TalkConnection {
 
     private static String words(String s) {
         return s == null ? "" : s.toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z0-9' ]", " ").replaceAll("\\s+", " ").trim();
+    }
+
+    private static Map<String, Object> crisisMessage() {
+        List<Map<String, Object>> help = CrisisScript.HELP.stream()
+                .map(h -> Map.<String, Object>of("name", h.name(), "number", h.number(), "hours", h.hours())).toList();
+        return message("crisis", "title", CrisisScript.TITLE, "lines", CrisisScript.LINES, "help", help);
     }
 
     private static void cancel(Reply r) {
