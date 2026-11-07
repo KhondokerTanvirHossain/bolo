@@ -74,4 +74,17 @@ class JdbcLearnerAdapter implements LearnerPort, ConsentLedgerPort, SessionPort 
                 .query((rs, n) -> new LearnerId(rs.getObject("learner_id", UUID.class)))
                 .optional();
     }
+
+    @Override
+    public void deleteIdleSince(Instant cutoff) {
+        jdbc.sql("delete from web_session where last_seen_at < ?").param(Timestamp.from(cutoff)).update();
+    }
+
+    @Override
+    public void deleteGuestsWithoutConsentCreatedBefore(Instant cutoff) {
+        jdbc.sql("""
+                delete from learner l where l.kind = 'guest' and l.created_at < ?
+                  and not exists (select 1 from consent_record c where c.learner_id = l.id)""")
+                .param(Timestamp.from(cutoff)).update();
+    }
 }

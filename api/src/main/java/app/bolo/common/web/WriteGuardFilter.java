@@ -14,8 +14,10 @@ import java.io.IOException;
 import java.util.Set;
 
 /**
- * CSRF guard for every write under /api (the medioo pattern, no CORS ever): the request must be JSON or multipart,
- * carry {@code X-Bolo: 1} and come from Bolo's own origin. A cross-site form or fetch can satisfy none of these.
+ * CSRF guard for every write (the medioo pattern, no CORS ever): the request must be JSON or multipart, carry
+ * {@code X-Bolo: 1} and come from Bolo's own origin. A cross-site form or fetch can satisfy none of these.
+ * It guards every unsafe method whatever the path: the API serves nothing else, and a path test on the raw URI is
+ * bypassed by encoded or matrix-param paths ({@code /%61pi/session}, {@code /api;x=1/session}) that Spring still routes.
  */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
@@ -31,7 +33,7 @@ class WriteGuardFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        return SAFE.contains(request.getMethod()) || !request.getRequestURI().startsWith("/api/");
+        return SAFE.contains(request.getMethod());
     }
 
     @Override

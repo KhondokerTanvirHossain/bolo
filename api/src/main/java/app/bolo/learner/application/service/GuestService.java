@@ -1,5 +1,6 @@
 package app.bolo.learner.application.service;
 
+import app.bolo.common.error.TooManyRequestsException;
 import app.bolo.common.id.LearnerId;
 import app.bolo.common.time.BoloClock;
 import app.bolo.learner.application.port.in.CurrentLearnerUseCase;
@@ -10,7 +11,7 @@ import app.bolo.learner.application.port.out.LearnerPort;
 import app.bolo.learner.application.port.out.ProfilePort;
 import app.bolo.learner.application.port.out.SessionPort;
 import app.bolo.learner.domain.Learner;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,7 +24,6 @@ import java.util.Base64;
 import java.util.Optional;
 
 @Service
-@RequiredArgsConstructor
 public class GuestService implements StartGuestUseCase, CurrentLearnerUseCase {
 
     /** NFR-17: sessions expire after 90 days of inactivity. */
@@ -35,14 +35,26 @@ public class GuestService implements StartGuestUseCase, CurrentLearnerUseCase {
     private final SessionPort sessions;
     private final ProfilePort profiles;
     private final BoloClock clock;
+    private final GuestRateLimiter newGuests;
+
+    public GuestService(LearnerPort learners, ConsentLedgerPort consents, SessionPort sessions, ProfilePort profiles,
+                        BoloClock clock, @Value("${bolo.guests-per-ip-per-hour}") int guestsPerIpPerHour) {
+        this.learners = learners;
+        this.consents = consents;
+        this.sessions = sessions;
+        this.profiles = profiles;
+        this.clock = clock;
+        this.newGuests = new GuestRateLimiter(guestsPerIpPerHour, Duration.ofHours(1));
+    }
 
     @Override
     @Transactional
-    public Started start(String existingTokenOrNull) {
+    public Started start(String existingTokenOrNull, String clientKey) {
         if (existingTokenOrNull != null) {
             Optional<LearnerId> known = byToken(existingTokenOrNull);
             if (known.isPresent()) return new Started(view(known.get()), null);
         }
+        if (!newGuests.tryAcquire(clientKey, clock.now())) throw new TooManyRequestsException();
         Learner guest = Learner.newGuest(clock.now());
         learners.save(guest);
         String token = newToken();

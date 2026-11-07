@@ -2,6 +2,7 @@ package app.bolo.common.web;
 
 import app.bolo.common.error.RefusedException;
 import app.bolo.common.error.SignedOutException;
+import app.bolo.common.error.TooManyRequestsException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -20,5 +21,11 @@ class ApiErrorAdvice {
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
     ApiError signedOut() {
         return new ApiError("signed-out");
+    }
+
+    @ExceptionHandler(TooManyRequestsException.class)
+    @ResponseStatus(HttpStatus.TOO_MANY_REQUESTS)
+    ApiError slowDown() {
+        return new ApiError("slow-down");
     }
 }

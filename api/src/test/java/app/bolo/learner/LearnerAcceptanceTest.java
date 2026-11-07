@@ -38,10 +38,10 @@ class LearnerAcceptanceTest extends PostgresTestBase {
     Cookie startSession() throws Exception {
         MvcResult res = mvc.perform(write(post("/api/session")).content("{}"))
                 .andExpect(status().isOk())
-                .andExpect(cookie().httpOnly("bolo_session", true))
+                .andExpect(cookie().httpOnly("__Host-bolo_session", true))
                 .andExpect(jsonPath("$.kind").value("guest"))
                 .andReturn();
-        return res.getResponse().getCookie("bolo_session");
+        return res.getResponse().getCookie("__Host-bolo_session");
     }
 
     @Test
@@ -142,6 +142,45 @@ class LearnerAcceptanceTest extends PostgresTestBase {
                         values (?, 'nonsense', 'phone_calls', 5, now())""")
                         .param(UUID.fromString(learnerId)).update())
                 .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+    }
+
+    @Test
+    void sessionCookieIsHostPrefixedSecureAndPathRoot() throws Exception {
+        String setCookie = mvc.perform(write(post("/api/session")).content("{}"))
+                .andReturn().getResponse().getHeader("Set-Cookie");
+        assertThat(setCookie).startsWith("__Host-bolo_session=").contains("Path=/;").contains("Secure")
+                .doesNotContainIgnoringCase("Domain=");
+    }
+
+    @Test
+    void aPlainBoloSessionCookieFromAnotherSubdomainIsIgnored() throws Exception {
+        Cookie real = startSession();
+        String token = real.getValue();
+        // A sibling *.sslip.io site can plant "bolo_session" (no prefix); only __Host-bolo_session counts.
+        mvc.perform(get("/api/me").cookie(new Cookie("bolo_session", token))).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void aValidSessionGetsItsCookieRefreshed() throws Exception {
+        Cookie cookie = startSession();
+        MvcResult again = mvc.perform(write(post("/api/session")).cookie(cookie).content("{}"))
+                .andExpect(status().isOk()).andReturn();
+        Cookie refreshed = again.getResponse().getCookie("__Host-bolo_session");
+        assertThat(refreshed).isNotNull();
+        assertThat(refreshed.getValue()).isEqualTo(cookie.getValue());
+        assertThat(refreshed.getMaxAge()).isEqualTo(90 * 24 * 3600);
+    }
+
+    @Test
+    void anEncodedApiPathCannotSkipTheWriteGuard() throws Exception {
+        mvc.perform(post(java.net.URI.create("/%61pi/session")).contentType(MediaType.TEXT_PLAIN).content("x"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void aMatrixParamApiPathCannotSkipTheWriteGuard() throws Exception {
+        mvc.perform(post(java.net.URI.create("/api;x=1/session")).contentType(MediaType.TEXT_PLAIN).content("x"))
+                .andExpect(status().isForbidden());
     }
 
     @Test

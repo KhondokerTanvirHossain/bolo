@@ -31,5 +31,7 @@ bolo:
   policy-version: 2026-11-v1
   # Session cookie Secure flag; off only for plain-http local development.
   secure-cookie: ${BOLO_SECURE_COOKIE:true}
+  # New guests per client IP per hour (a script must not fill the shared box's disk).
+  guests-per-ip-per-hour: ${BOLO_GUESTS_PER_IP_PER_HOUR:20}
 
 logging.level.root: INFO

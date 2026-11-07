@@ -11,4 +11,7 @@ public interface SessionPort {
 
     /** Returns the learner if the session was seen after {@code notBefore}, and marks it seen at {@code now}. */
     Optional<LearnerId> touch(byte[] tokenHash, Instant notBefore, Instant now);
+
+    /** Deletes sessions last seen before {@code cutoff}. */
+    void deleteIdleSince(Instant cutoff);
 }

@@ -30,10 +30,11 @@ class SessionController {
 
     @PostMapping("/api/session")
     LearnerView start(HttpServletRequest req, HttpServletResponse res) {
-        StartGuestUseCase.Started started = startGuest.start(SessionCookie.read(req));
-        if (started.newToken() != null) {
-            res.addHeader(HttpHeaders.SET_COOKIE, SessionCookie.header(started.newToken(), secureCookie));
-        }
+        String existing = SessionCookie.read(req, secureCookie);
+        StartGuestUseCase.Started started = startGuest.start(existing, SessionCookie.clientKey(req));
+        // Always (re)issue: a valid token gets a fresh 90-day Max-Age, matching the server's sliding expiry.
+        String token = started.newToken() != null ? started.newToken() : existing;
+        res.addHeader(HttpHeaders.SET_COOKIE, SessionCookie.header(token, secureCookie));
         return started.learner();
     }
 
