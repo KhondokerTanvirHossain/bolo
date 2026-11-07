@@ -143,3 +143,43 @@ test("Esc asks before ending; Esc again keeps talking; End ends", async ({ page 
   await page.getByRole("dialog").getByRole("button", { name: "End", exact: true }).click();
   await expect.poll(() => fake.texts.includes('{"type":"end"}')).toBe(true);
 });
+
+/** Review #1: End while the mic is still opening releases the mic and opens no talk socket. */
+test("End while Bolo is getting ready releases the mic", async ({ page }) => {
+  await page.addInitScript(() => {
+    const md = navigator.mediaDevices;
+    const original = md.getUserMedia.bind(md);
+    const w = window as unknown as { __streams: MediaStream[] };
+    w.__streams = [];
+    md.getUserMedia = (c?: MediaStreamConstraints) => new Promise((resolve, reject) => {
+      setTimeout(() => original(c).then((s) => { w.__streams.push(s); resolve(s); }, reject), 1500);
+    });
+  });
+  await stubApi(page);
+  const fake = await fakeTalkServer(page);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Start talking" }).click();
+  await expect(page.getByText("Bolo is getting ready")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await page.getByRole("dialog").getByRole("button", { name: "End", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Start talking" })).toBeVisible();
+  await page.waitForTimeout(2500);
+  const live = await page.evaluate(() =>
+    (window as unknown as { __streams: MediaStream[] }).__streams.flatMap((s) => s.getTracks()).filter((t) => t.readyState === "live").length);
+  expect(live).toBe(0);
+  expect(fake.opened()).toBe(false);
+});
+
+/** Review #2: if Bolo never answers End (a dead connection), the screen doesn't freeze. */
+test("End with no answer from Bolo returns to the start within a few seconds", async ({ page }) => {
+  await stubApi(page);
+  const fake = await fakeTalkServer(page);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Start talking" }).click();
+  await expect.poll(fake.opened).toBe(true);
+  send(fake.ws(), { type: "state", value: "your_turn" });
+  await expect(page.getByRole("button", { name: "Done, end my turn" })).toBeEnabled();
+  await page.keyboard.press("Escape");
+  await page.getByRole("dialog").getByRole("button", { name: "End", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Start talking" })).toBeVisible({ timeout: 6000 });
+});

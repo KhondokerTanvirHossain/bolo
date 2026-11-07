@@ -17,7 +17,12 @@ type Live = {
   heardTurn: number | null;
   pendingPlayed: number | null;
   ended: boolean;
+  endedByServer: boolean;
+  endTimer: ReturnType<typeof setTimeout> | null;
 };
+
+/** How long to wait for Bolo to confirm End before tearing down locally (a dead connection never answers). */
+const END_GRACE_MS = 3000;
 
 function socketUrl(id: string): string {
   const base = process.env.NEXT_PUBLIC_BOLO_WS
@@ -40,6 +45,7 @@ export function useTalk(deviceId: string | null) {
     if (!l) return;
     live.current = null;
     l.ended = true;
+    if (l.endTimer) clearTimeout(l.endTimer);
     l.node?.port.close();
     l.node?.disconnect();
     l.mic?.getTracks().forEach((t) => t.stop());
@@ -61,11 +67,17 @@ export function useTalk(deviceId: string | null) {
     const ctx = new AudioContext();
     void ctx.resume().catch(() => {});
     const l: Live = { ws: null, ctx, mic: null, node: null, player: createPlayer(ctx), turnEndAt: 0, heardTurn: null,
-      pendingPlayed: null, ended: false };
+      pendingPlayed: null, ended: false, endedByServer: false, endTimer: null };
     live.current = l;
 
     try {
-      l.mic = (await openMic(deviceId)).stream;
+      const { stream } = await openMic(deviceId);
+      // Ended (End tapped, unmounted) while the browser was still opening the mic: release it right away.
+      if (l.ended) {
+        stream.getTracks().forEach((t) => t.stop());
+        return;
+      }
+      l.mic = stream;
     } catch (e) {
       teardown();
       dispatch({ type: "no_mic", problem: classifyMicError(errorName(e)) });
@@ -112,6 +124,8 @@ export function useTalk(deviceId: string | null) {
         l.turnEndAt = performance.now();
         l.heardTurn = m.turn + 1;
         l.player.newTurn();
+      } else if (m.type === "ended") {
+        l.endedByServer = true;
       } else if (m.type === "buddy_done") {
         l.pendingPlayed = m.turn;
         maybePlayed();
@@ -151,8 +165,17 @@ export function useTalk(deviceId: string | null) {
   const done = useCallback(() => { if (live.current) sendJson(live.current, { type: "done" }); }, []);
   const end = useCallback(() => {
     const l = live.current;
-    if (l?.ws?.readyState === WebSocket.OPEN) sendJson(l, { type: "end" });
-    else { teardown(); dispatch({ type: "reset" }); }
+    if (l?.ws?.readyState === WebSocket.OPEN) {
+      sendJson(l, { type: "end" });
+      l.endTimer = setTimeout(() => {
+        if (live.current !== l || l.endedByServer) return;
+        teardown();
+        dispatch({ type: "reset" });
+      }, END_GRACE_MS);
+    } else {
+      teardown();
+      dispatch({ type: "reset" });
+    }
   }, [teardown]);
   const reset = useCallback(() => { teardown(); dispatch({ type: "reset" }); }, [teardown]);
 
