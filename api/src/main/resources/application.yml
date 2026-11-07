@@ -66,6 +66,8 @@ bolo:
       stt-language: en-US
       buddy-voice: en-IN-NeerjaNeural
       buddy-rate: "-5%"
+      # The Coach is a separate character with its own voice (PRD §4).
+      coach-voice: en-US-AndrewNeural
   media:
     # Encrypted learner audio (AES-256-GCM). Production mounts a volume here and sets BOLO_MEDIA_KEY.
     dir: ${BOLO_MEDIA_DIR:${java.io.tmpdir}/bolo-media}
@@ -77,5 +79,11 @@ bolo:
       key: ${BOLO_ANTHROPIC_API_KEY:}
     buddy-model: claude-haiku-5-5
     max-tokens: 300
+  coaching:
+    model: claude-sonnet-5-5
+    max-tokens: 1500
+    # ASM-6: under this much learner speech, no debrief ("not enough talking"). Tests shorten it.
+    min-speech-ms: 60000
+    retry-backoff-ms: 2000
 
 logging.level.root: INFO

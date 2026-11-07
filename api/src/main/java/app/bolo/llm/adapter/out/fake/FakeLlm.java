@@ -15,7 +15,16 @@ public class FakeLlm implements LlmPort {
 
     public static final String REPLY = "That sounds great. What do you do at work?";
 
+    /** What the fake Coach answers to a structured (JSON-schema) request: valid against the transcript "hello bolo". */
+    public static final String STRUCTURED_REPLY = """
+            {"strength":{"turn":1,"quote":"hello bolo","text":"You greeted Bolo straight away, warmly."},
+             "upgrades":[{"turn":1,"said":"hello bolo","better":"Hello Bolo, it's nice to talk with you."},
+                         {"turn":3,"said":"hello bolo","better":"Hello again, Bolo, I have more to tell you."}],
+             "sentenceLevel":"GOOD","vocabularyLevel":"BUILDING"}""";
+
     private volatile String reply = REPLY;
+    private volatile String structuredReply = STRUCTURED_REPLY;
+    private volatile boolean failStructured;
     private volatile RuntimeException failWith;
     private volatile long deltaMs = 30;
 
@@ -26,6 +35,14 @@ public class FakeLlm implements LlmPort {
 
     public void reply(String reply) {
         this.reply = reply;
+    }
+
+    public void structuredReply(String json) {
+        this.structuredReply = json == null ? STRUCTURED_REPLY : json;
+    }
+
+    public void failStructured(boolean fail) {
+        this.failStructured = fail;
     }
 
     public void failWith(RuntimeException e) {
@@ -39,8 +56,9 @@ public class FakeLlm implements LlmPort {
     @Override
     public LlmStream stream(LlmRequest request, Consumer<String> onDelta) {
         CompletableFuture<LlmResult> done = new CompletableFuture<>();
-        String text = reply;
-        RuntimeException fail = failWith;
+        boolean structured = request.jsonSchema() != null;
+        String text = structured ? structuredReply : reply;
+        RuntimeException fail = structured ? (failStructured ? new IllegalStateException("coach down") : null) : failWith;
         long pause = deltaMs;
         Thread worker = Thread.ofVirtual().start(() -> {
             try {

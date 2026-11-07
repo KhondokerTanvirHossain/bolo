@@ -6,6 +6,7 @@ import app.bolo.speech.application.port.in.StreamTranscriptionUseCase;
 import app.bolo.speech.application.port.in.SynthesizeUseCase;
 import app.bolo.speech.application.port.in.TranscriptListener;
 import app.bolo.speech.application.port.in.TranscriptionStream;
+import app.bolo.speech.application.port.in.Voice;
 import app.bolo.speech.application.port.out.SpeechToTextPort;
 import app.bolo.speech.application.port.out.TextToSpeechPort;
 import lombok.RequiredArgsConstructor;
@@ -57,9 +58,9 @@ public class SpeechService implements StreamTranscriptionUseCase, SynthesizeUseC
     }
 
     @Override
-    public void synthesize(TalkContext ctx, String text, Consumer<byte[]> pcm24kChunk) {
+    public void synthesize(TalkContext ctx, Voice voice, String text, Consumer<byte[]> pcm24kChunk) {
         try {
-            tts.synthesize(text, pcm24kChunk);
+            tts.synthesize(voice, text, pcm24kChunk);
         } finally {
             usage.record(ctx.learnerId(), ctx.sessionId(), tts.vendor(), "tts", text.length(), "chars");
         }

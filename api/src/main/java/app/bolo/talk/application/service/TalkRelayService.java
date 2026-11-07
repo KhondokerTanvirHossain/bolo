@@ -14,6 +14,7 @@ import app.bolo.talk.application.port.in.TalkView;
 import app.bolo.talk.application.port.out.TurnPort;
 import app.bolo.talk.domain.TurnPolicy;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
@@ -29,10 +30,12 @@ public class TalkRelayService implements TalkRelayUseCase {
     private final StartTalkUseCase talks;
     private final TurnPort turns;
     private final AudioStoreUseCase audioStore;
+    private final ApplicationEventPublisher events;
     private final TalkSettings settings;
 
     public TalkRelayService(StreamTranscriptionUseCase recogniser, SynthesizeUseCase voice, LlmClient llm,
                             StartTalkUseCase talks, TurnPort turns, AudioStoreUseCase audioStore,
+                            ApplicationEventPublisher events,
                             @Value("${bolo.talk.speculate-after-ms}") long speculateAfterMs,
                             @Value("${bolo.talk.end-after-ms}") long endAfterMs,
                             @Value("${bolo.talk.unfinished-end-after-ms}") long unfinishedEndAfterMs,
@@ -50,6 +53,7 @@ public class TalkRelayService implements TalkRelayUseCase {
         this.talks = talks;
         this.turns = turns;
         this.audioStore = audioStore;
+        this.events = events;
         var words = Arrays.stream(unfinishedWords.split(",")).map(w -> w.trim().toLowerCase(Locale.ROOT))
                 .filter(w -> !w.isEmpty()).collect(Collectors.toUnmodifiableSet());
         this.settings = new TalkSettings(new TurnPolicy(speculateAfterMs, endAfterMs, unfinishedEndAfterMs, words),
@@ -60,7 +64,7 @@ public class TalkRelayService implements TalkRelayUseCase {
     @Override
     public TalkConnection open(TalkView talk, LearnerId learner, TalkOutput out) {
         TalkConversation c = new TalkConversation(talk, new TalkContext(learner, talk.id()), out, recogniser, voice, llm,
-                talks, turns, audioStore, settings, () -> System.nanoTime() / 1_000_000);
+                talks, turns, audioStore, settings, () -> System.nanoTime() / 1_000_000, events::publishEvent);
         c.start();
         return c;
     }

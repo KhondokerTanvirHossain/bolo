@@ -1,0 +1,68 @@
+package app.bolo.coaching.adapter.out.persistence;
+
+import app.bolo.coaching.application.port.out.DebriefPort;
+import app.bolo.common.id.LearnerId;
+import app.bolo.common.id.TalkSessionId;
+import lombok.RequiredArgsConstructor;
+import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.stereotype.Repository;
+
+import java.sql.Timestamp;
+import java.time.Instant;
+import java.util.Optional;
+import java.util.UUID;
+
+@Repository
+@RequiredArgsConstructor
+class JdbcDebriefAdapter implements DebriefPort {
+
+    private final JdbcClient jdbc;
+
+    @Override
+    public void start(TalkSessionId talk, Instant at) {
+        jdbc.sql("""
+                insert into debrief (session_id, status, attempts, updated_at) values (?, 'scoring', 0, ?)
+                on conflict (session_id) do update set status = 'scoring', body = null, updated_at = excluded.updated_at""")
+                .params(talk.value(), Timestamp.from(at))
+                .update();
+    }
+
+    @Override
+    public void save(TalkSessionId talk, String status, String body, int attempts, Instant at) {
+        jdbc.sql("update debrief set status = ?, body = cast(? as jsonb), attempts = ?, updated_at = ? where session_id = ?")
+                .params(status, body, attempts, Timestamp.from(at), talk.value())
+                .update();
+    }
+
+    @Override
+    public Optional<Stored> find(TalkSessionId talk) {
+        return jdbc.sql("""
+                select s.learner_id, d.status, d.body::text as body
+                from debrief d join talk_session s on s.id = d.session_id where d.session_id = ?""")
+                .param(talk.value())
+                .query((rs, n) -> new Stored(new LearnerId(rs.getObject("learner_id", UUID.class)), rs.getString("status"),
+                        rs.getString("body")))
+                .optional();
+    }
+
+    @Override
+    public int readyCountFor(LearnerId learner, TalkSessionId except) {
+        return jdbc.sql("""
+                select count(*) from debrief d join talk_session s on s.id = d.session_id
+                where s.learner_id = ? and d.status = 'ready' and d.session_id <> ?""")
+                .params(learner.value(), except.value())
+                .query(Integer.class).single();
+    }
+
+    @Override
+    public void logDispute(TalkSessionId talk, int fixIndex, String kind, Instant at) {
+        jdbc.sql("insert into fix_dispute (session_id, fix_index, kind, at) values (?, ?, ?, ?)")
+                .params(talk.value(), fixIndex, kind, Timestamp.from(at))
+                .update();
+    }
+
+    @Override
+    public void failAllScoring(Instant at) {
+        jdbc.sql("update debrief set status = 'failed', updated_at = ? where status = 'scoring'").param(Timestamp.from(at)).update();
+    }
+}

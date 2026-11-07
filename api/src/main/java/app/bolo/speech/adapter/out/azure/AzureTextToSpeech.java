@@ -1,6 +1,7 @@
 package app.bolo.speech.adapter.out.azure;
 
 import app.bolo.speech.application.port.in.SpeechUnavailableException;
+import app.bolo.speech.application.port.in.Voice;
 import app.bolo.speech.application.port.out.TextToSpeechPort;
 import com.microsoft.cognitiveservices.speech.ResultReason;
 import com.microsoft.cognitiveservices.speech.SpeechConfig;
@@ -22,12 +23,23 @@ public class AzureTextToSpeech implements TextToSpeechPort {
     private final String region;
     private final String voice;
     private final String rate;
+    private final String coachVoice;
 
     public AzureTextToSpeech(String key, String region, String voice, String rate) {
+        this(key, region, voice, rate, voice);
+    }
+
+    public AzureTextToSpeech(String key, String region, String voice, String rate, String coachVoice) {
         this.key = key;
         this.region = region;
         this.voice = voice;
         this.rate = rate;
+        this.coachVoice = coachVoice;
+    }
+
+    @Override
+    public void synthesize(Voice who, String text, Consumer<byte[]> pcm24kChunk) {
+        speak(who == Voice.COACH ? coachVoice : voice, who == Voice.COACH ? "0%" : rate, text, pcm24kChunk);
     }
 
     @Override
@@ -37,6 +49,10 @@ public class AzureTextToSpeech implements TextToSpeechPort {
 
     @Override
     public void synthesize(String text, Consumer<byte[]> pcm24kChunk) {
+        speak(voice, rate, text, pcm24kChunk);
+    }
+
+    private void speak(String voiceName, String voiceRate, String text, Consumer<byte[]> pcm24kChunk) {
         SpeechConfig config = SpeechConfig.fromSubscription(key, region);
         config.setSpeechSynthesisOutputFormat(SpeechSynthesisOutputFormat.Raw24Khz16BitMonoPcm);
         SpeechSynthesizer synthesizer = new SpeechSynthesizer(config, (AudioConfig) null);
@@ -45,7 +61,7 @@ public class AzureTextToSpeech implements TextToSpeechPort {
                 byte[] audio = e.getResult().getAudioData();
                 if (audio != null && audio.length > 0) pcm24kChunk.accept(audio);
             });
-            SpeechSynthesisResult result = synthesizer.SpeakSsmlAsync(ssml(text)).get(20, TimeUnit.SECONDS);
+            SpeechSynthesisResult result = synthesizer.SpeakSsmlAsync(ssml(voiceName, voiceRate, text)).get(20, TimeUnit.SECONDS);
             try {
                 if (result.getReason() != ResultReason.SynthesizingAudioCompleted) {
                     var details = SpeechSynthesisCancellationDetails.fromResult(result);
@@ -65,9 +81,9 @@ public class AzureTextToSpeech implements TextToSpeechPort {
         }
     }
 
-    String ssml(String text) {
-        return "<speak version=\"1.0\" xmlns=\"http://www.w3.org/2001/10/synthesis\" xml:lang=\"en-IN\">"
-                + "<voice name=\"" + escape(voice) + "\"><prosody rate=\"" + escape(rate) + "\">" + escape(text)
+    String ssml(String voiceName, String voiceRate, String text) {
+        return "<speak version=\"1.0\" xmlns=\"http://www.w3.org/2001/10/synthesis\" xml:lang=\"en-US\">"
+                + "<voice name=\"" + escape(voiceName) + "\"><prosody rate=\"" + escape(voiceRate) + "\">" + escape(text)
                 + "</prosody></voice></speak>";
     }
 

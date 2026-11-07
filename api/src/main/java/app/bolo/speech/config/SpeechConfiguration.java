@@ -30,8 +30,9 @@ class SpeechConfiguration {
         TextToSpeechPort azureTextToSpeech(@Value("${bolo.speech.azure.key}") String key,
                                            @Value("${bolo.speech.azure.region}") String region,
                                            @Value("${bolo.speech.azure.buddy-voice}") String voice,
-                                           @Value("${bolo.speech.azure.buddy-rate}") String rate) {
-            return new AzureTextToSpeech(requireKey(key), region, voice, rate);
+                                           @Value("${bolo.speech.azure.buddy-rate}") String rate,
+                                           @Value("${bolo.speech.azure.coach-voice}") String coachVoice) {
+            return new AzureTextToSpeech(requireKey(key), region, voice, rate, coachVoice);
         }
 
         private static String requireKey(String key) {

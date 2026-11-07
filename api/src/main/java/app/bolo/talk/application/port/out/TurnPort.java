@@ -3,7 +3,10 @@ package app.bolo.talk.application.port.out;
 import app.bolo.common.id.TalkSessionId;
 import app.bolo.speech.application.port.in.ScoredWord;
 
+import app.bolo.talk.application.port.in.TalkRecord;
+
 import java.util.List;
+import java.util.Optional;
 
 public interface TurnPort {
 
@@ -17,4 +20,6 @@ public interface TurnPort {
 
     /** Scores that arrived after the turn was saved (the recogniser's last segment can lag the turn end). */
     void updateScored(TalkSessionId session, int idx, List<ScoredWord> words);
+
+    Optional<TalkRecord> record(TalkSessionId session);
 }

@@ -16,6 +16,7 @@ import app.bolo.speech.application.port.in.TranscriptListener;
 import app.bolo.speech.application.port.in.TranscriptionStream;
 import app.bolo.talk.application.port.in.ClientMessage;
 import app.bolo.talk.application.port.in.StartTalkUseCase;
+import app.bolo.talk.application.port.in.TalkEnded;
 import app.bolo.talk.application.port.in.TalkConnection;
 import app.bolo.talk.application.port.in.TalkOutput;
 import app.bolo.talk.application.port.in.TalkView;
@@ -41,6 +42,7 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Consumer;
 import java.util.function.LongSupplier;
 
 /**
@@ -98,6 +100,7 @@ final class TalkConversation implements TalkConnection {
     private final AudioStoreUseCase audioStore;
     private final TalkSettings settings;
     private final LongSupplier nowMs;
+    private final Consumer<TalkEnded> onEnded;
 
     private final ReentrantLock lock = new ReentrantLock();
     private final EnergyVad vad = new EnergyVad();
@@ -135,7 +138,7 @@ final class TalkConversation implements TalkConnection {
 
     TalkConversation(TalkView talk, TalkContext ctx, TalkOutput out, StreamTranscriptionUseCase recogniser,
                      SynthesizeUseCase voice, LlmClient llm, StartTalkUseCase talks, TurnPort turns,
-                     AudioStoreUseCase audioStore, TalkSettings settings, LongSupplier nowMs) {
+                     AudioStoreUseCase audioStore, TalkSettings settings, LongSupplier nowMs, Consumer<TalkEnded> onEnded) {
         this.talk = talk;
         this.ctx = ctx;
         this.out = out;
@@ -147,6 +150,7 @@ final class TalkConversation implements TalkConnection {
         this.audioStore = audioStore;
         this.settings = settings;
         this.nowMs = nowMs;
+        this.onEnded = onEnded;
         this.taker = new TurnTaker(settings.policy());
         this.system = BuddyPrompt.system(talk.goal(), talk.fearedMoment(), talk.minutes());
     }
@@ -472,6 +476,7 @@ final class TalkConversation implements TalkConnection {
         Map<String, Object> endedMessage;
         Reply spec;
         Reply spk;
+        int turnsTaken;
         lock.lock();
         try {
             if (ended) return;
@@ -482,10 +487,16 @@ final class TalkConversation implements TalkConnection {
             endedMessage.put("p90Ms", percentile(90));
             spec = speculation;
             spk = speaking;
+            turnsTaken = learnerTurns;
         } finally {
             lock.unlock();
         }
         talks.end(talk.id(), reason);
+        try {
+            onEnded.accept(new TalkEnded(talk.id(), ctx.learnerId(), turnsTaken, reason.dbValue()));
+        } catch (RuntimeException e) {
+            log.warn("talk {} end listener failed: {}", talk.id(), e.getClass().getSimpleName());
+        }
         if (notify) out.send(endedMessage);
         cancel(spec);
         cancel(spk);

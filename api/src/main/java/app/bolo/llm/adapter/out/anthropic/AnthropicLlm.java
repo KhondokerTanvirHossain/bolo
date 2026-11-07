@@ -8,7 +8,9 @@ import app.bolo.llm.application.port.in.LlmUnavailableException;
 import app.bolo.llm.application.port.out.LlmPort;
 import com.anthropic.client.AnthropicClient;
 import com.anthropic.client.okhttp.AnthropicOkHttpClient;
+import com.anthropic.core.JsonValue;
 import com.anthropic.core.http.StreamResponse;
+import com.anthropic.models.messages.JsonOutputFormat;
 import com.anthropic.models.messages.MessageCreateParams;
 import com.anthropic.models.messages.OutputConfig;
 import com.anthropic.models.messages.RawMessageStreamEvent;
@@ -23,8 +25,9 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 /**
- * Claude over the streaming Messages API. Bolo's replies are short and latency-bound (NFR-1), so thinking is off at
- * effort low, which the Haiku model accepts. No sampling parameters: current models reject non-default values.
+ * Claude over the streaming Messages API. Bolo's replies are short and latency-bound (NFR-1), so "fast" requests turn
+ * thinking off at effort low (Haiku accepts that); others keep adaptive thinking at effort low (Sonnet rejects
+ * disabled thinking). Structured output via output_config.format. No sampling parameters (current models reject them).
  */
 @Slf4j
 public class AnthropicLlm implements LlmPort {
@@ -42,12 +45,18 @@ public class AnthropicLlm implements LlmPort {
 
     @Override
     public LlmStream stream(LlmRequest request, Consumer<String> onDelta) {
+        OutputConfig.Builder output = OutputConfig.builder().effort(OutputConfig.Effort.LOW);
+        if (request.jsonSchema() != null) {
+            JsonOutputFormat.Schema.Builder schema = JsonOutputFormat.Schema.builder();
+            request.jsonSchema().forEach((k, v) -> schema.putAdditionalProperty(k, JsonValue.from(v)));
+            output.format(JsonOutputFormat.builder().type(JsonValue.from("json_schema")).schema(schema.build()).build());
+        }
         MessageCreateParams.Builder params = MessageCreateParams.builder()
                 .model(request.model())
                 .maxTokens(request.maxTokens())
                 .system(request.system())
-                .thinking(ThinkingConfigDisabled.builder().build())
-                .outputConfig(OutputConfig.builder().effort(OutputConfig.Effort.LOW).build());
+                .outputConfig(output.build());
+        if (request.fast()) params.thinking(ThinkingConfigDisabled.builder().build());
         for (LlmMessage m : request.messages()) {
             if (m.role() == LlmMessage.Role.USER) params.addUserMessage(m.text());
             else params.addAssistantMessage(m.text());
