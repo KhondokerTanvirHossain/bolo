@@ -34,6 +34,8 @@ class LiveTalkProbe {
 
     final HttpClient http = HttpClient.newHttpClient();
     final BlockingQueue<Object> inbox = new LinkedBlockingQueue<>();
+    /** When each message arrived (stamped by the socket listener, not when the probe reads it). */
+    final java.util.Map<Object, Long> arrivedAt = new java.util.concurrent.ConcurrentHashMap<>();
 
     @Test
     void aRealTurnWithBolo() throws Exception {
@@ -60,16 +62,18 @@ class LiveTalkProbe {
                 next += 20_000_000;
                 sleepUntil(next);
             }
-            long turnEnd = -1;
-            for (int i = 0; i < 400 && turnEnd < 0; i++) {
+            // Keep the mic "open" with silence until the turn ends; leave every message in the inbox.
+            for (int i = 0; i < 400 && inbox.stream().noneMatch(m -> m instanceof String s && s.contains("\"turn_end\"")); i++) {
                 ws.sendBinary(ByteBuffer.wrap(new byte[640]), true).join();
                 next += 20_000_000;
                 sleepUntil(next);
-                for (Object m; (m = inbox.poll()) != null; ) {
-                    if (m instanceof String s && s.contains("\"turn_end\"")) turnEnd = System.nanoTime();
-                }
             }
-            assertThat(turnEnd).as("turn_end after 8 s of silence").isPositive();
+            long turnEnd = -1;
+            while (turnEnd < 0) {
+                Object m = inbox.poll(1, TimeUnit.SECONDS);
+                assertThat(m).as("turn_end after 8 s of silence").isNotNull();
+                if (m instanceof String s && s.contains("\"turn_end\"")) turnEnd = arrivedAt.get(m);
+            }
 
             long firstAudio = -1;
             StringBuilder reply = new StringBuilder();
@@ -77,7 +81,7 @@ class LiveTalkProbe {
             boolean done = false;
             while (!done && System.currentTimeMillis() < until) {
                 Object m = inbox.poll(500, TimeUnit.MILLISECONDS);
-                if (m instanceof byte[] && firstAudio < 0) firstAudio = System.nanoTime();
+                if (m instanceof byte[] && firstAudio < 0) firstAudio = arrivedAt.get(m);
                 if (m instanceof String s) {
                     if (s.contains("\"caption\"")) reply.append(' ').append(field(s, "text"));
                     if (s.contains("\"ended\"")) throw new AssertionError("talk ended: " + s);
@@ -144,7 +148,9 @@ class LiveTalkProbe {
         public CompletionStage<?> onText(WebSocket ws, CharSequence data, boolean last) {
             text.append(data);
             if (last) {
-                inbox.add(text.toString());
+                String m = text.toString();
+                arrivedAt.put(m, System.nanoTime());
+                inbox.add(m);
                 text.setLength(0);
             }
             ws.request(1);
@@ -157,7 +163,9 @@ class LiveTalkProbe {
             data.get(chunk);
             binary.writeBytes(chunk);
             if (last) {
-                inbox.add(binary.toByteArray());
+                byte[] m = binary.toByteArray();
+                arrivedAt.put(m, System.nanoTime());
+                inbox.add(m);
                 binary = new java.io.ByteArrayOutputStream();
             }
             ws.request(1);
