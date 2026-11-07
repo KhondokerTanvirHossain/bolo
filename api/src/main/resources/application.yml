@@ -47,5 +47,12 @@ bolo:
       stt-language: en-IN
       buddy-voice: en-IN-NeerjaNeural
       buddy-rate: "-5%"
+  llm:
+    # anthropic | fake. Production sets anthropic in deploy/compose.prod.yml.
+    vendor: ${BOLO_LLM_VENDOR:fake}
+    anthropic:
+      key: ${BOLO_ANTHROPIC_API_KEY:}
+    buddy-model: claude-haiku-5-5
+    max-tokens: 300
 
 logging.level.root: INFO
