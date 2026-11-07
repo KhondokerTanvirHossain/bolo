@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { loadClip } from "@/audio/clipStore";
 import { Icon, Scene } from "@/scene/Scene";
 import { WORDMARK_SMALL_SVG } from "@/scene/art";
+import { PracticeScreen } from "@/practice/PracticeScreen";
 import { TalkScreen } from "@/talk/TalkScreen";
 import { useTalk } from "@/talk/useTalk";
 
@@ -10,6 +11,7 @@ import { useTalk } from "@/talk/useTalk";
 export function FirstTalkScreen({ deviceId }: { deviceId: string | null }) {
   const [url, setUrl] = useState<string | null>(null);
   const conversation = useTalk(deviceId);
+  const [practising, setPractising] = useState(false);
   const audio = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
@@ -22,8 +24,10 @@ export function FirstTalkScreen({ deviceId }: { deviceId: string | null }) {
     return () => { if (objectUrl) URL.revokeObjectURL(objectUrl); };
   }, []);
 
+  if (practising) return <PracticeScreen deviceId={deviceId} onBack={() => setPractising(false)} />;
+
   if (conversation.state.phase !== "idle") {
-    return <TalkScreen state={conversation.state} onDone={conversation.done} onEnd={conversation.end}
+    return <TalkScreen state={conversation.state} deviceId={deviceId} onDone={conversation.done} onEnd={conversation.end}
       onTalkAgain={() => void conversation.start()} onLeave={conversation.reset} onPause={conversation.pause}
       onResume={conversation.resume} onRepeat={conversation.repeat} />;
   }
@@ -45,6 +49,9 @@ export function FirstTalkScreen({ deviceId }: { deviceId: string | null }) {
       <div className="dk-dock">
         <button className="bo-btn bo-btn--primary" onClick={() => void conversation.start()} autoFocus>
           <Icon name="mic" fill />Start talking
+        </button>
+        <button className="bo-scenebtn" onClick={() => setPractising(true)}>
+          <Icon name="record_voice_over" />Practise sounds
         </button>
         {url && (
           <>

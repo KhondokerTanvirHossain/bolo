@@ -7,6 +7,7 @@ import type { TalkState } from "./talkState";
 
 type Props = {
   state: TalkState;
+  deviceId?: string | null;
   onDone: () => void;
   onEnd: () => void;
   onTalkAgain: () => void;
@@ -37,7 +38,7 @@ function readCaptions(): boolean {
  * The conversation (TLK-16): the scene, Bolo's caption (TLK-8, toggle), the mic state, the time left, Pause, Done and
  * End; plus the hint card (TLK-6), the paused state (TLK-10) and the crisis card (TLK-14).
  */
-export function TalkScreen({ state, onDone, onEnd, onTalkAgain, onLeave, onPause, onResume, onRepeat }: Props) {
+export function TalkScreen({ state, deviceId = null, onDone, onEnd, onTalkAgain, onLeave, onPause, onResume, onRepeat }: Props) {
   const [asking, setAsking] = useState(false);
   const [noDebrief, setNoDebrief] = useState(false);
   const [captions, setCaptions] = useState(true);
@@ -102,7 +103,8 @@ export function TalkScreen({ state, onDone, onEnd, onTalkAgain, onLeave, onPause
 
   // A talk with at least one turn goes to the Coach's debrief (DBF); an empty one keeps the plain summary.
   if (state.phase === "ended" && state.talkId && (state.summary?.turns ?? 0) > 0 && !noDebrief) {
-    return <CoachFlow talkId={state.talkId} onTalkAgain={onTalkAgain} onDone={onLeave} onNoDebrief={() => setNoDebrief(true)} />;
+    return <CoachFlow talkId={state.talkId} deviceId={deviceId} onTalkAgain={onTalkAgain} onDone={onLeave}
+      onNoDebrief={() => setNoDebrief(true)} />;
   }
   if (state.phase === "crisis" && state.crisis) {
     return <CrisisCard crisis={state.crisis} onClose={onLeave} />;

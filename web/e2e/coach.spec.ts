@@ -130,3 +130,24 @@ test("a double tap on 'That's not what I said' removes one card", async ({ page 
   expect(s.disputes).toHaveLength(1);
   expect(s.disputes[0]).toContain("/fixes/f1/dispute");
 });
+
+/** US-4.3: Try it on a fix card scores the model sentence; three tries, then "This one takes practice." */
+test("Try it on a fix card", async ({ page }) => {
+  const s = await stub(page, [READY]);
+  const posts: string[] = [];
+  await page.route("**/api/attempts", async (r) => {
+    posts.push(r.request().postData() ?? "");
+    await new Promise((res) => setTimeout(res, 300));
+    await r.fulfill({ json: { level: "NAILED", heard: true, focus: [] } });
+  });
+  await talkAndEnd(page, s);
+  await expect(page.getByText("You explained your job for 40 seconds without stopping.")).toBeVisible({ timeout: 10_000 });
+  await page.keyboard.press("ArrowDown");
+  const tryIt = page.getByRole("button", { name: "Try it" });
+  await tryIt.click();
+  await page.waitForTimeout(600);
+  await page.getByRole("button", { name: "Stop recording" }).dblclick();
+  await expect(page.getByText("Nailed it")).toBeVisible();
+  expect(posts).toHaveLength(1);
+  expect(posts[0]).toContain("It is very important.");
+});

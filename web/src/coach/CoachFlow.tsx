@@ -1,11 +1,12 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { ReadAloud } from "@/practice/ReadAloud";
 import { Icon } from "@/scene/Scene";
 import { Clip } from "./Clip";
 import { fetchDebrief, pollDebrief, disputeFix, type Debrief, type Fix, type Level } from "./debrief";
 import { highlight } from "./highlight";
 
-type Props = { talkId: string; onTalkAgain: () => void; onDone: () => void; onNoDebrief?: () => void };
+type Props = { talkId: string; deviceId?: string | null; onTalkAgain: () => void; onDone: () => void; onNoDebrief?: () => void };
 
 const LEVEL_WORD: Record<Level, string> = { BUILDING: "Building", GOOD: "Good", STRONG: "Strong" };
 const LEVEL_BARS: Record<Level, number> = { BUILDING: 1, GOOD: 2, STRONG: 3 };
@@ -15,7 +16,7 @@ function seconds(ms: number): string {
 }
 
 /** After a talk: "Your coach is listening back", then the debrief (DBF-1..5), or the too-short / failed states. */
-export function CoachFlow({ talkId, onTalkAgain, onDone, onNoDebrief }: Props) {
+export function CoachFlow({ talkId, deviceId = null, onTalkAgain, onDone, onNoDebrief }: Props) {
   const [debrief, setDebrief] = useState<Debrief | null>({ status: "scoring" });
 
   useEffect(() => {
@@ -39,7 +40,7 @@ export function CoachFlow({ talkId, onTalkAgain, onDone, onNoDebrief }: Props) {
     return <Notice title="We couldn't prepare your feedback. Your talk is saved." body="Try another talk in a moment."
       primary="Talk again" onPrimary={onTalkAgain} onDone={onDone} />;
   }
-  return <DebriefScreen talkId={talkId} debrief={debrief} onTalkAgain={onTalkAgain} onDone={onDone} />;
+  return <DebriefScreen talkId={talkId} deviceId={deviceId} debrief={debrief} onTalkAgain={onTalkAgain} onDone={onDone} />;
 }
 
 function Scoring() {
@@ -74,7 +75,7 @@ function Notice({ title, body, primary, onPrimary, onDone }: { title: string; bo
   );
 }
 
-function DebriefScreen({ talkId, debrief, onTalkAgain, onDone }: { talkId: string; debrief: Debrief } & Omit<Props, "talkId">) {
+function DebriefScreen({ talkId, deviceId, debrief, onTalkAgain, onDone }: { talkId: string; debrief: Debrief } & Omit<Props, "talkId">) {
   const [fixes, setFixes] = useState<Fix[]>(debrief.fixes ?? []);
   const [at, setAt] = useState(0);
   const [note, setNote] = useState<string | null>(null);
@@ -132,7 +133,7 @@ function DebriefScreen({ talkId, debrief, onTalkAgain, onDone }: { talkId: strin
             </div>
           )}
           {at > 0 && at <= fixes.length && (
-            <FixCard key={fixes[at - 1].id ?? at} fix={fixes[at - 1]} n={at} of={fixes.length} disputing={disputing}
+            <FixCard key={fixes[at - 1].id ?? at} fix={fixes[at - 1]} n={at} of={fixes.length} disputing={disputing} deviceId={deviceId ?? null}
               onDispute={() => void dispute(fixes[at - 1])} playRef={register} />
           )}
           {at === cards - 1 && <Skills debrief={debrief} onTalkAgain={onTalkAgain} onDone={onDone} />}
@@ -159,8 +160,8 @@ function Item({ n, title, sub, on, onClick }: { n: React.ReactNode; title: strin
   );
 }
 
-function FixCard({ fix, n, of, disputing, onDispute, playRef }: { fix: Fix; n: number; of: number; disputing: boolean;
-  onDispute: () => void; playRef: (p: () => void) => void }) {
+function FixCard({ fix, n, of, disputing, deviceId, onDispute, playRef }: { fix: Fix; n: number; of: number; disputing: boolean;
+  deviceId: string | null; onDispute: () => void; playRef: (p: () => void) => void }) {
   const kindLabel = fix.kind === "sound" ? "Sound fix" : fix.kind === "upgrade" ? "Say it better" : fix.title;
   const disputeButton = <button className="bo-btn bo-btn--quiet-neutral" disabled={disputing} onClick={onDispute}>That&apos;s not what I said</button>;
   return (
@@ -197,10 +198,22 @@ function FixCard({ fix, n, of, disputing, onDispute, playRef }: { fix: Fix; n: n
             <Tip text={fix.tip} />
           </>
         )}
+        {(fix.kind === "sound" || fix.kind === "upgrade") && fix.better && (
+          <div style={{ marginTop: 18 }}><TryIt reference={fix.better} deviceId={deviceId} /></div>
+        )}
         <div style={{ display: "flex", justifyContent: "center", marginTop: 18 }}>{disputeButton}</div>
       </article>
     </div>
   );
+}
+
+/** US-4.3: say the better version; after 3 tries that aren't "Nailed it", it moves on kindly. */
+function TryIt({ reference, deviceId }: { reference: string; deviceId: string | null }) {
+  const [tries, setTries] = useState(0);
+  const [nailed, setNailed] = useState(false);
+  if (tries >= 3 && !nailed) return <p className="bo-footnote" style={{ textAlign: "center" }}>This one takes practice. Come back to it any time.</p>;
+  return <ReadAloud reference={reference} deviceId={deviceId} showSentence={false}
+    onOutcome={(o) => { setTries((t) => t + 1); if (o.level === "NAILED") setNailed(true); }} />;
 }
 
 function Tip({ text }: { text?: string }) {
