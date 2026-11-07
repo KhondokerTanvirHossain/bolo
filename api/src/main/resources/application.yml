@@ -38,5 +38,14 @@ bolo:
   talk:
     # Live talks at once. Azure Speech's free tier allows one live recognition, so 1 until we move to S0.
     max-live-sessions: ${BOLO_TALK_MAX_LIVE:1}
+  speech:
+    # azure | fake. Production sets azure in deploy/compose.prod.yml; fake keeps tests and keyless dev working.
+    vendor: ${BOLO_SPEECH_VENDOR:fake}
+    azure:
+      key: ${BOLO_AZURE_SPEECH_KEY:}
+      region: ${BOLO_AZURE_SPEECH_REGION:centralindia}
+      stt-language: en-IN
+      buddy-voice: en-IN-NeerjaNeural
+      buddy-rate: "-5%"
 
 logging.level.root: INFO

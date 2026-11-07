@@ -20,6 +20,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'org.springframework.boot:spring-boot-starter-flyway'
     implementation 'org.flywaydb:flyway-database-postgresql'
+    implementation 'com.microsoft.cognitiveservices.speech:client-sdk:1.53.0@jar'
     runtimeOnly 'org.postgresql:postgresql'
 
     compileOnly 'org.projectlombok:lombok'

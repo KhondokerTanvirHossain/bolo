@@ -1,0 +1,133 @@
+package app.bolo.speech.adapter.out.azure;
+
+import app.bolo.speech.application.port.in.SpeechUnavailableException;
+import app.bolo.speech.application.port.in.TranscriptListener;
+import app.bolo.speech.application.port.in.TranscriptionStream;
+import app.bolo.speech.application.port.out.SpeechToTextPort;
+import com.microsoft.cognitiveservices.speech.CancellationReason;
+import com.microsoft.cognitiveservices.speech.ResultReason;
+import com.microsoft.cognitiveservices.speech.SpeechConfig;
+import com.microsoft.cognitiveservices.speech.SpeechRecognizer;
+import com.microsoft.cognitiveservices.speech.audio.AudioConfig;
+import com.microsoft.cognitiveservices.speech.audio.AudioInputStream;
+import com.microsoft.cognitiveservices.speech.audio.AudioStreamFormat;
+import com.microsoft.cognitiveservices.speech.audio.PushAudioInputStream;
+import lombok.extern.slf4j.Slf4j;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
+/** Azure continuous recognition over a push stream. Logs never carry the recognised text. */
+@Slf4j
+public class AzureSpeechToText implements SpeechToTextPort {
+
+    private final String key;
+    private final String region;
+    private final String language;
+
+    public AzureSpeechToText(String key, String region, String language) {
+        this.key = key;
+        this.region = region;
+        this.language = language;
+    }
+
+    @Override
+    public String vendor() {
+        return "azure";
+    }
+
+    @Override
+    public TranscriptionStream open(TranscriptListener listener) {
+        SpeechConfig config = SpeechConfig.fromSubscription(key, region);
+        config.setSpeechRecognitionLanguage(language);
+        PushAudioInputStream push = AudioInputStream.createPushStream(AudioStreamFormat.getWaveFormatPCM(16000L, (short) 16, (short) 1));
+        AudioConfig audio = AudioConfig.fromStreamInput(push);
+        SpeechRecognizer recognizer = new SpeechRecognizer(config, audio);
+        Utterance utterance = new Utterance(listener);
+        recognizer.recognizing.addEventListener((s, e) -> utterance.partial(e.getResult().getText()));
+        recognizer.recognized.addEventListener((s, e) -> {
+            if (e.getResult().getReason() == ResultReason.RecognizedSpeech) utterance.fin(e.getResult().getText());
+        });
+        recognizer.canceled.addEventListener((s, e) -> {
+            if (e.getReason() == CancellationReason.Error) {
+                log.warn("azure stt canceled: {} {}", e.getErrorCode(), e.getErrorDetails());
+                listener.onFailure(new SpeechUnavailableException("azure stt: " + e.getErrorCode()));
+            }
+        });
+        try {
+            recognizer.startContinuousRecognitionAsync().get(10, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            closeAll(recognizer, audio, push, config);
+            throw new SpeechUnavailableException("azure stt did not start", e);
+        }
+        return new TranscriptionStream() {
+            private volatile boolean closed;
+
+            @Override
+            public void write(byte[] pcm16k) {
+                if (!closed) push.write(pcm16k);
+            }
+
+            @Override
+            public void mark() {
+                utterance.mark();
+            }
+
+            @Override
+            public void close() {
+                if (closed) return;
+                closed = true;
+                try {
+                    push.close();
+                    recognizer.stopContinuousRecognitionAsync().get(5, TimeUnit.SECONDS);
+                } catch (Exception e) {
+                    log.warn("azure stt stop: {}", e.getClass().getSimpleName());
+                } finally {
+                    closeAll(recognizer, audio, null, config);
+                }
+            }
+        };
+    }
+
+    private static void closeAll(SpeechRecognizer r, AudioConfig a, PushAudioInputStream p, SpeechConfig c) {
+        try { r.close(); } catch (Exception ignored) { }
+        try { a.close(); } catch (Exception ignored) { }
+        if (p != null) try { p.close(); } catch (Exception ignored) { }
+        try { c.close(); } catch (Exception ignored) { }
+    }
+
+    /** Final segments since the last mark, plus the newest partial. */
+    static final class Utterance {
+
+        private final TranscriptListener listener;
+        private final List<String> finals = new ArrayList<>();
+        private String partial = "";
+
+        Utterance(TranscriptListener listener) {
+            this.listener = listener;
+        }
+
+        synchronized void partial(String text) {
+            partial = text == null ? "" : text;
+            listener.onPartial(textSoFar());
+        }
+
+        synchronized void fin(String text) {
+            partial = "";
+            if (text != null && !text.isBlank()) finals.add(text.trim());
+            listener.onPartial(textSoFar());
+        }
+
+        synchronized void mark() {
+            finals.clear();
+            partial = "";
+        }
+
+        private String textSoFar() {
+            List<String> parts = new ArrayList<>(finals);
+            if (!partial.isBlank()) parts.add(partial.trim());
+            return String.join(" ", parts);
+        }
+    }
+}
