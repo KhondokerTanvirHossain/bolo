@@ -60,6 +60,19 @@ async function stubApi(page: Page, opts: { consent?: boolean; profile?: boolean;
   return { consents: sent, profiles, sessions: () => sessions };
 }
 
+/**
+ * Seeds the stored onboarding state before any of the page's code runs. Writing it after load raced the app's own
+ * save on boot, a suspected cause of CI flakes on reload tests.
+ */
+async function seed(page: Page, json: string) {
+  await page.addInitScript((value) => {
+    if (!sessionStorage.getItem("bolo.e2e.seeded")) {
+      localStorage.setItem("bolo.onboarding.v1", value);
+      sessionStorage.setItem("bolo.e2e.seeded", "1");
+    }
+  }, json);
+}
+
 /** True when an AudioContext's clock advances in this browser environment. Bounded: with no audio output,
  *  resume() and close() can hang forever, so nothing here is awaited without a deadline. */
 async function audioRenders(page: Page): Promise<boolean> {
@@ -147,10 +160,9 @@ test("Meet Bolo through consent to the microphone check", async ({ page }) => {
 
 test("a reload on the Day 1 step comes back to an empty recorder", async ({ page }) => {
   await stubApi(page, { consent: true, profile: true });
+  await seed(page, JSON.stringify({ step: "day1", over13: true,
+    keepRecordings: true, micDeviceId: null, headphones: false, questionIndex: 2, answers: {} }));
   await page.goto("/");
-  await page.evaluate(() => localStorage.setItem("bolo.onboarding.v1", JSON.stringify({ step: "day1", over13: true,
-    keepRecordings: true, micDeviceId: null, headphones: false, questionIndex: 2, answers: {} })));
-  await page.reload();
   await page.getByRole("button", { name: "Start recording" }).click();
   await expect(page.getByRole("button", { name: "Stop recording" })).toBeVisible();
   await page.reload();
@@ -160,19 +172,17 @@ test("a reload on the Day 1 step comes back to an empty recorder", async ({ page
 
 test("a reload on the microphone step resumes there", async ({ page }) => {
   await stubApi(page, { consent: true });
+  await seed(page,
+    JSON.stringify({ step: "mic", over13: true, keepRecordings: true, micDeviceId: null, headphones: false }));
   await page.goto("/");
-  await page.evaluate(() => localStorage.setItem("bolo.onboarding.v1",
-    JSON.stringify({ step: "mic", over13: true, keepRecordings: true, micDeviceId: null, headphones: false })));
-  await page.reload();
   await expect(page.getByRole("heading", { name: "Choose your microphone" })).toBeVisible();
 });
 
 test("without consent on the server, a stored later step returns to consent", async ({ page }) => {
   await stubApi(page);
+  await seed(page,
+    JSON.stringify({ step: "mic", over13: true, keepRecordings: true, micDeviceId: null, headphones: false }));
   await page.goto("/");
-  await page.evaluate(() => localStorage.setItem("bolo.onboarding.v1",
-    JSON.stringify({ step: "mic", over13: true, keepRecordings: true, micDeviceId: null, headphones: false })));
-  await page.reload();
   await expect(page.getByRole("heading", { name: "Bolo listens only while you practise." })).toBeVisible();
 });
 
@@ -219,10 +229,9 @@ test("an expired session at consent starts a new one and carries on", async ({ p
 
 test("a remembered microphone that is gone falls back to the default one", async ({ page }) => {
   await stubApi(page, { consent: true });
+  await seed(page, JSON.stringify({ step: "mic", over13: true,
+    keepRecordings: true, micDeviceId: "unplugged-usb-headset", headphones: false, questionIndex: 0, answers: {} }));
   await page.goto("/");
-  await page.evaluate(() => localStorage.setItem("bolo.onboarding.v1", JSON.stringify({ step: "mic", over13: true,
-    keepRecordings: true, micDeviceId: "unplugged-usb-headset", headphones: false, questionIndex: 0, answers: {} })));
-  await page.reload();
   await expect(page.locator("[data-mic-status]")).toHaveAttribute("data-mic-status", "live");
   await expect(page.getByRole("heading", { name: "Choose your microphone" })).toBeVisible();
 });
@@ -230,10 +239,9 @@ test("a remembered microphone that is gone falls back to the default one", async
 /** Lands on the Day 1 card with consent and answers already on the server. */
 async function atDay1(page: Page) {
   await stubApi(page, { consent: true, profile: true });
+  await seed(page, JSON.stringify({ step: "day1", over13: true,
+    keepRecordings: true, micDeviceId: null, headphones: false, micCheck: "great", questionIndex: 2, answers: {} }));
   await page.goto("/");
-  await page.evaluate(() => localStorage.setItem("bolo.onboarding.v1", JSON.stringify({ step: "day1", over13: true,
-    keepRecordings: true, micDeviceId: null, headphones: false, micCheck: "great", questionIndex: 2, answers: {} })));
-  await page.reload();
 }
 
 test("two starts in one tick open one mic, and Stop releases it", async ({ page }) => {
@@ -285,11 +293,10 @@ test("a clip of 10 seconds or more can still be recorded again (US-1.6)", async 
 
 test("a session lost during the questions goes back to consent, never past it", async ({ page }) => {
   await stubApi(page, { consent: true, profileFailures: [401] });
-  await page.goto("/");
-  await page.evaluate(() => localStorage.setItem("bolo.onboarding.v1", JSON.stringify({ step: "setup", over13: true,
+  await seed(page, JSON.stringify({ step: "setup", over13: true,
     keepRecordings: true, micDeviceId: null, headphones: false, micCheck: "great", questionIndex: 2,
-    answers: { goal: "work_meetings", fearedMoment: "small_talk" } })));
-  await page.reload();
+    answers: { goal: "work_meetings", fearedMoment: "small_talk" } }));
+  await page.goto("/");
   await page.getByRole("button", { name: "5 minutes" }).click();
   await page.getByRole("button", { name: "Next" }).click();
   await expect(page.getByRole("heading", { name: "Bolo listens only while you practise." })).toBeVisible();

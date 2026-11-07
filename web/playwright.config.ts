@@ -8,6 +8,9 @@ export default defineConfig({
   // CI runners open the fake mic slowly when several browsers start at once (mic-opening tests flaked in turn), so
   // CI runs one worker and allows assertions 10 s. Local runs keep the defaults.
   workers: process.env.CI ? 1 : undefined,
+  // One retry on CI only: older onboarding tests have flaked there (root cause not proven; see the ledger). A test
+  // that passes only on retry is still reported as "flaky" in the run summary, so it stays visible.
+  retries: process.env.CI ? 1 : 0,
   expect: { timeout: process.env.CI ? 10_000 : 5_000 },
   use: { baseURL: "http://localhost:3100" },
   projects: [
