@@ -1,10 +1,10 @@
 # Bolo — Product Requirements Document (MVP)
 
-Nov 6, 2026 · @Khondoker Tanvir Hossain
+Nov 6, 2026 · updated Nov 7, 2026 for browser-first · @Khondoker Tanvir Hossain
 
 ## 1. Overview
 
-The Bolo MVP is an Android-first app for Bangla-speaking professionals. It runs one daily loop: 5 or 10 minutes of talking with a Buddy who sits beside the learner, then a 2-minute debrief with 3 fixes from a Coach, then optional 3-minute drills. This PRD defines what the MVP must do, how each feature behaves in every case, and how we will know it works. It builds on the [concept, pen portraits and journeys doc](https://claude.ai/artifact/G3eA6oVoBY353c7Bxe1r2P).
+The Bolo MVP is a browser-first app for Bangla-speaking professionals. It ships in three steps: desktop browser (closed beta), then mobile browser (public launch), then an Android app. The architecture is in [Bolo-Architecture-MVP.md](Bolo-Architecture-MVP.md). It runs one daily loop: 5 or 10 minutes of talking with a Buddy who sits beside the learner, then a 2-minute debrief with 3 fixes from a Coach, then optional 3-minute drills. This PRD defines what the MVP must do, how each feature behaves in every case, and how we will know it works. It builds on the [concept, pen portraits and journeys doc](https://claude.ai/artifact/G3eA6oVoBY353c7Bxe1r2P).
 
 ### Problem
 
@@ -23,7 +23,7 @@ Learners who already read and write English freeze when they speak. Their pronun
 - Live human tutors or a marketplace
 - Social features, public leaderboards, sharing feeds
 - Exam certification or official band scores
-- iOS app (web and iOS come after the Android MVP is validated), and any paywall in the closed beta (paid plans arrive at public launch)
+- Native iOS app (iPhone users get the mobile browser version), and any paywall in the closed beta (paid plans arrive at public launch)
 
 ### Success metrics
 
@@ -43,7 +43,7 @@ Targets are proposals to confirm after the validation phase (section 11). A loop
 
 The MVP serves one persona well: a working professional who writes English comfortably but freezes when speaking at work. Students, exam-takers and specialist fields come in later releases.
 
-**Primary user (MVP).** Rafi: 22–40, a Bangladeshi graduate working in tech, banking, pharma or a multinational. Uses Android with earbuds, practises during a commute or late at night, and has a real work moment he fears (standups, client calls, interviews).
+**Primary user (MVP).** Rafi: 22–40, a Bangladeshi graduate working in tech, banking, pharma or a multinational. Uses a laptop at work and an Android phone with earbuds, practises at a desk, during a commute or late at night, and has a real work moment he fears (standups, client calls, interviews).
 
 **Secondary users (v1.1+).** Exam-takers (IELTS, OET), senior professionals who need discretion, and clinicians preparing role-plays.
 
@@ -53,7 +53,7 @@ The MVP serves one persona well: a working professional who writes English comfo
 
 | Area | In the MVP | Later |
 | --- | --- | --- |
-| Platform | Android app (min Android 9), English UI with Bangla helper text | Web, iOS |
+| Platform | Desktop browser (closed beta), then mobile browser as an installable web app (public launch); English UI with Bangla helper text | Android app (Play Store wrapper of the web app first), native iOS |
 | Onboarding | Voice-first: consent, mic, 3 questions, 30-second Day 1 clip; account after the first loop | Placement test |
 | Buddy | 1 Buddy persona; free talk + daily topic | Multiple personas, learner chooses voice/accent |
 | Scenarios | Free talk, Standup Rehearsal | Job interview, IELTS, presentation, clinical role-play |
@@ -80,9 +80,9 @@ Every screen must pass all 12 rules below before it ships. They are written to b
 | R7 | **Never a dead end.** Every error or empty state offers exactly one clear next action. | Edge-case matrix in section 7 fully covered |
 | R8 | **Audio before text.** Feedback plays sound first; text is the backup. | Every fix card has a play button as its first element |
 | R9 | **Kind tone.** Open every debrief with a strength; never use "wrong", "bad" or "error" in learner-facing copy. | Copy review |
-| R10 | **Low-end friendly.** Works smoothly on a 2 GB RAM Android phone on a 3G connection. | Device lab test: no screen takes > 2 s to become usable |
-| R11 | **One-handed use.** Primary actions sit in the bottom third of the screen. | Thumb-zone overlay in design review |
-| R12 | **Interrupt-safe.** Leaving the app at any point loses nothing; the learner resumes where they were. | Kill the app at every step in QA and confirm it resumes |
+| R10 | **Low-end friendly.** Works smoothly on an office laptop on a slow connection, and (from the mobile browser release) on a 2 GB RAM Android phone on 3G. | Device lab test: no screen takes > 2 s to become usable |
+| R11 | **One-handed use on phones, keyboard on computers.** On phones, primary actions sit in the bottom third of the screen; on computers, every action has a key (see the design system's desktop page). | Thumb-zone overlay and keyboard-only walkthrough in design review |
+| R12 | **Interrupt-safe.** Leaving the app at any point loses nothing; the learner resumes where they were. | Close the tab, switch tabs and drop the network at every step in QA and confirm it resumes |
 
 ### Navigation model
 
@@ -96,7 +96,7 @@ Three bottom tabs only: **Talk** (Home), **Progress** and **Me** (settings, plan
 
 ### Design inputs
 
-- **Smallest target:** 360 dp wide screen on a 2 GB RAM Android phone; design at 360 dp first, then check 412 dp.
+- **Targets:** desktop at 1280px and up first (layouts down to 1024px and 640px are in the design system); phone at 360 px wide first, then 412 px.
 - **Screen inventory:** design produces it from the app map (section 4) and the stories (section 6) as the first design deliverable.
 - **Banned words (R6, R9), starter list:** wrong, bad, error, mistake, fail, incorrect, poor, phoneme, schwa, fricative, labiodental. Never describe an accent as a problem.
 - **Bangla copy:** written by a native Bangla copywriter and reviewed by 3 target users; never machine-translated alone.
@@ -158,7 +158,7 @@ The MVP has 77 functional requirements across 11 modules. **P0** is required for
 | TLK-12 | Steer the conversation to elicit the learner's current focus sounds and patterns. | P1 |
 | TLK-13 | Let the learner ask the Buddy to repeat or slow down ("Sorry?", "Slower please"). | P0 |
 | TLK-14 | Keep conversations safe: refuse harmful topics and redirect politely; crisis responses use approved local helpline content. | P0 |
-| TLK-15 | Barge-in (learner speaking over the Buddy stops it) works only when earbuds or a headset are connected; it is off on the phone speaker. | P0 |
+| TLK-15 | Barge-in (learner speaking over the Buddy stops it) works only when the learner says they use headphones (asked once in the mic picker, since a browser can't detect them); it is off otherwise, and switches off automatically if the Buddy's voice is heard in the mic. | P0 |
 | TLK-16 | The conversation screen shows only: the companion scene, the mic state, the Buddy's caption, a subtle time-remaining arc, Pause and End. | P0 |
 
 ### 5.3 Silent assessment (ASM)
@@ -223,13 +223,13 @@ The MVP has 77 functional requirements across 11 modules. **P0** is required for
 
 | ID | Requirement | Priority |
 | --- | --- | --- |
-| ACC-1 | Prompt for an account (Google sign-in or phone OTP) at the end of the first loop (PRG-7), to save progress. | P0 |
+| ACC-1 | Prompt for an account at the end of the first loop (PRG-7), to save progress. Google sign-in in the closed beta (P0); phone OTP is added at public launch (P1). | P0 |
 | ACC-2 | Allow continuing as a guest for up to 3 sessions. Guest sessions are scored on the server; recordings are kept only if the learner chose to keep them (ONB-7). | P0 |
 | ACC-3 | Store the consent choice from ONB-7 with time and policy version; the learner can change it any time in Me → Privacy. | P0 |
 | ACC-4 | Delete any single recording, or all data, from Me → Privacy; complete deletion within 7 days. | P0 |
 | ACC-5 | Free plan: 7 talks in the first 7 days (counted from the first talk), then 2 talks a month, for everyone (a talk is one 5-minute conversation plus its Coach debrief). Paid monthly plans: Basic ৳300, Premium ৳500, Ultimate ৳1000. Plans differ only in how many talks they include; every plan has every feature, and every plan states its talk limit as a number (set after the cost test). No plan is called "Unlimited". | P1 |
 | ACC-6 | Payment via bKash and card; monthly billing; change plan or cancel anytime, cancelling in 2 taps. | P1 |
-| ACC-7 | Restore goals, history, patterns and the Day 1 clip on a new phone after sign-in. | P0 |
+| ACC-7 | Restore goals, history, patterns and the Day 1 clip on a new device or browser after sign-in. | P0 |
 | ACC-8 | In Bolo's first year only: a learner whose 3 invited friends each finish a first talk gets one month of Basic free. Invites are shared by hand through a link; Bolo never reads contacts or sends anything itself. | P1 |
 
 ### 5.9 Settings and accessibility (SET)
@@ -258,7 +258,7 @@ The MVP has 77 functional requirements across 11 modules. **P0** is required for
 | PRS-5 | With earbuds, place the Buddy's voice slightly to the companion's side in stereo. | P0 |
 | PRS-6 | Let the learner choose a companion: male, female or a non-human character. The companion is always framed as a friend, never romantic. | P0 |
 | PRS-7 | Offer a voice-only mode (soft pulsing ring), and fall back to a still scene on low-end devices or when "Remove animations" is on. | P0 |
-| PRS-8 | Scenes download once and are ≤ 3 MB each; the default scene ships inside the app. | P0 |
+| PRS-8 | Scenes download once, are cached by the browser and are ≤ 3 MB each; the default scene is cached on first visit and works offline. | P0 |
 
 ## 6. User stories and acceptance criteria
 
@@ -295,8 +295,8 @@ The 9 epics below cover the happy path and every edge case we can foresee for ea
 *As a* learner who tapped "Deny", *I want* a simple way to fix it, *so that* I'm not stuck.
 
 - **Given** I denied the mic once, **when** I return to the speaking step, **then** I see "Bolo needs your mic to hear you" and a single "Try again" button that shows the system prompt again.
-- **Given** I chose "Don't ask again", **when** I tap "Try again", **then** the app opens the phone's app settings directly to Bolo's permissions.
-- **Given** I enabled the mic in settings, **when** I come back to the app, **then** it detects the permission and continues from the same step with no extra tap.
+- **Given** the browser has blocked the mic for Bolo, **when** I tap "Try again", **then** I see a picture of where to unblock it (the icon beside the address bar) for my browser.
+- **Given** I unblocked the mic, **when** I come back to the tab, **then** it detects the permission and continues from the same step with no extra tap.
 
 **US-1.4 · Tell Bolo my goal** · P0 · ONB-3
 
@@ -370,7 +370,7 @@ The 9 epics below cover the happy path and every edge case we can foresee for ea
 - **Given** I'm speaking, **when** I stay silent for at least 2.5 s (longer if my sentence sounds unfinished), **then** my turn ends and the Buddy replies.
 - **Given** I pause mid-thought, **when** I start speaking again before my turn ends, **then** my turn continues uninterrupted.
 - **Given** I want to finish my turn early, **when** I tap "Done", **then** the Buddy replies immediately.
-- **Given** I start speaking while the Buddy is still talking, **when** my voice is detected, **then** the Buddy stops and listens (barge-in), but only when I'm using earbuds or a headset. On the phone speaker, the Buddy finishes its line first, because the mic would hear the Buddy's own voice.
+- **Given** I start speaking while the Buddy is still talking, **when** my voice is detected, **then** the Buddy stops and listens (barge-in), but only when I told Bolo I'm using headphones. On speakers, the Buddy finishes its line first, because the mic would hear the Buddy's own voice.
 
 **US-2.4 · Get pushed to say more** · P0 · TLK-5
 
@@ -786,8 +786,8 @@ When several states are true at once, the first match in each column wins:
 
 *As a* learner who just finished a first loop, *I want* to save my progress quickly, *so that* I don't lose my Day 1 clip.
 
-- **Given** I've finished or skipped the drills at the end of my first loop, **when** the summary closes, **then** I see "Save your progress" with 2 options: "Continue with Google" and "Use phone number", plus a quiet "Not now" link.
-- **Given** I choose phone number, **when** I enter my number, **then** I get a 6-digit OTP by SMS that is auto-read where Android allows it.
+- **Given** I've finished or skipped the drills at the end of my first loop, **when** the summary closes, **then** I see "Save your progress" with "Continue with Google" (and, from public launch, "Use phone number"), plus a quiet "Not now" link.
+- **Given** I choose phone number (public launch), **when** I enter my number, **then** I get a 6-digit OTP by SMS; the browser offers to fill it where it supports one-time-code autofill.
 - **Given** I sign in, **when** the account is created, **then** everything from my guest sessions is attached to it with no extra step.
 - **Given** I create an account, **when** I confirm, **then** my 13+ confirmation from onboarding carries over and I'm not asked again.
 
@@ -797,20 +797,20 @@ When several states are true at once, the first match in each column wins:
 
 - **Given** I tapped "Not now", **when** I finish my 2nd and 3rd sessions, **then** the save prompt reappears once after each.
 - **Given** I've done 3 guest sessions, **when** I try to start a 4th, **then** I must sign in first. The screen says my progress will be kept. My guest sessions were scored on the server, and recordings were kept only if I chose to keep them at the start.
-- **Given** I uninstall the app as a guest, **when** I reinstall, **then** my guest data is gone, and I was warned of this on the "Not now" prompt.
+- **Given** I clear my browser data as a guest, **when** I come back, **then** my guest data is gone, and I was warned of this on the "Not now" prompt.
 
-**US-8.3 · OTP problems** · P0 · edge case
+**US-8.3 · OTP problems** · P1 (arrives with phone OTP at public launch) · edge case
 
 *As a* learner whose SMS didn't arrive, *I want* an easy fallback, *so that* I'm not locked out.
 
 - **Given** no OTP arrives, **when** 30 s pass, **then** "Resend code" becomes active, and after 2 resends "Try Google instead" is suggested.
 - **Given** I enter a wrong code, **when** I submit it, **then** I see "That code didn't match" with the field cleared. After 5 wrong attempts I must wait 15 minutes.
 
-**US-8.4 · Move to a new phone (ACC-7)** · P0
+**US-8.4 · Move to a new device (ACC-7)** · P0
 
-*As a* learner with a new phone, *I want* my history restored, *so that* I keep my progress.
+*As a* learner on a new computer, browser or phone, *I want* my history restored, *so that* I keep my progress.
 
-- **Given** I install Bolo on a new phone, **when** I tap "I already have an account" on the welcome screen, **then** after sign-in my goals, history, patterns and Day 1 clip are restored and onboarding is skipped.
+- **Given** I open Bolo on a new device or browser, **when** I tap "I already have an account" on the welcome screen, **then** after sign-in my goals, history, patterns and Day 1 clip are restored and onboarding is skipped.
 
 **US-8.5 · Control my voice recordings** · P0 · ACC-3
 
@@ -862,7 +862,7 @@ When several states are true at once, the first match in each column wins:
 *As a* free learner in Bolo's first year, *I want* to earn a month of Basic by inviting friends, *so that* I can keep practising without paying yet.
 
 - **Given** I open Me → Invite friends (or the free-limit sheet), **when** the screen loads, **then** I see "Invite 3 friends, get a month of Basic", 3 slots showing who has joined, my invite link with Copy, and "Share invite link".
-- **Given** I tap "Share invite link", **when** Android's share sheet opens, **then** the message is neutral and editable, never mentions my level, and I choose who gets it. Bolo never reads my contacts or messages anyone.
+- **Given** I tap "Share invite link", **when** the device's share sheet opens (Web Share API; on a computer without one, the link is copied), **then** the message is neutral and editable, never mentions my level, and I choose who gets it. Bolo never reads my contacts or messages anyone.
 - **Given** a friend opens my link, **when** they finish their first talk, **then** they fill one slot, shown by their first name; friends who haven't joined are never listed.
 - **Given** my third friend finishes a first talk, **when** I next open the app, **then** I see "A month of Basic is yours"; Basic runs for 30 days without asking for payment details and doesn't renew. If I already pay, the month is credited to my next bill.
 - **Given** Bolo's first year has ended, **when** I look for the offer, **then** it no longer appears anywhere; friends who joined before the end still count.
@@ -928,14 +928,14 @@ Every state below shows one short message and exactly one primary next action (r
 | Learner silent 8 / 15 / 45 s | Encouragement → hint card → paused | Tap to continue | US-2.5 |
 | Learner pauses mid-thought | Turn stays open (adaptive wait ≥ 2.5 s) | Keep talking, or tap Done | US-2.3 |
 | Learner speaks Bangla | Buddy restates the meaning, asks for English, shows a starter | Say it in English | US-2.6 |
-| Learner talks over the Buddy | With earbuds the Buddy stops and listens; on the phone speaker it finishes its line | Keep talking | US-2.3 |
+| Learner talks over the Buddy | With headphones the Buddy stops and listens; on speakers it finishes its line | Keep talking | US-2.3 |
 | Phone call or app switch | Session auto-pauses | Continue your chat | US-2.10 |
 | Session < 60 s of speech | "Not enough talking to give useful feedback yet" | Talk a bit more | US-3.3 |
 | Noisy audio, low-confidence issues | Debrief with fewer fixes + a note about noise | Run mic check | US-3.4 |
 | Scoring slow (> 15 s) or failed | "Your coach is listening back" / "We couldn't prepare your feedback" | Notify me when ready | US-3.7 |
 | Wrong fix | Card removed: "Thanks, we've removed it" | Next card | US-4.6 |
 | App closed during the first-loop end steps | Only the missed steps are shown, once, before Home | Continue | US-6.8 |
-| Bluetooth earbuds disconnect mid-session | Session pauses: "Your earbuds disconnected" | Continue on phone speaker | — |
+| Bluetooth headphones disconnect mid-session | Session pauses: "Your headphones disconnected" | Continue on speakers | — |
 | Buddy's voice picked up by the mic (speaker echo) | Echo cancellation keeps the Buddy's voice out of scoring; if echo persists for 2 turns: "Earbuds will help me hear you better" | Continue | — |
 | Low-end phone or "Remove animations" on | Still scene; only the mic ring moves | None needed | US-P5 |
 | Scene not downloaded, on mobile data | Scene size with a choice | Download now / Wait for Wi-Fi | US-P5 |
@@ -950,15 +950,15 @@ Every state below shows one short message and exactly one primary next action (r
 
 ## 8. Accessibility
 
-The MVP meets WCAG 2.1 AA on Android. Because Bolo is voice-first, it also has to work for people who stammer, are hard of hearing or have low vision, without penalising them.
+The MVP meets WCAG 2.1 AA in every supported browser. Because Bolo is voice-first, it also has to work for people who stammer, are hard of hearing or have low vision, without penalising them.
 
 ### Requirements
 
 | ID | Requirement | Priority |
 | --- | --- | --- |
 | AX-1 | Text contrast ≥ 4.5:1 (≥ 3:1 for large text and icons) in every theme that ships. | P0 |
-| AX-2 | Touch targets ≥ 48 × 48 dp; the primary Talk button ≥ 96 dp. | P0 |
-| AX-3 | Every control has a TalkBack label; card order and focus order match the visual order. | P0 |
+| AX-2 | Touch targets ≥ 48 × 48 px; the primary Talk button ≥ 96 px. | P0 |
+| AX-3 | Every control has an accessible name for screen readers (NVDA, VoiceOver, and TalkBack on phones) and a keyboard path; card order and focus order match the visual order. | P0 |
 | AX-4 | Layouts work with system font scaling up to 200% without clipping or horizontal scrolling. | P0 |
 | AX-5 | Results never rely on colour alone: each result has an icon and a word (✓ Nailed it, ↗ Closer, ↻ Once more). | P0 |
 | AX-6 | Every audio element has a text equivalent (captions for the Buddy, transcripts for clips). | P0 |
@@ -969,12 +969,12 @@ The MVP meets WCAG 2.1 AA on Android. Because Bolo is voice-first, it also has t
 
 ### Accessibility stories
 
-**US-9.1 · Use Bolo with TalkBack** · P0 · AX-3
+**US-9.1 · Use Bolo with a screen reader** · P0 · AX-3
 
 *As a* learner with low vision, *I want* to complete the full loop with a screen reader, *so that* I can practise independently.
 
-- **Given** TalkBack is on, **when** I move through Home, Talk, Debrief and Drill, **then** every control is announced with its name and state (e.g. "Play your clip, button").
-- **Given** it becomes my turn to speak, **when** the mic opens, **then** TalkBack announces "Your turn" and stays silent while I speak, so it isn't picked up as my speech.
+- **Given** a screen reader is on, **when** I move through Home, Talk, Debrief and Drill, **then** every control is announced with its name and state (e.g. "Play your clip, button").
+- **Given** it becomes my turn to speak, **when** the mic opens, **then** the screen reader announces "Your turn" and stays silent while I speak, so it isn't picked up as my speech.
 
 **US-9.2 · Practise with a stammer** · P0 · AX-8
 
@@ -1010,15 +1010,15 @@ The MVP meets WCAG 2.1 AA on Android. Because Bolo is voice-first, it also has t
 
 ## 9. Non-functional requirements
 
-Conversation latency is the non-functional requirement that matters most: a Buddy that pauses awkwardly brings back the anxiety the product exists to remove. All targets are measured on a mid-range Android phone on a Bangladeshi 4G connection.
+Conversation latency is the non-functional requirement that matters most: a Buddy that pauses awkwardly brings back the anxiety the product exists to remove. All targets are measured from Bangladesh: on a mid-range laptop on office broadband and on 4G tethering for the closed beta, and on a mid-range Android phone on 4G from the mobile browser release.
 
 | ID | Area | Requirement | Target |
 | --- | --- | --- | --- |
-| NFR-1 | Latency | Learner's turn ends → Buddy starts speaking | ≤ 1.5 s median, ≤ 2.5 s p90 |
+| NFR-1 | Latency | End-of-turn decision (the adaptive silence wait of TLK-4 has passed, or "Done" was tapped) → Buddy starts speaking | ≤ 1.5 s median, ≤ 2.5 s p90 |
 | NFR-2 | Latency | Session ends → debrief ready | ≤ 15 s p90 |
 | NFR-3 | Latency | "Try it" attempt → result shown | ≤ 2 s p90 |
-| NFR-4 | Performance | Cold start to Home usable | ≤ 3 s on a 2 GB RAM device |
-| NFR-5 | Performance | App install size, including the default scene | ≤ 40 MB |
+| NFR-4 | Performance | First visit to Home usable | ≤ 3 s on a mid-range laptop on 4G (and on a 2 GB RAM phone from the mobile browser release) |
+| NFR-5 | Performance | First-visit download, including the default scene | ≤ 5 MB; each later visit loads from cache |
 | NFR-6 | Performance | Mobile data per 10-minute session | ≤ 5 MB (≤ 3 MB with data saver) |
 | NFR-7 | Reliability | Crash-free sessions | ≥ 99.5% |
 | NFR-8 | Reliability | Backend availability | ≥ 99.5% monthly |
@@ -1031,9 +1031,9 @@ Conversation latency is the non-functional requirement that matters most: a Budd
 | NFR-15 | Privacy | Voice data never used to train third-party models; vendor contracts must guarantee this | Required |
 | NFR-16 | Privacy | Consent choice recorded before any audio is captured, with timestamp and policy version | Required |
 | NFR-17 | Security | OTP rate-limited (5 attempts, then a 15-minute lock); sessions expire after 90 days of inactivity | Required |
-| NFR-18 | Compatibility | Android 9+; works with wired and Bluetooth earbuds and the phone speaker (echo cancellation on) | Required |
+| NFR-18 | Compatibility | Latest two versions of Chrome, Edge and Firefox, and Safari 17+; works with wired and Bluetooth headphones and with speakers (echo cancellation on) | Required |
 | NFR-19 | Presence | Scene animation runs at ≥ 30 fps on a 2 GB RAM device, or falls back to a still scene automatically | Required |
-| NFR-20 | Localisation | English UI with Bangla helper strings; all strings in resource files ready for full Bangla UI | Required |
+| NFR-20 | Localisation | English UI with Bangla helper strings; all strings in message bundles ready for full Bangla UI | Required |
 | NFR-21 | Safety | Crisis-response wording and local helpline numbers approved by a qualified local partner before beta | Required |
 | NFR-22 | Cost | AI and speech cost per 10-minute loop | Target set after validation; tracked from day 1 |
 
@@ -1086,14 +1086,14 @@ Bolo ships in 4 phases. Each gate is a go/no-go check on real data, so we never 
 ```mermaid
 flowchart LR
     P0["0 · Validate<br/>Scoring accuracy test<br/>Concierge pilot, 10<br/>Buddy & scene UX test"] --> G1{"Gate 1<br/>Scoring agrees ≥ 80%<br/>First word ≤ 60 s"}
-    G1 --> P1["<b>1 · Build MVP</b> (this PRD)<br/>All P0 requirements<br/>Android closed beta<br/>50–100 learners"]
+    G1 --> P1["<b>1 · Build MVP</b> (this PRD)<br/>All P0 requirements<br/>Desktop browser closed beta<br/>50–100 learners"]
     P1 --> G2{"Gate 2<br/>Day-7 retention ≥ 30%<br/>Disputed fixes ≤ 10%"}
-    G2 --> P2["2 · Launch<br/>P1: paid plans, bKash<br/>Bangla tips, streak<br/>Public Play Store"]
+    G2 --> P2["2 · Launch<br/>Mobile browser<br/>P1: paid plans, bKash, phone OTP<br/>Bangla tips, streak<br/>Public web launch"]
     P2 --> G3{"Gate 3<br/>Fluency up for ≥ 60%<br/>Paid conversion on target"}
-    G3 --> P3["3 · Expand<br/>Interview + IELTS<br/>Web and iOS<br/>Car mode, clinical"]
+    G3 --> P3["3 · Expand<br/>Android app (Play Store)<br/>Interview + IELTS<br/>Car mode, clinical"]
 ```
 
-Phase 0 needs no app: a scoring test on 20 recorded speakers, a 10-person concierge pilot and a usability test of the Buddy and Coach. Failing Gate 1 means changing the scoring approach before any build starts.
+Phase 0 needs no finished app: a scoring test on 20 recorded speakers, a voice-latency test from Bangladesh, a 10-person concierge pilot and a usability test of the Buddy and Coach. Failing Gate 1 means changing the scoring or voice approach before the MVP build starts. Gate 1 also requires the Buddy's reply latency (NFR-1) to be inside its target on real Bangladeshi connections.
 
 ## 12. Dependencies, risks and open questions
 
@@ -1110,7 +1110,7 @@ The MVP depends on 8 external services and partners. The biggest risk is pronunc
 | Companion and scene art | 3 companions, 2 scenes, 5 animation states, mouth-position illustrations | Illustrator plus an interactive-animation tool such as Rive |
 | Crisis content | Approved wording and local helpline numbers | A qualified local mental-health partner (NFR-21) |
 | Payments (public launch) | bKash and card, recurring billing | bKash tokenised/recurring checkout; a local payment gateway for cards |
-| Auth and messaging | Google sign-in, SMS OTP, push notifications | Firebase or equivalent; a local SMS gateway |
+| Auth and messaging | Google sign-in, browser push notifications; SMS OTP at public launch | Google Identity Services; Web Push (VAPID); a local SMS gateway (public launch) |
 
 ### Risks
 
@@ -1134,4 +1134,4 @@ The MVP depends on 8 external services and partners. The biggest risk is pronunc
 - [ ] Talks included in each plan and the fair-use limit for every plan, set from the cost test (designs use placeholders: Basic 20, Premium 50, Ultimate 100 a month). Also: student discount? yearly plans? How many free months one learner can earn through invites in the first year?
 - [ ] Accent of the model voice: neutral international English, or a choice of British or American?
 - [ ] Do we need a human-teacher review tier to build credibility at launch, or later?
-- [ ] Web version timing: needed for the Kamrul persona (desktop at work) earlier than planned?
+- [x] Platform order: desktop browser (closed beta) → mobile browser (public launch) → Android app (decided 7 Nov 2026).
