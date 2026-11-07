@@ -1,7 +1,6 @@
 # Bolo's site block, appended to the box's /home/ec2-user/n8n/Caddyfile (shared with medioo, drugdb and n8n).
 # Apply only with the procedure in docs/RUNBOOK.md (in-place write, validate, reload, compare the other tenants).
-# Host: sslip.io resolves bolo.13-205-14-249.sslip.io to the box, so HTTPS (needed for the mic) works with no DNS edit.
-bolo.13-205-14-249.sslip.io {
+bolo.eliooo.org {
 	encode zstd gzip
 
 	header {
@@ -22,4 +21,9 @@ bolo.13-205-14-249.sslip.io {
 	handle {
 		reverse_proxy bolo-web:3000
 	}
+}
+
+# Bolo's first address (2026-11-07, before the DNS record existed): links already shared keep working.
+bolo.13-205-14-249.sslip.io {
+	redir https://bolo.eliooo.org{uri} permanent
 }

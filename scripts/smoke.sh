@@ -18,6 +18,7 @@ headers=$(curl -s -D - -o /dev/null --max-time 15 -X POST "$BOLO_URL/api/session
 check "session sets a Secure HttpOnly cookie" yes "$(grep -i '^set-cookie: __Host-bolo_session=' <<<"$headers" | grep -qi 'secure' && grep -i '^set-cookie: __Host-bolo_session=' <<<"$headers" | grep -qi 'httponly' && echo yes || echo no)"
 check "write without X-Bolo is refused" 403 "$(code -X POST "$BOLO_URL/api/session" -H 'Content-Type: application/json' -H "Origin: $BOLO_URL" -d '{}')"
 check "HSTS header" yes "$(curl -s -I --max-time 15 "$BOLO_URL/" | grep -qi '^strict-transport-security' && echo yes || echo no)"
+check "old sslip.io address redirects here" "301 $BOLO_URL/x?y=1" "$(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' --max-time 15 'https://bolo.13-205-14-249.sslip.io/x?y=1')"
 
 echo "Other tenants (must be unchanged by any Bolo deploy)"
 for url in https://medioo.eliooo.org/ https://drugdb.eliooo.org/ https://n8n.eliooo.org/; do
