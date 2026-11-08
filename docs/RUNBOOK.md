@@ -135,3 +135,42 @@ Phase 0). It uses the same rule as practice and Try it: `SoundFlags` in the `ass
   - the teacher's labels;
   - a second pronunciation vendor, as another vendor function in `GoldenSetRunner`.
 
+
+## Home and settings (Phase 1a)
+
+- **Home** (`GET /api/home`, PRD US-6.9) shows the **Start talking** button and at most one card:
+  - "Finish your feedback": the latest talk's debrief is ready, but the learner hasn't opened it;
+  - otherwise "Practise the v sound": the first sound fix in that feedback.
+- **Marking feedback as seen:** opening a ready debrief calls `POST /api/talk/{id}/debrief/viewed`, recorded in `debrief.viewed_at`.
+- **Settings** (gear button on Home; `PUT /api/me/settings`) apply from the **next** talk:
+  - Bolo's speed: normal or slower (`learner_settings`);
+  - captions: on or off.
+- **"Slower please"** during a talk slows Bolo for that talk, and asks "Keep Bolo slower next time?"; **Yes** saves it.
+
+## Funnel and time to first word
+
+- **Events** (`event` table, PRD §10) carry no audio and no text: only numbers, booleans and short keys. They are allow-listed and limited to 60 per learner per minute.
+  - **From the browser:** `app_first_open`, `mic_permission_result`, `onboarding_step_completed`, `first_word_spoken`, `debrief_viewed`.
+  - **From the server:** `session_started`, `session_ended`.
+- **Before consent** there is no learner, so events wait in the browser and are sent right after consent. The funnel can't see people who leave before consent.
+- **`first_word_spoken`** fires once per browser: when the Day 1 clip is saved, or at the first talk turn. It carries `seconds_since_first_open`.
+- **Read the funnel:** `scripts/metrics.sh [days]` (default 30). It is read-only and prints opens, mic allowed, onboarding finished, first word (median and slowest 1 in 10), talks and feedback viewed. **Target: first word ≤ 60 s median** (PRD R4, Gate 1).
+
+## Stranger test (Phase 1a exit)
+
+The goal: someone who has never seen Bolo gets from opening it to talk to feedback **with no help**.
+
+1. **Set up:**
+   - use the person's own laptop, in a **fresh private window**, at https://bolo.eliooo.org;
+   - they need sound on and a working mic;
+   - no live talk can be running, because Azure F0 allows one at a time.
+2. **Say only:** "This is an app to practise speaking English. Try it; I'll just watch." Then don't help.
+3. **Note as they go:**
+   - every pause longer than about 5 s;
+   - every question they ask;
+   - anything they click that does nothing;
+   - where they almost gave up.
+4. **They're done when:** they reach the Coach's feedback, or give up. Ask afterwards: "What was confusing? Would you use it again tomorrow?"
+5. **Afterwards:** run `scripts/metrics.sh 1`.
+   - Their first word should be within **60 s** of opening, and their first talk turn within **3 min**.
+   - Write the notes in `docs/product/feedback-log.md`.
