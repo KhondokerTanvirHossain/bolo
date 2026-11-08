@@ -1,6 +1,9 @@
 spring:
   application.name: bolo-api
   threads.virtual.enabled: true
+  # Uploads: practice clips (<= 640 KB) and the Day 1 clip (<= 2 MB); anything larger is refused before it is read.
+  servlet.multipart.max-file-size: 2MB
+  servlet.multipart.max-request-size: 3MB
   datasource:
     url: ${BOLO_DB_URL:jdbc:postgresql://localhost:5434/bolo}
     username: ${BOLO_DB_USER:bolo}

@@ -1,5 +1,6 @@
 package app.bolo.talk.application.service;
 
+import app.bolo.learner.application.port.in.SignInConfig;
 import app.bolo.common.error.RefusedException;
 import app.bolo.common.id.LearnerId;
 import app.bolo.common.id.TalkSessionId;
@@ -29,11 +30,16 @@ public class TalkSessionService implements StartTalkUseCase {
     private final String policyVersion;
     private final int maxLive;
     private final Duration attachWithin;
+    private final SignInConfig signIn;
+
+    /** ACC-2: a guest may start this many talks; then they sign in to keep talking (only while sign-in is on). */
+    static final int GUEST_TALKS = 3;
 
     public TalkSessionService(TalkSessionPort sessions, CurrentLearnerUseCase learners, BoloClock clock,
                               @Value("${bolo.policy-version}") String policyVersion,
                               @Value("${bolo.talk.max-live-sessions}") int maxLive,
-                              @Value("${bolo.talk.attach-within-ms}") long attachWithinMs) {
+                              @Value("${bolo.talk.attach-within-ms}") long attachWithinMs, SignInConfig signIn) {
+        this.signIn = signIn;
         this.sessions = sessions;
         this.learners = learners;
         this.clock = clock;
@@ -45,6 +51,9 @@ public class TalkSessionService implements StartTalkUseCase {
     @Override
     public TalkView start(LearnerId learner) {
         LearnerView view = consented(learner).orElseThrow(() -> new RefusedException("no-consent"));
+        if (signIn.enabled() && "guest".equals(view.kind()) && sessions.countStarted(learner) >= GUEST_TALKS) {
+            throw new RefusedException("sign-in");
+        }
         int minutes = view.profile() == null ? 5 : view.profile().talkMinutes();
         var now = clock.now();
         sessions.endOpenFor(learner, EndReason.DISCONNECTED, now);

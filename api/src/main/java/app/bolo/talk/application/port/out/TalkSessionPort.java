@@ -37,4 +37,7 @@ public interface TalkSessionPort {
 
     /** A guest joined an account (LearnerMerged): its rows become the account's. */
     void moveLearner(LearnerId from, LearnerId to);
+
+    /** Talks the learner actually started (the socket attached). */
+    int countStarted(LearnerId learner);
 }

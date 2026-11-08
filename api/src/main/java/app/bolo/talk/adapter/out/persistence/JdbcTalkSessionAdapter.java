@@ -108,6 +108,12 @@ class JdbcTalkSessionAdapter implements TalkSessionPort {
     }
 
     @Override
+    public int countStarted(LearnerId learner) {
+        return jdbc.sql("select count(*) from talk_session where learner_id = ? and attached_at is not null")
+                .param(learner.value()).query(Integer.class).single();
+    }
+
+    @Override
     public void moveLearner(LearnerId from, LearnerId to) {
         jdbc.sql("update talk_session set learner_id = ? where learner_id = ?").params(to.value(), from.value()).update();
     }
