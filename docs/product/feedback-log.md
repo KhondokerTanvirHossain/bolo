@@ -43,3 +43,27 @@ Feedback from testing the live app, kept for discussion before it becomes PRD ch
   - **Rejected:** automatic language detection on every turn (it risks hearing accented English as Bangla, and may break pronunciation scoring).
   - **No-cost part on its own:** shorten the current unclear-turn reply.
 - **Status:** logged only. The founder will handle it later; not urgent. Nothing changed.
+
+## 2026-11-09 — founder test of the conversation, and engagement ideas
+
+### 4. Bolo is repetitive and doesn't know me
+- **Observed:**
+  - Bolo asks the same questions again and again ("What did you do today?"). The questions aren't interesting.
+  - It has no context about the learner, so it doesn't feel personal.
+- **Founder's view:**
+  - Bolo should feel like a real person who knows you. It should remember context, personalise, and ask interesting questions.
+  - "If the only hook is English, it won't work." There has to be an addictive hook that makes people want to keep talking.
+  - "The more the user speaks, the more they get better."
+- **Related (for the discussion):**
+  - Today Bolo knows only the setup answers (goal, hardest moment) and nothing from earlier talks.
+  - The PRD's story memory (TLK-11) is planned for Phase 1b.
+  - The accent and persona item (2026-11-08, item 1 and 2 above) is part of the same conversation.
+- **Status:** logged only; not to be built until discussed. Bolo's voice and persona are unchanged.
+
+### 5. Gamification: push notifications and challenges
+- **Founder's idea:** gamification, push notifications and challenges.
+- **Related (for the discussion):**
+  - The PRD plans Web Push reminders with time slots, "Keep it private" and back-off rules (Phase 1c), and a gentle streak (P1, Phase 2).
+  - The design rules say "no guilt".
+  - Challenges aren't in the PRD yet.
+- **Status:** logged only.
