@@ -91,6 +91,14 @@ test("too little speech says so kindly", async ({ page }) => {
   await talkAndEnd(page, s);
   await expect(page.getByText("Not enough talking to give you useful feedback yet")).toBeVisible();
   await expect(page.getByRole("button", { name: "Talk a bit more" })).toBeVisible();
+  // Founder test 2026-11-08: cards that overrode the centring slid off to the bottom right.
+  const box = (await page.locator("[data-screen=scoring] .dk-card").boundingBox())!;
+  const vp = page.viewportSize()!;
+  expect(box.x).toBeGreaterThanOrEqual(0);
+  expect(box.y).toBeGreaterThanOrEqual(0);
+  expect(box.x + box.width).toBeLessThanOrEqual(vp.width);
+  expect(box.y + box.height).toBeLessThanOrEqual(vp.height);
+  expect(Math.abs(box.x + box.width / 2 - vp.width / 2)).toBeLessThan(4);
 });
 
 test("a debrief that couldn't be prepared says the talk is saved", async ({ page }) => {
@@ -150,4 +158,23 @@ test("Try it on a fix card", async ({ page }) => {
   await expect(page.getByText("Nailed it")).toBeVisible();
   expect(posts).toHaveLength(1);
   expect(posts[0]).toContain("It is very important.");
+});
+
+/** Pilot learners are mostly on phones: the debrief must be readable and tappable at 390 px, with no keyboard. */
+test("on a phone the debrief cards fit and can be tapped through", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const s = await stub(page, [READY]);
+  await talkAndEnd(page, s);
+  const strength = page.getByText("You explained your job for 40 seconds without stopping.");
+  await expect(strength).toBeVisible({ timeout: 10_000 });
+  const box = (await strength.boundingBox())!;
+  expect(box.x).toBeGreaterThanOrEqual(15);
+  expect(box.x + box.width).toBeLessThanOrEqual(375);
+  await page.getByRole("button", { name: /The v sound/ }).click();
+  await expect(page.getByText("Top teeth touch your lower lip for v.")).toBeVisible();
+  for (const label of ["Top teeth touch your lower lip for v.", "Try"]) {
+    const b = (await page.getByText(label, { exact: true }).first().boundingBox())!;
+    expect(b.x + b.width, label).toBeLessThanOrEqual(375);
+  }
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 });

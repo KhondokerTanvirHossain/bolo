@@ -94,7 +94,7 @@ export default function Onboarding() {
   if (boot.kind === "offline") {
     return (
       <section className="dk-screen on">
-        <div className="dk-card" role="alert" style={{ position: "relative", margin: "20vh auto" }}>
+        <div className="dk-card" role="alert">
           <h1 className="bo-flow__title">Bolo can&apos;t reach the internet</h1>
           <p className="bo-flow__body">Check your connection, then try again.</p>
           <button className="bo-btn bo-btn--primary bo-btn--block" onClick={() => window.location.reload()}>Try again</button>

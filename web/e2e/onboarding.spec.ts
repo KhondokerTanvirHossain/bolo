@@ -311,3 +311,15 @@ test("a busy server at consent says so in plain words", async ({ page }) => {
   await page.getByRole("button", { name: "Yes, keep them" }).click();
   await expect(page.getByRole("alert").filter({ hasText: "Lots of people are joining" })).toBeVisible();
 });
+
+test("no connection says so on a card in the middle of the screen", async ({ page }) => {
+  await page.route("**/api/**", (r) => r.abort("internetdisconnected"));
+  await page.goto("/");
+  const card = page.getByRole("alert").filter({ hasText: "Bolo can't reach the internet" });
+  await expect(card).toBeVisible();
+  const box = (await card.boundingBox())!;
+  const vp = page.viewportSize()!;
+  expect(box.x + box.width).toBeLessThanOrEqual(vp.width);
+  expect(box.y + box.height).toBeLessThanOrEqual(vp.height);
+  expect(Math.abs(box.x + box.width / 2 - vp.width / 2)).toBeLessThan(4);
+});

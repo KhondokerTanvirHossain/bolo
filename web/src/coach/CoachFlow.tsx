@@ -63,8 +63,8 @@ function Scoring() {
 function Notice({ title, body, primary, onPrimary, onDone }: { title: string; body: string; primary: string; onPrimary: () => void; onDone: () => void }) {
   return (
     <section className="dk-screen on" data-screen="scoring">
-      <div className="dk-talk" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div className="dk-card" role="status" style={{ position: "relative" }}>
+      <div className="dk-talk">
+        <div className="dk-card" role="status">
           <h1 className="bo-flow__title">{title}</h1>
           <p className="bo-flow__body">{body}</p>
           <button className="bo-btn bo-btn--primary bo-btn--block" style={{ marginTop: 16 }} onClick={onPrimary} autoFocus>{primary}</button>
@@ -171,7 +171,7 @@ function FixCard({ fix, n, of, disputing, deviceId, onDispute, playRef }: { fix:
         {fix.kind === "sound" && (
           <>
             <h2 className="bo-fix__title">{fix.title} <span style={{ font: "500 15px/20px var(--font-sans)", color: "var(--ink-secondary)" }}>· {fix.example}</span></h2>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+            <div className="dk-fixpair">
               <div><p className="bo-fix__label">You said</p><Clip src={fix.clip} label="Play what you said" playRef={playRef} />
                 <p className="bo-fix__sentence">&quot;{highlight(fix.said ?? "", [fix.saidHighlight ?? ""], "bo-said")}&quot;</p></div>
               <div><p className="bo-fix__label">Try</p><Clip src={fix.model} label="Play the model" model />
