@@ -4,8 +4,9 @@ import java.util.List;
 
 /**
  * TLK-14's approved crisis response: fixed content, never generated (Architecture §4.2). Spoken in Bolo's voice and
- * shown as a help card; the practice stops. Numbers verified 2026-11-08 (findahelpline.com, kaanpeteroi.org) and
- * PENDING FOUNDER APPROVAL before any pilot learner uses Bolo.
+ * shown as a help card; the practice stops. Numbers verified 2026-11-08 (findahelpline.com, kaanpeteroi.org).
+ * Approved by the founder on 2026-11-09 for the pilot. NFR-21 still needs a qualified local mental-health partner to
+ * approve the wording and numbers before the beta.
  */
 public final class CrisisScript {
 

@@ -65,8 +65,9 @@ prints nothing; `caddy validate`; `caddy reload`; compare the three status codes
 ## Pilot safety (TLK-14) and talk help
 
 - Crisis content is fixed, never generated: `api/src/main/java/app/bolo/talk/domain/CrisisScript.java`. Numbers
-  verified 2026-11-08: Kaan Pete Roi 09612-119911 (3 PM–3 AM), national emergency 999. **Founder approval is needed
-  before any pilot learner uses Bolo**; re-verify the numbers every quarter.
+  verified 2026-11-08: Kaan Pete Roi 09612-119911 (3 PM–3 AM), national emergency 999. **Founder approved 2026-11-09
+  for the pilot.** Before the beta, NFR-21 needs a qualified local mental-health partner to approve the wording and
+  numbers (Kaan Pete Roi itself, or a clinical psychologist). Re-verify the numbers every quarter.
 - A keyword screen (CrisisScreen) plus a Haiku classifier (SafetyGuard) on every learner turn; a crisis stops Bolo,
   speaks the script, shows the help card and ends the talk (reason `crisis`, no debrief, its audio deleted).
 - Live check: `cd api && BOLO_LIVE_URL=https://bolo.eliooo.org ./gradlew liveProbe --tests '*LiveCrisisProbe*'`.
