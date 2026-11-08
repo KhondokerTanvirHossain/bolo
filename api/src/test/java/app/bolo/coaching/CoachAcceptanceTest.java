@@ -163,6 +163,40 @@ class CoachAcceptanceTest extends PostgresTestBase {
         assertThat((String) JsonPath.read(debriefWhenSettled(), "$.topic")).isEqualTo("Free talk");
     }
 
+    /** US-8.6 / ScreenHistorySession: Delete recording — the audio goes at once, the feedback stays. */
+    @Test
+    void deletingARecordingRemovesItsAudioAndKeepsTheFeedback() throws Exception {
+        talk(3);
+        String before = debriefWhenSettled();
+        String clip = JsonPath.read(before, "$.fixes[0].clip");
+        var r = client.send("POST", "/api/talk/" + id + "/recording/delete", cookie, "{}");
+        assertThat(r.status()).isEqualTo(204);
+        assertThat(get(clip, cookie).statusCode()).isEqualTo(404);
+        String after = get("/api/talk/" + id + "/debrief", cookie).body();
+        assertThat((Boolean) JsonPath.read(after, "$.recordingDeleted")).isTrue();
+        assertThat((Object) JsonPath.read(after, "$.fixes[0].clip")).isNull();
+        assertThat((Object) JsonPath.read(after, "$.fixes[0].model")).isNull();
+        assertThat((String) JsonPath.read(after, "$.strength.text")).isNotBlank();
+        assertThat(audio.children("talk/" + id)).isEmpty();
+    }
+
+    @Test
+    void deletingARecordingTwiceIsFine() throws Exception {
+        talk(3);
+        debriefWhenSettled();
+        assertThat(client.send("POST", "/api/talk/" + id + "/recording/delete", cookie, "{}").status()).isEqualTo(204);
+        assertThat(client.send("POST", "/api/talk/" + id + "/recording/delete", cookie, "{}").status()).isEqualTo(204);
+    }
+
+    @Test
+    void anotherLearnerCannotDeleteMyRecording() throws Exception {
+        talk(3);
+        String body = debriefWhenSettled();
+        String other = client.consentedGuest(5);
+        assertThat(client.send("POST", "/api/talk/" + id + "/recording/delete", other, "{}").status()).isEqualTo(404);
+        assertThat(get(JsonPath.read(body, "$.fixes[0].clip"), cookie).statusCode()).isEqualTo(200);
+    }
+
     @Test
     void anInventedQuoteIsDropped() throws Exception {
         llm.structuredReply("""

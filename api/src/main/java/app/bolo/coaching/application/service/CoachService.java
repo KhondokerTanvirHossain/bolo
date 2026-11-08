@@ -32,6 +32,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.ObjectNode;
 
 import java.io.ByteArrayOutputStream;
@@ -378,6 +379,25 @@ public class CoachService implements DebriefUseCase, LatestDebriefUseCase, app.b
     @Override
     public java.util.List<PastDebrief> list(LearnerId learner) {
         return debriefs.history(learner).stream().map(p -> new PastDebrief(p.talkId(), p.startedAt(), p.minutes(), p.status(), p.body())).toList();
+    }
+
+    @Override
+    public boolean deleteRecording(LearnerId learner, TalkSessionId talk) {
+        boolean owner = debriefs.find(talk).map(d -> d.learner().equals(learner)).orElse(false);
+        if (!owner) return false;
+        audio.deletePrefix("talk/" + talk + "/");
+        debriefs.updateReadyBody(talk, current -> {
+            ObjectNode body = (ObjectNode) JSON.readTree(current);
+            if (body.path("strength").isObject()) ((ObjectNode) body.get("strength")).putNull("clip");
+            for (JsonNode fix : body.path("fixes")) {
+                ObjectNode f = (ObjectNode) fix;
+                if (f.has("clip")) f.putNull("clip");
+                if (f.has("model")) f.putNull("model");
+            }
+            body.put("recordingDeleted", true);
+            return JSON.writeValueAsString(body);
+        }, clock.now());
+        return true;
     }
 
     @Override

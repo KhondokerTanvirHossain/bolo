@@ -16,6 +16,12 @@ public interface DebriefUseCase {
     /** The learner has seen this ready debrief (Home stops offering "Finish your feedback"); false if not theirs or not ready. */
     boolean markViewed(LearnerId learner, TalkSessionId talk);
 
+    /**
+     * US-8.6: deletes this talk's audio (clips and model lines) at once; the feedback text stays and its audio links
+     * become null. False when it isn't the learner's talk.
+     */
+    boolean deleteRecording(LearnerId learner, TalkSessionId talk);
+
     /** A clip or model file of the learner's own debrief. */
     Optional<byte[]> media(LearnerId learner, TalkSessionId talk, String file);
 }

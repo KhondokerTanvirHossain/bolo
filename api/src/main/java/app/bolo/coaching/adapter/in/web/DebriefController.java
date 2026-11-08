@@ -47,6 +47,13 @@ class DebriefController {
         return done ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
     }
 
+    @PostMapping("/api/talk/{id}/recording/delete")
+    ResponseEntity<Void> deleteRecording(@RequestAttribute(name = CurrentLearner.ATTRIBUTE, required = false) LearnerId learner,
+                                         @PathVariable String id) {
+        boolean done = talk(id).map(t -> debriefs.deleteRecording(signedIn(learner), t)).orElse(false);
+        return done ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
+    }
+
     @GetMapping("/api/media/talk/{id}/{file}")
     ResponseEntity<byte[]> media(@RequestAttribute(name = CurrentLearner.ATTRIBUTE, required = false) LearnerId learner,
                                  @PathVariable String id, @PathVariable String file) {
