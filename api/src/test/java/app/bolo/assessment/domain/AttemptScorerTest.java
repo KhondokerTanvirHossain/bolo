@@ -91,4 +91,15 @@ class AttemptScorerTest {
         AttemptResult r = AttemptScorer.score(List.of(word("it", 0, 100, 78), word("is", 100, 200, 80), word("good", 200, 500, 76)));
         assertThat(r.level()).isEqualTo(AttemptResult.Level.NAILED);
     }
+
+    /** The words to work on keep the sentence's order, dropped words included. */
+    @Test
+    void focusFollowsTheSentence() {
+        var words = java.util.List.of(
+                new SpokenWord("very", 0, 100, 50, "None", java.util.List.of(new SpokenSound("v", 20))),
+                new SpokenWord("big", 100, 200, 0, "Omission", java.util.List.of()),
+                new SpokenWord("i", 200, 250, 40, "Insertion", java.util.List.of()),
+                new SpokenWord("school", 250, 400, 90, "None", java.util.List.of(new SpokenSound("s", 90))));
+        assertThat(AttemptScorer.score(words).focus()).extracting(AttemptResult.Focus::word).containsExactly("very", "big", "school");
+    }
 }
