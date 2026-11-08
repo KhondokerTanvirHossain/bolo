@@ -54,7 +54,9 @@ class JdbcDebriefAdapter implements DebriefPort {
     @Override
     public java.util.List<Past> history(LearnerId learner) {
         return jdbc.sql("""
-                select d.session_id, s.started_at, s.minutes, d.status, d.body::text as body
+                select d.session_id, s.started_at, d.status, d.body::text as body,
+                       -- how long it really lasted (the chosen length until it ends), at least 1 minute
+                       coalesce(greatest(1, round(extract(epoch from (s.ended_at - s.started_at)) / 60))::int, s.minutes) as minutes
                 from debrief d join talk_session s on s.id = d.session_id
                 where s.learner_id = ? order by s.started_at""")
                 .param(learner.value())
@@ -74,11 +76,12 @@ class JdbcDebriefAdapter implements DebriefPort {
     @Override
     public Optional<Stored> find(TalkSessionId talk) {
         return jdbc.sql("""
-                select s.learner_id, d.status, d.body::text as body
+                select s.learner_id, d.status, d.body::text as body,
+                       s.media_purged_at is not null as purged, coalesce(s.keep_audio, false) as kept
                 from debrief d join talk_session s on s.id = d.session_id where d.session_id = ?""")
                 .param(talk.value())
                 .query((rs, n) -> new Stored(new LearnerId(rs.getObject("learner_id", UUID.class)), rs.getString("status"),
-                        rs.getString("body")))
+                        rs.getString("body"), rs.getBoolean("purged"), rs.getBoolean("kept")))
                 .optional();
     }
 

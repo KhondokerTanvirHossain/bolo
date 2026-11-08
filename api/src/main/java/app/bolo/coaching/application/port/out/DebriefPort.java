@@ -8,7 +8,8 @@ import java.util.Optional;
 
 public interface DebriefPort {
 
-    record Stored(LearnerId learner, String status, String body) {
+    /** audioPurged: the retention sweep removed the talk's audio; keptAudio: the keep choice it was recorded under. */
+    record Stored(LearnerId learner, String status, String body, boolean audioPurged, boolean keptAudio) {
     }
 
     void start(TalkSessionId talk, Instant at);

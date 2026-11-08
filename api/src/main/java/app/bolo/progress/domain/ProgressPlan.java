@@ -75,6 +75,14 @@ public final class ProgressPlan {
         return new Trends(done.size(), by);
     }
 
+    /** Finished talks after index {@code last} that could have shown {@code key}: a sound needs a pronunciation score. */
+    private static int talksSince(List<Session> done, int last, String key) {
+        boolean sound = !key.contains(":") && !"short-answers".equals(key);
+        int n = 0;
+        for (int i = last + 1; i < done.size(); i++) if (!sound || done.get(i).skills().containsKey("pronunciation")) n++;
+        return n;
+    }
+
     public static Patterns patterns(List<Session> sessions) {
         List<Session> done = sessions.stream().filter(Session::ready).sorted(Comparator.comparing(Session::startedAt)).toList();
         int n = done.size();
@@ -97,7 +105,7 @@ public final class ProgressPlan {
             List<Integer> at = e.getValue();
             int first = at.getFirst(), last = at.getLast();
             String key = e.getKey(), title = titles.get(key);
-            if (n - 1 - last >= FIXED_AFTER) {
+            if (talksSince(done, last, key) >= FIXED_AFTER) {
                 fixed.add(new PatternTag(key, title, "FIXED"));
                 continue;
             }

@@ -36,10 +36,14 @@ class ProgressAcceptanceTest extends PostgresTestBase {
     }
 
     void pastTalk(UUID learner, int daysAgo, String topic, String pattern) {
+        pastTalk(learner, daysAgo, topic, pattern, 300);
+    }
+
+    void pastTalk(UUID learner, int daysAgo, String topic, String pattern, int seconds) {
         UUID talk = UUID.randomUUID();
         Instant at = Instant.now().minus(daysAgo, ChronoUnit.DAYS);
         jdbc.sql("insert into talk_session (id, learner_id, minutes, started_at, ended_at, end_reason) values (?, ?, 5, ?, ?, 'learner_ended')")
-                .params(talk, learner, Timestamp.from(at), Timestamp.from(at.plusSeconds(300))).update();
+                .params(talk, learner, Timestamp.from(at), Timestamp.from(at.plusSeconds(seconds))).update();
         String body = """
                 {"status":"ready","topic":"%s","speechMs":120000,
                  "skills":{"pronunciation":"GOOD","fluency":"BUILDING","sentenceBuilding":"GOOD","vocabulary":"STRONG"},
@@ -65,6 +69,17 @@ class ProgressAcceptanceTest extends PostgresTestBase {
         assertThat((String) JsonPath.read(p, "$.patterns.active[0].key")).isEqualTo("V_BH");
         assertThat((List<String>) JsonPath.read(p, "$.latest[*].topic")).containsExactly("The payment bug demo", "My weekend", "Job interview practice");
         assertThat(p).doesNotContain("Someone else").doesNotContain("TH_TD");
+    }
+
+    /** Review: a row shows how long the talk really lasted, not the length chosen (5 min) before it. */
+    @Test
+    void historyShowsHowLongTheTalkLasted() throws Exception {
+        String me = client.consentedGuest(5);
+        UUID id = learnerOf(me);
+        pastTalk(id, 1, "Short one", "V_BH", 70);
+        pastTalk(id, 2, "Full one", "V_BH", 300);
+        String h = client.send("GET", "/api/history", me, "").body();
+        assertThat((List<Integer>) JsonPath.read(h, "$.sessions[*].minutes")).containsExactly(1, 5);
     }
 
     @Test

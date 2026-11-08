@@ -387,17 +387,23 @@ public class CoachService implements DebriefUseCase, LatestDebriefUseCase, app.b
         if (!owner) return false;
         audio.deletePrefix("talk/" + talk + "/");
         debriefs.updateReadyBody(talk, current -> {
-            ObjectNode body = (ObjectNode) JSON.readTree(current);
-            if (body.path("strength").isObject()) ((ObjectNode) body.get("strength")).putNull("clip");
-            for (JsonNode fix : body.path("fixes")) {
-                ObjectNode f = (ObjectNode) fix;
-                if (f.has("clip")) f.putNull("clip");
-                if (f.has("model")) f.putNull("model");
-            }
+            ObjectNode body = withoutAudio(current);
             body.put("recordingDeleted", true);
             return JSON.writeValueAsString(body);
         }, clock.now());
         return true;
+    }
+
+    /** The body with every clip and model link removed; the feedback text stays. */
+    private static ObjectNode withoutAudio(String current) {
+        ObjectNode body = (ObjectNode) JSON.readTree(current);
+        if (body.path("strength").isObject()) ((ObjectNode) body.get("strength")).putNull("clip");
+        for (JsonNode fix : body.path("fixes")) {
+            ObjectNode f = (ObjectNode) fix;
+            if (f.has("clip")) f.putNull("clip");
+            if (f.has("model")) f.putNull("model");
+        }
+        return body;
     }
 
     @Override
@@ -424,8 +430,14 @@ public class CoachService implements DebriefUseCase, LatestDebriefUseCase, app.b
 
     @Override
     public Optional<String> view(LearnerId learner, TalkSessionId talk) {
-        return debriefs.find(talk).filter(d -> d.learner().equals(learner))
-                .map(d -> d.body() != null ? d.body() : "{\"status\":\"" + d.status() + "\"}");
+        return debriefs.find(talk).filter(d -> d.learner().equals(learner)).map(d -> {
+            if (d.body() == null) return "{\"status\":\"" + d.status() + "\"}";
+            if (!d.audioPurged() || d.body().contains("\"recordingDeleted\"")) return d.body();
+            // The retention sweep removed this talk's audio: no dead players, and say why (kept 90 days, or not kept).
+            ObjectNode body = withoutAudio(d.body());
+            body.put(d.keptAudio() ? "recordingExpired" : "recordingNotKept", true);
+            return JSON.writeValueAsString(body);
+        });
     }
 
     @Override

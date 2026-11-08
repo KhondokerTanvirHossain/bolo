@@ -83,6 +83,20 @@ class ProgressPlanTest {
         assertThat(tag(p, "S_SH")).isNull();
     }
 
+    /** Review: talks where pronunciation wasn't scored (no phonemes back) say nothing about sounds; they can't make one Fixed. */
+    @Test
+    void talksWithoutAPronunciationScoreDoNotFixASound() {
+        var s = new ArrayList<>(series(new String[]{"S_SH", "filler:um"}, new String[]{"S_SH", "filler:um"}));
+        for (int i = 0; i < 5; i++) {
+            var r = ready(0);
+            s.add(new ProgressPlan.Session("u" + i, NOW.plus(Duration.ofHours(i + 1)), 5, "ready", "T", 90_000,
+                    Map.of("fluency", "GOOD", "sentenceBuilding", "GOOD", "vocabulary", "GOOD"), List.of(), r.fixTitles()));
+        }
+        var p = ProgressPlan.patterns(s);
+        assertThat(tag(p, "S_SH")).isNotNull();
+        assertThat(p.fixed()).extracting(ProgressPlan.PatternTag::key).containsExactly("filler:um");
+    }
+
     @Test
     void aFixedPatternThatReturnsIsActiveAgain() {
         var p = ProgressPlan.patterns(series(new String[]{"S_SH"}, new String[]{}, new String[]{}, new String[]{}, new String[]{},

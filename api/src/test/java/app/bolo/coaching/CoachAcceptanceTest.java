@@ -188,6 +188,43 @@ class CoachAcceptanceTest extends PostgresTestBase {
         assertThat(client.send("POST", "/api/talk/" + id + "/recording/delete", cookie, "{}").status()).isEqualTo(204);
     }
 
+    @Autowired app.bolo.talk.application.port.in.AudioRetentionUseCase retention;
+
+    /** Ends the talk long ago under the given keep choice, then runs the real retention sweep. */
+    void sweptAfter(boolean keep, java.time.Duration ago) {
+        jdbc.sql("update talk_session set keep_audio = ?, ended_at = ? where id = ?::uuid")
+                .params(keep, java.sql.Timestamp.from(java.time.Instant.now().minus(ago)), id).update();
+        retention.sweep();
+    }
+
+    /** Review: once the sweep removes a no-keep talk's audio, History shows no dead players and says why. */
+    @Test
+    void aSweptRecordingShowsNoPlayersAndSaysItWasNotKept() throws Exception {
+        talk(3);
+        debriefWhenSettled();
+        sweptAfter(false, java.time.Duration.ofHours(25));
+        String after = get("/api/talk/" + id + "/debrief", cookie).body();
+        assertThat((Object) JsonPath.read(after, "$.strength.clip")).isNull();
+        assertThat((Object) JsonPath.read(after, "$.fixes[0].clip")).isNull();
+        assertThat((Object) JsonPath.read(after, "$.fixes[0].model")).isNull();
+        assertThat((Boolean) JsonPath.read(after, "$.recordingNotKept")).isTrue();
+        assertThat(after).doesNotContain("recordingDeleted").doesNotContain("recordingExpired");
+        assertThat((String) JsonPath.read(after, "$.strength.text")).isNotBlank();
+    }
+
+    /** Review: a kept recording reaches its 90 days; the debrief says it expired, not that the learner chose it. */
+    @Test
+    void aKeptRecordingPast90DaysSaysItExpired() throws Exception {
+        talk(3);
+        String before = debriefWhenSettled();
+        assertThat(before).doesNotContain("recordingNotKept").doesNotContain("recordingExpired");
+        sweptAfter(true, java.time.Duration.ofDays(91));
+        String after = get("/api/talk/" + id + "/debrief", cookie).body();
+        assertThat((Object) JsonPath.read(after, "$.fixes[0].clip")).isNull();
+        assertThat((Boolean) JsonPath.read(after, "$.recordingExpired")).isTrue();
+        assertThat(after).doesNotContain("recordingNotKept");
+    }
+
     @Test
     void anotherLearnerCannotDeleteMyRecording() throws Exception {
         talk(3);
