@@ -200,3 +200,20 @@ The goal: someone who has never seen Bolo gets from opening it to talk to feedba
   - **Make one:** `scripts/invite.sh "<who it's for>" <max-uses>` prints `https://bolo.eliooo.org/?invite=CODE`.
   - **See them:** `scripts/box.sh` then `box "docker exec bolo-db psql -U bolo -d bolo -c 'select code,label,max_uses,uses from invite'"`.
   - **The checks' own invite:** the smoke test and live probes use `~/bolo/probe-invite` on the box (`scripts/probe-invite.sh` creates it).
+
+## Me, Privacy and deletion
+
+- **Me** (the **Me** button on Home, inside the app shell's sidebar) shows:
+  - the account email, or "Guest" with **Save your progress**;
+  - my goals (read-only);
+  - Speaking: Bolo's speed and captions, applying from the next talk;
+  - Privacy;
+  - Sign out.
+  Sign-out clears this browser's Bolo state and the Day 1 clip.
+- **Me → Privacy:**
+  - **Keep my recordings** appends a consent record (`POST /api/consent`) and applies from the next talk.
+  - **Delete everything:** typing DELETE enables the button, which calls `POST /api/me/delete {"confirm":"DELETE"}`. It deletes at once (the PRD allows up to 7 days):
+    - every audio file of the learner's talks (`talk/<id>/`);
+    - the Day 1 clip (`learner/<id>/`);
+    - then every database row, by cascade.
+    The cookie is cleared, and the browser returns to the welcome screen. There's no confirmation email yet, because Bolo can't send email.
