@@ -43,7 +43,7 @@ export function SetupScreen({ state, busy, failure, onAnswer, onNext, onBack }: 
         <h1 className="bo-flow__title" id="setup-title">{q.en}</h1>
         <p className="bo-flow__bn" style={{ marginTop: 0 }}>{q.bn}</p>
         <p className="bo-footnote" style={{ textAlign: "left", margin: "18px 0 10px" }}>
-          Say it, or click one. Keys 1–{q.chips.length} work too.
+          Click one. Keys 1–{q.chips.length} work too.
         </p>
         <div className="bo-chips" role="group" aria-label={q.en}>
           {q.chips.map((c) => (
