@@ -38,6 +38,8 @@ services:
       BOLO_SPEECH_VENDOR: azure
       # Google sign-in: the four BOLO_FIREBASE_* values (public) live in bolo.env; without them sign-in stays off.
       BOLO_AUTH_VENDOR: firebase
+      # Closed beta: new learners need an invite link (scripts/invite.sh).
+      BOLO_INVITES_REQUIRED: "true"
       BOLO_LLM_VENDOR: anthropic
       # Learner audio, AES-256-GCM encrypted with BOLO_MEDIA_KEY (bolo.env); deleted by the retention sweep (NFR-14).
       BOLO_MEDIA_DIR: /data/media

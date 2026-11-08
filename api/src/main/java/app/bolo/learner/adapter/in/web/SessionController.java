@@ -28,10 +28,15 @@ class SessionController {
         this.secureCookie = secureCookie;
     }
 
+    /** The closed beta's invite code, from the ?invite= link; only a brand-new guest needs it. */
+    record SessionRequest(String invite) {
+    }
+
     @PostMapping("/api/session")
-    LearnerView start(HttpServletRequest req, HttpServletResponse res) {
+    LearnerView start(@org.springframework.web.bind.annotation.RequestBody(required = false) SessionRequest body,
+                      HttpServletRequest req, HttpServletResponse res) {
         String existing = SessionCookie.read(req, secureCookie);
-        StartGuestUseCase.Started started = startGuest.start(existing, SessionCookie.clientKey(req));
+        StartGuestUseCase.Started started = startGuest.start(existing, SessionCookie.clientKey(req), body == null ? null : body.invite());
         // Always (re)issue: a valid token gets a fresh 90-day Max-Age, matching the server's sliding expiry.
         String token = started.newToken() != null ? started.newToken() : existing;
         res.addHeader(HttpHeaders.SET_COOKIE, SessionCookie.header(token, secureCookie));

@@ -33,10 +33,12 @@ public class SignInService implements SignInUseCase {
     private final ApplicationEventPublisher events;
     private final BoloClock clock;
     private final TransactionTemplate tx;
+    private final InviteGate inviteGate;
 
     public SignInService(IdentityPort identities, AccountPort accounts, LearnerPort learners, SessionPort sessions,
                          LearnerMergePort merge, CurrentLearnerUseCase current, ApplicationEventPublisher events, BoloClock clock,
-                         PlatformTransactionManager transactions) {
+                         PlatformTransactionManager transactions, InviteGate inviteGate) {
+        this.inviteGate = inviteGate;
         this.identities = identities;
         this.accounts = accounts;
         this.learners = learners;
@@ -52,14 +54,14 @@ public class SignInService implements SignInUseCase {
     public SignedIn signIn(String currentTokenOrNull, String idToken, String inviteOrNull) {
         IdentityPort.VerifiedIdentity who = identities.verify(idToken).orElseThrow(SignInFailedException::new);
         try {
-            return tx.execute(s -> once(currentTokenOrNull, who));
+            return tx.execute(s -> once(currentTokenOrNull, who, inviteOrNull));
         } catch (DataIntegrityViolationException raced) {
             // Another sign-in for the same Google user made the account first: sign into that one.
-            return tx.execute(s -> once(currentTokenOrNull, who));
+            return tx.execute(s -> once(currentTokenOrNull, who, inviteOrNull));
         }
     }
 
-    private SignedIn once(String currentToken, IdentityPort.VerifiedIdentity who) {
+    private SignedIn once(String currentToken, IdentityPort.VerifiedIdentity who, String invite) {
         Optional<LearnerId> now = currentToken == null ? Optional.empty() : current.byToken(currentToken);
         Optional<LearnerId> existing = accounts.learnerFor(who.uid());
         LearnerId target;
@@ -76,6 +78,7 @@ public class SignInService implements SignInUseCase {
             accounts.insert(target, who.uid(), who.email(), who.name(), clock.now());
             learners.setKind(target, LearnerKind.ACCOUNT);
         } else {
+            inviteGate.admitNewcomer(invite);
             Learner fresh = Learner.newAccount(clock.now());
             learners.save(fresh);
             accounts.insert(fresh.id(), who.uid(), who.email(), who.name(), clock.now());

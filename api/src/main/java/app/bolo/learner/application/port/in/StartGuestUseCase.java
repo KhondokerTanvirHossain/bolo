@@ -6,7 +6,8 @@ package app.bolo.learner.application.port.in;
  */
 public interface StartGuestUseCase {
 
-    Started start(String existingTokenOrNull, String clientKey);
+    /** A new guest needs {@code invite} while the closed beta is on (refused with "invite"); a valid session never does. */
+    Started start(String existingTokenOrNull, String clientKey, String invite);
 
     record Started(LearnerView learner, String newToken) {
     }

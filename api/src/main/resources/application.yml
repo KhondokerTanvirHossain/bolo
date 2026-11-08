@@ -98,6 +98,10 @@ bolo:
     min-speech-ms: 60000
     retry-backoff-ms: 2000
 
+  # The closed beta: a new guest or a new Google account needs an invite code (?invite=CODE). On in production.
+  beta:
+    invites-required: ${BOLO_INVITES_REQUIRED:false}
+
   # ACC-1 Google sign-in through Firebase Auth. firebase | fake; the four values are Firebase's public web config.
   # Without all four, sign-in is off (guests only, no 4th-talk limit).
   auth:

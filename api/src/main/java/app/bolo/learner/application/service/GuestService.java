@@ -41,9 +41,10 @@ public class GuestService implements StartGuestUseCase, CurrentLearnerUseCase {
     private final AccountPort accounts;
     private final BoloClock clock;
     private final GuestRateLimiter newGuests;
+    private final InviteGate inviteGate;
 
     public GuestService(LearnerPort learners, ConsentLedgerPort consents, SessionPort sessions, ProfilePort profiles,
-                        SettingsPort settings, AccountPort accounts, BoloClock clock, @Value("${bolo.guests-per-ip-per-hour}") int guestsPerIpPerHour,
+                        SettingsPort settings, AccountPort accounts, InviteGate inviteGate, BoloClock clock, @Value("${bolo.guests-per-ip-per-hour}") int guestsPerIpPerHour,
                         @Value("${bolo.guests-per-hour}") int guestsPerHour) {
         this.learners = learners;
         this.consents = consents;
@@ -51,18 +52,20 @@ public class GuestService implements StartGuestUseCase, CurrentLearnerUseCase {
         this.profiles = profiles;
         this.settings = settings;
         this.accounts = accounts;
+        this.inviteGate = inviteGate;
         this.clock = clock;
         this.newGuests = new GuestRateLimiter(guestsPerIpPerHour, guestsPerHour, Duration.ofHours(1));
     }
 
     @Override
     @Transactional
-    public Started start(String existingTokenOrNull, String clientKey) {
+    public Started start(String existingTokenOrNull, String clientKey, String invite) {
         if (existingTokenOrNull != null) {
             Optional<LearnerId> known = byToken(existingTokenOrNull);
             if (known.isPresent()) return new Started(view(known.get()), null);
         }
         if (!newGuests.tryAcquire(clientKey, clock.now())) throw new TooManyRequestsException();
+        inviteGate.admitNewcomer(invite);
         Learner guest = Learner.newGuest(clock.now());
         learners.save(guest);
         String token = newToken();
