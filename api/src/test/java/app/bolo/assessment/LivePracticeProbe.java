@@ -27,7 +27,7 @@ class LivePracticeProbe {
 
     @Test
     void theExtraVowelIsCaughtAndACleanSentenceIsNailed() throws Exception {
-        String cookie = send("/api/session", null, "{}").headers().firstValue("set-cookie").orElseThrow().split(";", 2)[0];
+        String cookie = send("/api/session", null, sessionBody()).headers().firstValue("set-cookie").orElseThrow().split(";", 2)[0];
         send("/api/consent", cookie, "{\"keepRecordings\":false,\"over13\":true,\"policyVersion\":\"2026-11-v1\"}");
 
         long t0 = System.currentTimeMillis();
@@ -64,5 +64,11 @@ class LivePracticeProbe {
                 .header("Content-Type", "application/json").POST(HttpRequest.BodyPublishers.ofString(json));
         if (cookie != null) r.header("Cookie", cookie);
         return http.send(r.build(), HttpResponse.BodyHandlers.ofString());
+    }
+
+    /** The closed beta needs an invite for a new guest; scripts/probe-invite.sh prints the probes' own code. */
+    static String sessionBody() {
+        String invite = System.getenv("BOLO_LIVE_INVITE");
+        return invite == null || invite.isBlank() ? "{}" : "{\"invite\":\"" + invite + "\"}";
     }
 }

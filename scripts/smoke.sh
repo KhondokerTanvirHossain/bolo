@@ -13,8 +13,12 @@ echo "Bolo ($BOLO_URL)"
 check "home page" 200 "$(code "$BOLO_URL/")"
 check "title is just Bolo" yes "$(curl -s --max-time 15 "$BOLO_URL/" | grep -q '<title>Bolo</title>' && echo yes || echo no)"
 check "api health" '{"status":"UP"}' "$(curl -s --max-time 15 "$BOLO_URL/api/actuator/health")"
+# Closed beta: a newcomer needs an invite. The checks use their own probes invite (scripts/probe-invite.sh).
+check "a newcomer without an invite is turned away" '{"code":"invite"}' "$(curl -s --max-time 15 -X POST "$BOLO_URL/api/session" \
+  -H 'Content-Type: application/json' -H 'X-Bolo: 1' -H "Origin: $BOLO_URL" -d '{}')"
+INVITE="$(scripts/probe-invite.sh 2>/dev/null || true)"
 headers=$(curl -s -D - -o /dev/null --max-time 15 -X POST "$BOLO_URL/api/session" \
-  -H 'Content-Type: application/json' -H 'X-Bolo: 1' -H "Origin: $BOLO_URL" -d '{}')
+  -H 'Content-Type: application/json' -H 'X-Bolo: 1' -H "Origin: $BOLO_URL" -d "{\"invite\":\"$INVITE\"}")
 check "session sets a Secure HttpOnly cookie" yes "$(grep -i '^set-cookie: __Host-bolo_session=' <<<"$headers" | grep -qi 'secure' && grep -i '^set-cookie: __Host-bolo_session=' <<<"$headers" | grep -qi 'httponly' && echo yes || echo no)"
 check "write without X-Bolo is refused" 403 "$(code -X POST "$BOLO_URL/api/session" -H 'Content-Type: application/json' -H "Origin: $BOLO_URL" -d '{}')"
 check "HSTS header" yes "$(curl -s -I --max-time 15 "$BOLO_URL/" | grep -qi '^strict-transport-security' && echo yes || echo no)"

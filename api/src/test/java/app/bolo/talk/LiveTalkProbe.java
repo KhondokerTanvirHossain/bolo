@@ -39,7 +39,7 @@ class LiveTalkProbe {
 
     @Test
     void aRealTurnWithBolo() throws Exception {
-        String cookie = post("/api/session", null, "{}").headers().firstValue("set-cookie").orElseThrow().split(";", 2)[0];
+        String cookie = post("/api/session", null, sessionBody()).headers().firstValue("set-cookie").orElseThrow().split(";", 2)[0];
         post("/api/consent", cookie, "{\"keepRecordings\":false,\"over13\":true,\"policyVersion\":\"2026-11-v1\"}");
         send("PUT", "/api/profile", cookie, "{\"goal\":\"job_interviews\",\"fearedMoment\":\"interviews\",\"talkMinutes\":5}");
         HttpResponse<String> talk = post("/api/talk", cookie, "{}");
@@ -171,5 +171,11 @@ class LiveTalkProbe {
             ws.request(1);
             return null;
         }
+    }
+
+    /** The closed beta needs an invite for a new guest; scripts/probe-invite.sh prints the probes' own code. */
+    static String sessionBody() {
+        String invite = System.getenv("BOLO_LIVE_INVITE");
+        return invite == null || invite.isBlank() ? "{}" : "{\"invite\":\"" + invite + "\"}";
     }
 }
