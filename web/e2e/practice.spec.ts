@@ -61,3 +61,36 @@ test("nothing heard asks kindly for one more go", async ({ page }) => {
   await page.getByRole("button", { name: "Stop recording" }).click();
   await expect(page.getByText("We couldn't hear that. Let's try once more.")).toBeVisible();
 });
+
+/** Founder test 2026-11-08: the practice card sat off to the bottom right, cut off, on a blank page. */
+test("the practice card sits whole in the middle of the screen, over Bolo's scene", async ({ page }) => {
+  await stub(page, { level: "NAILED", heard: true, focus: [] });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Practise sounds" }).click();
+  const card = page.locator("[data-screen=drill] .dk-card");
+  await expect(card.getByRole("heading", { name: "Practise sounds" })).toBeVisible();
+  const box = (await card.boundingBox())!;
+  expect(box.x).toBeGreaterThanOrEqual(0);
+  expect(box.y).toBeGreaterThanOrEqual(0);
+  expect(box.x + box.width).toBeLessThanOrEqual(1440);
+  expect(box.y + box.height).toBeLessThanOrEqual(900);
+  expect(Math.abs(box.x + box.width / 2 - 720)).toBeLessThan(4);
+  await expect(page.locator("[data-screen=drill] .bo-scene")).toBeAttached();
+});
+
+/** Every card is fixed-width; on a phone it must fit with a 16 px gutter, the sentence view included. */
+test("on a phone the practice card fits the screen", async ({ page }) => {
+  await stub(page, { level: "NAILED", heard: true, focus: [] });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Practise sounds" }).click();
+  const card = page.locator("[data-screen=drill] .dk-card");
+  for (const step of ["list", "sentence"]) {
+    if (step === "sentence") await page.getByRole("button", { name: /The s at the start/ }).click();
+    await expect(card).toBeVisible();
+    const box = (await card.boundingBox())!;
+    expect(box.x, step).toBeGreaterThanOrEqual(15);
+    expect(box.x + box.width, step).toBeLessThanOrEqual(375);
+  }
+});

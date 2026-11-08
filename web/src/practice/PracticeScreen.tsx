@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Icon } from "@/scene/Scene";
+import { Icon, Scene } from "@/scene/Scene";
 import { fetchPractice, type Pattern } from "./attempts";
 import { ReadAloud } from "./ReadAloud";
 
@@ -14,7 +14,9 @@ export function PracticeScreen({ deviceId, onBack }: { deviceId: string | null; 
 
   return (
     <section className="dk-screen on" data-screen="drill">
-      <div className="dk-card" style={{ position: "relative", margin: "8vh auto", maxWidth: 640 }}>
+      <Scene />
+      <div className="dk-dim" />
+      <div className={`dk-card${chosen ? " dk-card--wide" : ""}`} role="dialog" aria-modal="true" aria-label="Practise sounds">
         {!chosen ? (
           <>
             <h1 className="bo-flow__title">Practise sounds</h1>
