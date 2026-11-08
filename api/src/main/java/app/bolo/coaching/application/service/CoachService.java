@@ -6,6 +6,7 @@ import app.bolo.assessment.application.port.in.AssessTalkUseCase.HabitView;
 import app.bolo.assessment.application.port.in.AssessTalkUseCase.SoundCandidate;
 import app.bolo.assessment.application.port.in.AssessTalkUseCase.TalkAssessment;
 import app.bolo.coaching.application.port.in.DebriefUseCase;
+import app.bolo.coaching.application.port.in.LatestDebriefUseCase;
 import app.bolo.coaching.application.port.out.DebriefPort;
 import app.bolo.coaching.domain.CoachPrompt;
 import app.bolo.coaching.domain.CoachReply;
@@ -51,7 +52,7 @@ import java.util.regex.Pattern;
  */
 @Slf4j
 @Service
-public class CoachService implements DebriefUseCase {
+public class CoachService implements DebriefUseCase, LatestDebriefUseCase {
 
     private static final JsonMapper JSON = JsonMapper.builder().build();
     private static final Pattern MEDIA_FILE = Pattern.compile("(clip|model)-\\d{1,2}\\.wav");
@@ -246,6 +247,7 @@ public class CoachService implements DebriefUseCase {
         String sentence = sentenceWith(turn.text(), at.word());
         ObjectNode fix = JSON.createObjectNode();
         fix.put("kind", "sound");
+        fix.put("pattern", at.pattern());
         fix.put("title", at.title());
         fix.put("example", at.example());
         fix.put("said", sentence);
@@ -364,6 +366,28 @@ public class CoachService implements DebriefUseCase {
     }
 
     // ---- reading it back --------------------------------------------------------------------------------------------
+
+    @Override
+    public boolean markViewed(LearnerId learner, TalkSessionId talk) {
+        return debriefs.markViewed(learner, talk, clock.now());
+    }
+
+    @Override
+    public Optional<Latest> latestFor(LearnerId learner) {
+        return debriefs.latestFor(learner).map(d -> {
+            String pattern = null, title = null;
+            if (d.body() != null) {
+                for (var fix : JSON.readTree(d.body()).path("fixes")) {
+                    if ("sound".equals(fix.path("kind").asString("")) && fix.hasNonNull("pattern")) {
+                        pattern = fix.path("pattern").asString();
+                        title = fix.path("title").asString(null);
+                        break;
+                    }
+                }
+            }
+            return new Latest(d.talkId(), d.status(), d.viewed(), pattern, title);
+        });
+    }
 
     @Override
     public Optional<String> view(LearnerId learner, TalkSessionId talk) {

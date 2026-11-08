@@ -19,6 +19,15 @@ public interface DebriefPort {
 
     Optional<Stored> find(TalkSessionId talk);
 
+    /** The learner's most recent talk with a debrief. */
+    record Last(String talkId, String status, boolean viewed, String body) {
+    }
+
+    Optional<Last> latestFor(LearnerId learner);
+
+    /** Sets viewed_at once, for the owner's ready debrief; true when it is (now or already) viewed. */
+    boolean markViewed(LearnerId learner, TalkSessionId talk, Instant at);
+
     /** Ready debriefs this learner already had, other than this talk's. */
     int readyCountFor(LearnerId learner, TalkSessionId except);
 

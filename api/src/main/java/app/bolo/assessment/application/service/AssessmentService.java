@@ -29,7 +29,7 @@ public class AssessmentService implements AssessTalkUseCase {
         List<SoundCandidate> sounds = new ArrayList<>();
         for (SoundIssue issue : PatternDetector.candidates(scores)) {
             WordAt at = issue.examples().getFirst();
-            sounds.add(new SoundCandidate(issue.pattern().title(), issue.pattern().example(), issue.pattern().tip(),
+            sounds.add(new SoundCandidate(issue.pattern().name(), issue.pattern().title(), issue.pattern().example(), issue.pattern().tip(),
                     issue.count(), at.turnIdx(), at.word(), at.startMs(), at.endMs()));
         }
         Optional<HabitView> habit = Habit.of(stats).map(h -> new HabitView(h.kind().name(), h.word(), h.count(), h.averageWords()));

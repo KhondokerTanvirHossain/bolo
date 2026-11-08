@@ -13,6 +13,9 @@ public interface DebriefUseCase {
     /** DBF-4: removes the fix card (by its stable id) and logs it; false if there is no such card for this learner. */
     boolean dispute(LearnerId learner, TalkSessionId talk, String fixId);
 
+    /** The learner has seen this ready debrief (Home stops offering "Finish your feedback"); false if not theirs or not ready. */
+    boolean markViewed(LearnerId learner, TalkSessionId talk);
+
     /** A clip or model file of the learner's own debrief. */
     Optional<byte[]> media(LearnerId learner, TalkSessionId talk, String file);
 }

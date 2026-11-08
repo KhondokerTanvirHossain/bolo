@@ -11,7 +11,8 @@ public interface AssessTalkUseCase {
     record TurnInput(int idx, String text, List<ScoredWord> words) {
     }
 
-    record SoundCandidate(String title, String example, String tip, int count, int turnIdx, String word, long startMs, long endMs) {
+    /** pattern: the SoundPattern key, e.g. "V_BH" (practice opens on it). */
+    record SoundCandidate(String pattern, String title, String example, String tip, int count, int turnIdx, String word, long startMs, long endMs) {
     }
 
     record HabitView(String kind, String word, int count, double averageWords) {
