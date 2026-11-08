@@ -41,5 +41,11 @@ public interface TalkSessionPort {
     /** Talks the learner actually started (the socket attached). */
     int countStarted(LearnerId learner);
 
+    /** The keep-recordings choice this talk is made under (US-8.5); the retention sweep follows it. */
+    void recordKeepChoice(app.bolo.common.id.TalkSessionId talk, boolean keep);
+
+    /** Which of these talks still exist (audio of the others is orphaned). */
+    java.util.Set<app.bolo.common.id.TalkSessionId> existing(java.util.Collection<app.bolo.common.id.TalkSessionId> ids);
+
     java.util.List<app.bolo.common.id.TalkSessionId> idsFor(LearnerId learner);
 }

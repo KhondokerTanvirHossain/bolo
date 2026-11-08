@@ -27,7 +27,7 @@ export default function PrivacyPage() {
 
       <h2 className="title-2" style={section}>For how long</h2>
       <ul>
-        <li>Recordings you chose to keep: 90 days.</li>
+        <li>Recordings you chose to keep: 90 days. Your Day 1 clip stays until you delete everything, for the Day 7, 14 and 21 comparison.</li>
         <li>If you chose not to keep recordings: your audio is deleted within 24 hours. The text and scores stay, so your progress still works.</li>
         <li>The full audio of a talk is deleted once your feedback is ready; only the short clips on your feedback cards are kept, by the rules above.</li>
         <li>Everything else stays until you delete it.</li>

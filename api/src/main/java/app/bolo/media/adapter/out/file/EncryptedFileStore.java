@@ -80,6 +80,17 @@ public class EncryptedFileStore implements ObjectStorePort {
     }
 
     @Override
+    public java.util.List<String> children(String prefix) {
+        Path dir = resolve(prefix.endsWith("/") ? prefix.substring(0, prefix.length() - 1) : prefix);
+        if (!Files.isDirectory(dir)) return java.util.List.of();
+        try (Stream<Path> list = Files.list(dir)) {
+            return list.filter(Files::isDirectory).map(p -> p.getFileName().toString()).toList();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    @Override
     public void deletePrefix(String prefix) {
         Path dir = resolve(prefix.endsWith("/") ? prefix.substring(0, prefix.length() - 1) : prefix);
         if (!Files.exists(dir)) return;

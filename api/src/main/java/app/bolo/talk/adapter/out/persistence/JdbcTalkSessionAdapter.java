@@ -93,10 +93,7 @@ class JdbcTalkSessionAdapter implements TalkSessionPort {
         return jdbc.sql("""
                 select s.id from talk_session s
                 where s.ended_at is not null and s.media_purged_at is null
-                  and (s.ended_at < ?
-                       or (s.ended_at < ? and not coalesce((select c.keep_recordings from consent_record c
-                                                            where c.learner_id = s.learner_id
-                                                            order by c.id desc limit 1), false)))""")
+                  and (s.ended_at < ? or (s.ended_at < ? and not coalesce(s.keep_audio, false)))""")
                 .params(Timestamp.from(anyEndedBefore), Timestamp.from(noConsentEndedBefore))
                 .query((rs, n) -> new TalkSessionId(rs.getObject("id", UUID.class)))
                 .list();
@@ -111,6 +108,19 @@ class JdbcTalkSessionAdapter implements TalkSessionPort {
     public java.util.List<app.bolo.common.id.TalkSessionId> idsFor(LearnerId learner) {
         return jdbc.sql("select id from talk_session where learner_id = ?").param(learner.value())
                 .query((rs, n) -> new app.bolo.common.id.TalkSessionId(rs.getObject("id", java.util.UUID.class))).list();
+    }
+
+    @Override
+    public void recordKeepChoice(app.bolo.common.id.TalkSessionId talk, boolean keep) {
+        jdbc.sql("update talk_session set keep_audio = ? where id = ?").params(keep, talk.value()).update();
+    }
+
+    @Override
+    public java.util.Set<app.bolo.common.id.TalkSessionId> existing(java.util.Collection<app.bolo.common.id.TalkSessionId> ids) {
+        if (ids.isEmpty()) return java.util.Set.of();
+        java.util.UUID[] arr = ids.stream().map(app.bolo.common.id.TalkSessionId::value).toArray(java.util.UUID[]::new);
+        return new java.util.HashSet<>(jdbc.sql("select id from talk_session where id = any(?)").param(arr)
+                .query((rs, n) -> new app.bolo.common.id.TalkSessionId(rs.getObject("id", java.util.UUID.class))).list());
     }
 
     @Override

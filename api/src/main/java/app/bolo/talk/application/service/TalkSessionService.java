@@ -61,6 +61,7 @@ public class TalkSessionService implements StartTalkUseCase {
         if (!sessions.insertIfBelowCap(session, maxLive, now.minus(SLOT_HOLD), now.minus(attachWithin))) {
             throw new RefusedException("busy");
         }
+        sessions.recordKeepChoice(session.id(), view.consent() != null && view.consent().keepRecordings());
         return toView(session, view);
     }
 

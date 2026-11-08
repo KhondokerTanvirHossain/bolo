@@ -30,6 +30,17 @@ public class AudioRetentionService implements AudioRetentionUseCase {
             audio.deletePrefix("talk/" + id + "/");
             sessions.markAudioPurged(id, now);
         }
+        // Audio of a talk that no longer exists (deleted while its debrief or turn was still being written): remove it.
+        var onDisk = new java.util.ArrayList<app.bolo.common.id.TalkSessionId>();
+        for (String name : audio.children("talk/")) {
+            try {
+                onDisk.add(app.bolo.common.id.TalkSessionId.of(name));
+            } catch (IllegalArgumentException notATalk) {
+                // not a talk folder; leave it
+            }
+        }
+        var alive = sessions.existing(onDisk);
+        for (var id : onDisk) if (!alive.contains(id)) audio.deletePrefix("talk/" + id + "/");
         if (!due.isEmpty()) log.info("audio retention: purged {} talks", due.size());
     }
 

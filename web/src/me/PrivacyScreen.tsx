@@ -41,7 +41,7 @@ export function PrivacyScreen({ keep, onDeleted }: { keep: boolean; onDeleted: (
       <div className="bo-group" style={{ marginTop: 24, padding: "14px 20px" }}>
         <p className="bo-row__title" style={{ margin: 0 }}>What Bolo keeps</p>
         <ul className="bo-row__sub" style={{ margin: "6px 0 0", paddingLeft: 18, fontSize: 15, lineHeight: "22px" }}>
-          <li>Your voice clips, only if you choose to keep them (90 days).</li>
+          <li>Your voice clips, only if you choose to keep them (90 days). Your Day 1 clip stays until you delete everything, so you can hear your progress.</li>
           <li>The text of your talks and your scores, for feedback and progress.</li>
           <li>Your Google email and name, when you sign in.</li>
         </ul>
@@ -49,7 +49,8 @@ export function PrivacyScreen({ keep, onDeleted }: { keep: boolean; onDeleted: (
           Bolo never sells your data. <a className="dk-link" href="/privacy" target="_blank" rel="noreferrer">Read the full privacy page</a>
         </p>
       </div>
-      <div className="bo-group" style={{ marginTop: 16 }}><KeepRecordingsRow keep={keep} /></div>
+      {/* Keyed by the server's value: when fresher data arrives, the switch shows it rather than a stale first read. */}
+      <div className="bo-group" style={{ marginTop: 16 }}><KeepRecordingsRow key={String(keep)} keep={keep} /></div>
       <div style={{ marginTop: 28 }}>
         <button className="bo-btn bo-btn--critical" onClick={() => setAsking(true)}>Delete everything</button>
         <p className="bo-row__sub" style={{ margin: "4px 0 0" }}>Your account and all your data, at once.</p>

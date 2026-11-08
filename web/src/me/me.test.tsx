@@ -39,3 +39,12 @@ describe("Keep my recordings (US-8.5)", () => {
     expect(screen.getByText(/from your next talk/)).toBeTruthy();
   });
 });
+
+describe("the switch follows fresh data (review)", () => {
+  it("shows the newest choice when it arrives after the screen opened", async () => {
+    const { PrivacyScreen } = await import("./PrivacyScreen");
+    const { rerender } = render(<PrivacyScreen keep={false} onDeleted={() => {}} />);
+    rerender(<PrivacyScreen keep={true} onDeleted={() => {}} />);
+    expect(screen.getByRole("switch", { name: "Keep my recordings" }).getAttribute("aria-checked")).toBe("true");
+  });
+});

@@ -32,4 +32,9 @@ public class AudioStoreService implements AudioStoreUseCase {
     public void delete(String key) {
         store.delete(key);
     }
+
+    @Override
+    public java.util.List<String> children(String prefix) {
+        return store.children(prefix);
+    }
 }

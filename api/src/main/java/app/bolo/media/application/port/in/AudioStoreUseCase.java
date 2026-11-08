@@ -11,5 +11,8 @@ public interface AudioStoreUseCase {
 
     void deletePrefix(String prefix);
 
+    /** Names of the folders directly under {@code prefix}, e.g. the talk ids under "talk/". */
+    java.util.List<String> children(String prefix);
+
     void delete(String key);
 }
