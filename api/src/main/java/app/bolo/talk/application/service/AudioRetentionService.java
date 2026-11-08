@@ -32,4 +32,10 @@ public class AudioRetentionService implements AudioRetentionUseCase {
         }
         if (!due.isEmpty()) log.info("audio retention: purged {} talks", due.size());
     }
+
+    /** Delete everything (ACC-4): every talk's audio and clips go before the learner's rows do. */
+    @org.springframework.context.event.EventListener
+    public void onLearnerDeleting(app.bolo.common.event.LearnerDeleting e) {
+        for (var id : sessions.idsFor(e.learner())) audio.deletePrefix("talk/" + id.value() + "/");
+    }
 }

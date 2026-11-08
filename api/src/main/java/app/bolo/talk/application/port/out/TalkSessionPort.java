@@ -40,4 +40,6 @@ public interface TalkSessionPort {
 
     /** Talks the learner actually started (the socket attached). */
     int countStarted(LearnerId learner);
+
+    java.util.List<app.bolo.common.id.TalkSessionId> idsFor(LearnerId learner);
 }

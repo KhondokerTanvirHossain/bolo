@@ -17,10 +17,13 @@ import org.springframework.web.bind.annotation.RestController;
 class AuthController {
 
     private final SignInUseCase signIn;
+    private final app.bolo.learner.application.port.in.DeleteLearnerUseCase deleter;
     private final boolean secureCookie;
 
-    AuthController(SignInUseCase signIn, @Value("${bolo.secure-cookie}") boolean secureCookie) {
+    AuthController(SignInUseCase signIn, app.bolo.learner.application.port.in.DeleteLearnerUseCase deleter,
+                   @Value("${bolo.secure-cookie}") boolean secureCookie) {
         this.signIn = signIn;
+        this.deleter = deleter;
         this.secureCookie = secureCookie;
     }
 
@@ -32,6 +35,19 @@ class AuthController {
         SignInUseCase.SignedIn done = signIn.signIn(SessionCookie.read(req, secureCookie), body.idToken(), body.invite());
         res.addHeader(HttpHeaders.SET_COOKIE, SessionCookie.header(done.token(), secureCookie));
         return done.learner();
+    }
+
+    record DeleteRequest(String confirm) {
+    }
+
+    /** Me → Privacy → Delete everything (ACC-4): JSON with confirm "DELETE", so the write guard and a typed confirmation both apply. */
+    @PostMapping("/api/me/delete")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    void deleteEverything(@org.springframework.web.bind.annotation.RequestAttribute(name = SessionCookie.LEARNER_ATTRIBUTE, required = false)
+                          app.bolo.common.id.LearnerId learner, @RequestBody(required = false) DeleteRequest body, HttpServletResponse res) {
+        if (learner == null) throw new app.bolo.common.error.SignedOutException();
+        deleter.deleteEverything(learner, body == null ? null : body.confirm());
+        res.addHeader(HttpHeaders.SET_COOKIE, SessionCookie.cleared(secureCookie));
     }
 
     @PostMapping("/api/auth/sign-out")

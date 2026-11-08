@@ -108,6 +108,12 @@ class JdbcTalkSessionAdapter implements TalkSessionPort {
     }
 
     @Override
+    public java.util.List<app.bolo.common.id.TalkSessionId> idsFor(LearnerId learner) {
+        return jdbc.sql("select id from talk_session where learner_id = ?").param(learner.value())
+                .query((rs, n) -> new app.bolo.common.id.TalkSessionId(rs.getObject("id", java.util.UUID.class))).list();
+    }
+
+    @Override
     public int countStarted(LearnerId learner) {
         return jdbc.sql("select count(*) from talk_session where learner_id = ? and attached_at is not null")
                 .param(learner.value()).query(Integer.class).single();
