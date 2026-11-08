@@ -104,6 +104,8 @@ export default function Onboarding() {
   const toConsent = useCallback(() => dispatch({ type: "go", step: "consent" }), []);
   const forgetMic = useCallback(() => dispatch({ type: "forgetMic" }), []);
   const toTalk = useCallback(() => dispatch({ type: "go", step: "talk" }), []);
+  // Stable: Day 1 restarts its "saved" timer whenever this changes.
+  const day1Saved = useCallback(() => { void firstWordSpoken(); dispatch({ type: "go", step: "talk" }); }, []);
 
   if (boot.kind === "offline") {
     return (
@@ -136,7 +138,7 @@ export default function Onboarding() {
       return <SetupScreen state={state} busy={busy} failure={failure} onAnswer={answer} onNext={() => void next()}
         onBack={() => dispatch({ type: "prevQuestion" })} />;
     case "day1":
-      return <Day1Screen deviceId={state.micDeviceId} onSaved={() => { void firstWordSpoken(); toTalk(); }} />;
+      return <Day1Screen deviceId={state.micDeviceId} onSaved={day1Saved} />;
     case "talk":
       return <FirstTalkScreen deviceId={state.micDeviceId} />;
   }
