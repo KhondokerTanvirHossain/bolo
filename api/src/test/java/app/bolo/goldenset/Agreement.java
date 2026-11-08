@@ -84,8 +84,10 @@ public final class Agreement {
                     w.errorType(), w.phonemes().stream().map(p -> new SpokenSound(p.symbol(), p.accuracy())).toList())).toList();
             List<String> tokens = Alignment.tokens(o.rec().reference());
             Map<Integer, Integer> align = Alignment.align(words, tokens);
-            if (tokens.isEmpty() || align.size() < MIN_ALIGNED * tokens.size()) {
-                skipped.add(new Skipped(id, "words didn't match the reference: " + align.size() + " of " + tokens.size() + " lined up"));
+            // Azure returns unspoken reference words as Omissions, which always line up; only words actually said count here.
+            long said = align.keySet().stream().filter(pos -> !"Omission".equals(words.get(pos).errorType())).count();
+            if (tokens.isEmpty() || said < MIN_ALIGNED * tokens.size()) {
+                skipped.add(new Skipped(id, "words didn't match the reference: " + said + " of " + tokens.size() + " said and lined up"));
                 continue;
             }
             Map<Key, Double> chancesHere = new HashMap<>();
@@ -94,7 +96,8 @@ public final class Agreement {
                 for (SoundPattern p : SoundFlags.patternsIn(w)) chancesHere.put(new Key(ref, p), weakest(w, p));
             });
             Map<Key, Double> flagged = new HashMap<>();
-            for (SoundFlags.Flag f : SoundFlags.flags(words, soundBelow, wordBelow)) {
+            // Measure what a learner is told: one sound per word plus the extra vowel (as practice shows it).
+            for (SoundFlags.Flag f : SoundFlags.shown(SoundFlags.flags(words, soundBelow, wordBelow))) {
                 Integer ref = align.get(f.position());
                 if (ref != null) flagged.putIfAbsent(new Key(ref, f.pattern()), f.soundScore());
             }

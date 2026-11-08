@@ -1,1 +1,187 @@
-{"heard":true,"accuracy":100.0,"words":[{"word":"i","startMs":40,"endMs":150,"accuracy":100.0,"errorType":"None","phonemes":[{"symbol":"aɪ","accuracy":100.0}]},{"word":"think","startMs":160,"endMs":430,"accuracy":100.0,"errorType":"None","phonemes":[{"symbol":"θ","accuracy":100.0},{"symbol":"ɪ","accuracy":100.0},{"symbol":"ŋ","accuracy":100.0},{"symbol":"k","accuracy":100.0}]},{"word":"these","startMs":440,"endMs":670,"accuracy":100.0,"errorType":"None","phonemes":[{"symbol":"ð","accuracy":100.0},{"symbol":"i","accuracy":100.0},{"symbol":"z","accuracy":100.0}]},{"word":"three","startMs":680,"endMs":910,"accuracy":100.0,"errorType":"None","phonemes":[{"symbol":"θ","accuracy":100.0},{"symbol":"ɹ","accuracy":100.0},{"symbol":"i","accuracy":100.0}]},{"word":"thick","startMs":920,"endMs":1130,"accuracy":100.0,"errorType":"None","phonemes":[{"symbol":"θ","accuracy":100.0},{"symbol":"ɪ","accuracy":100.0},{"symbol":"k","accuracy":100.0}]},{"word":"books","startMs":1140,"endMs":1390,"accuracy":100.0,"errorType":"None","phonemes":[{"symbol":"b","accuracy":100.0},{"symbol":"ʊ","accuracy":100.0},{"symbol":"k","accuracy":100.0},{"symbol":"s","accuracy":100.0}]},{"word":"are","startMs":1400,"endMs":1530,"accuracy":100.0,"errorType":"None","phonemes":[{"symbol":"ɑɹ","accuracy":100.0}]},{"word":"worth","startMs":1540,"endMs":1810,"accuracy":100.0,"errorType":"None","phonemes":[{"symbol":"w","accuracy":100.0},{"symbol":"ɝ","accuracy":100.0},{"symbol":"θ","accuracy":100.0}]},{"word":"it","startMs":1820,"endMs":1990,"accuracy":100.0,"errorType":"None","phonemes":[{"symbol":"ɪ","accuracy":100.0},{"symbol":"t","accuracy":100.0}]}]}
+{
+ "audioSha256": "f2c52368bc4ccf5d2eedca6658d0c33faad70b3980c1d9fe4f3e79cbf26eedfb",
+ "reference": "I think these three thick books are worth it.",
+ "result": {
+  "heard": true,
+  "accuracy": 100.0,
+  "words": [
+   {
+    "word": "i",
+    "startMs": 40,
+    "endMs": 150,
+    "accuracy": 100.0,
+    "errorType": "None",
+    "phonemes": [
+     {
+      "symbol": "aɪ",
+      "accuracy": 100.0
+     }
+    ]
+   },
+   {
+    "word": "think",
+    "startMs": 160,
+    "endMs": 430,
+    "accuracy": 100.0,
+    "errorType": "None",
+    "phonemes": [
+     {
+      "symbol": "θ",
+      "accuracy": 100.0
+     },
+     {
+      "symbol": "ɪ",
+      "accuracy": 100.0
+     },
+     {
+      "symbol": "ŋ",
+      "accuracy": 100.0
+     },
+     {
+      "symbol": "k",
+      "accuracy": 100.0
+     }
+    ]
+   },
+   {
+    "word": "these",
+    "startMs": 440,
+    "endMs": 670,
+    "accuracy": 100.0,
+    "errorType": "None",
+    "phonemes": [
+     {
+      "symbol": "ð",
+      "accuracy": 100.0
+     },
+     {
+      "symbol": "i",
+      "accuracy": 100.0
+     },
+     {
+      "symbol": "z",
+      "accuracy": 100.0
+     }
+    ]
+   },
+   {
+    "word": "three",
+    "startMs": 680,
+    "endMs": 910,
+    "accuracy": 100.0,
+    "errorType": "None",
+    "phonemes": [
+     {
+      "symbol": "θ",
+      "accuracy": 100.0
+     },
+     {
+      "symbol": "ɹ",
+      "accuracy": 100.0
+     },
+     {
+      "symbol": "i",
+      "accuracy": 100.0
+     }
+    ]
+   },
+   {
+    "word": "thick",
+    "startMs": 920,
+    "endMs": 1130,
+    "accuracy": 100.0,
+    "errorType": "None",
+    "phonemes": [
+     {
+      "symbol": "θ",
+      "accuracy": 100.0
+     },
+     {
+      "symbol": "ɪ",
+      "accuracy": 100.0
+     },
+     {
+      "symbol": "k",
+      "accuracy": 100.0
+     }
+    ]
+   },
+   {
+    "word": "books",
+    "startMs": 1140,
+    "endMs": 1390,
+    "accuracy": 100.0,
+    "errorType": "None",
+    "phonemes": [
+     {
+      "symbol": "b",
+      "accuracy": 100.0
+     },
+     {
+      "symbol": "ʊ",
+      "accuracy": 100.0
+     },
+     {
+      "symbol": "k",
+      "accuracy": 100.0
+     },
+     {
+      "symbol": "s",
+      "accuracy": 100.0
+     }
+    ]
+   },
+   {
+    "word": "are",
+    "startMs": 1400,
+    "endMs": 1530,
+    "accuracy": 100.0,
+    "errorType": "None",
+    "phonemes": [
+     {
+      "symbol": "ɑɹ",
+      "accuracy": 100.0
+     }
+    ]
+   },
+   {
+    "word": "worth",
+    "startMs": 1540,
+    "endMs": 1810,
+    "accuracy": 100.0,
+    "errorType": "None",
+    "phonemes": [
+     {
+      "symbol": "w",
+      "accuracy": 100.0
+     },
+     {
+      "symbol": "ɝ",
+      "accuracy": 100.0
+     },
+     {
+      "symbol": "θ",
+      "accuracy": 100.0
+     }
+    ]
+   },
+   {
+    "word": "it",
+    "startMs": 1820,
+    "endMs": 1990,
+    "accuracy": 100.0,
+    "errorType": "None",
+    "phonemes": [
+     {
+      "symbol": "ɪ",
+      "accuracy": 100.0
+     },
+     {
+      "symbol": "t",
+      "accuracy": 100.0
+     }
+    ]
+   }
+  ]
+ }
+}

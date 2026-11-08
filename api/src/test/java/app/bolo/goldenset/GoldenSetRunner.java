@@ -35,6 +35,18 @@ public final class GoldenSetRunner {
 
     private static final JsonMapper JSON = JsonMapper.builder().build();
 
+    /** A saved vendor result, with the audio and text it was scored on: a changed recording must be scored again. */
+    record Saved(String audioSha256, String reference, PronunciationResult result) {
+    }
+
+    static String sha256(Path file) throws IOException {
+        try {
+            return java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(file)));
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
     private GoldenSetRunner() {
     }
 
@@ -75,13 +87,29 @@ public final class GoldenSetRunner {
         for (GoldenSet.Recording rec : set.recordings()) {
             Path file = cache.resolve(rec.id() + ".json");
             PronunciationResult result;
+            String sha;
+            try {
+                sha = sha256(rec.audio());
+            } catch (IOException e) {
+                out.println(rec.id() + ": can't read its audio (" + e.getClass().getSimpleName() + ")");
+                return 2;
+            }
             if (mode != Mode.REFRESH && Files.exists(file)) {
+                Saved saved;
                 try {
-                    result = JSON.readValue(Files.readString(file), PronunciationResult.class);
+                    saved = JSON.readValue(Files.readString(file), Saved.class);
                 } catch (IOException | RuntimeException e) {
+                    saved = null;
+                }
+                if (saved == null || saved.result() == null || saved.audioSha256() == null) {
                     out.println(rec.id() + ": the saved result " + file.getFileName() + " is unreadable; delete it and run again");
                     return 2;
                 }
+                if (!saved.audioSha256().equals(sha) || !rec.reference().equals(saved.reference())) {
+                    out.println(rec.id() + ": its audio or reference text changed since it was scored; run with --refresh");
+                    return 2;
+                }
+                result = saved.result();
             } else if (mode == Mode.OFFLINE) {
                 out.println(rec.id() + ": no saved result (run once without --offline)");
                 return 2;
@@ -95,7 +123,7 @@ public final class GoldenSetRunner {
                 }
                 try {
                     Files.createDirectories(cache);
-                    Files.writeString(file, JSON.writeValueAsString(result), StandardCharsets.UTF_8);
+                    Files.writeString(file, JSON.writeValueAsString(new Saved(sha, rec.reference(), result)), StandardCharsets.UTF_8);
                 } catch (IOException e) {
                     out.println(rec.id() + ": can't save the result (" + e.getClass().getSimpleName() + ")");
                     return 2;

@@ -18,7 +18,7 @@ Not enough teacher-marked issues yet to judge 4 sounds.
 | The sh sound | 0 | 0 | 0 | 0 | 0 | – | – | 0% of 17 | NOT ENOUGH DATA |
 | The s at the start | 2 | 2 | 2 | 0 | 0 | 100% | 100% | 0% of 6 | NOT ENOUGH DATA |
 
-Plain agreement (NFR-10): 100% over 108 word–sound chances.
+Plain agreement, clear words included (not the gate): 100% over 108 word–sound chances. Most words have no issue, so this stays high even when Bolo misses issues; use the verdicts above.
 
 ## Threshold sweep (flags right / issues caught)
 

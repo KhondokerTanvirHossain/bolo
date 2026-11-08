@@ -1,1 +1,182 @@
-{"heard":true,"accuracy":99.0,"words":[{"word":"she","startMs":40,"endMs":250,"accuracy":100.0,"errorType":"None","phonemes":[{"symbol":"ʃ","accuracy":100.0},{"symbol":"i","accuracy":100.0}]},{"word":"sells","startMs":260,"endMs":630,"accuracy":100.0,"errorType":"None","phonemes":[{"symbol":"s","accuracy":100.0},{"symbol":"ɛ","accuracy":100.0},{"symbol":"l","accuracy":100.0},{"symbol":"z","accuracy":100.0}]},{"word":"fresh","startMs":640,"endMs":940,"accuracy":97.0,"errorType":"None","phonemes":[{"symbol":"f","accuracy":97.0},{"symbol":"ɹ","accuracy":97.0},{"symbol":"ɛ","accuracy":97.0},{"symbol":"ʃ","accuracy":97.0}]},{"word":"fish","startMs":950,"endMs":1190,"accuracy":97.0,"errorType":"None","phonemes":[{"symbol":"f","accuracy":100.0},{"symbol":"ɪ","accuracy":100.0},{"symbol":"ʃ","accuracy":81.0}]},{"word":"near","startMs":1200,"endMs":1380,"accuracy":100.0,"errorType":"None","phonemes":[{"symbol":"n","accuracy":100.0},{"symbol":"ɪɹ","accuracy":100.0}]},{"word":"the","startMs":1390,"endMs":1490,"accuracy":100.0,"errorType":"None","phonemes":[{"symbol":"ð","accuracy":100.0},{"symbol":"ə","accuracy":100.0}]},{"word":"zoo","startMs":1500,"endMs":1710,"accuracy":100.0,"errorType":"None","phonemes":[{"symbol":"z","accuracy":100.0},{"symbol":"u","accuracy":100.0}]},{"word":"station","startMs":1720,"endMs":2260,"accuracy":100.0,"errorType":"None","phonemes":[{"symbol":"s","accuracy":100.0},{"symbol":"t","accuracy":100.0},{"symbol":"eɪ","accuracy":100.0},{"symbol":"ʃ","accuracy":100.0},{"symbol":"ə","accuracy":100.0},{"symbol":"n","accuracy":100.0}]}]}
+{
+ "audioSha256": "04f6e7146c384ba1d16bc3d7d26a0635dda158667d1dc142af90ad0975e1faea",
+ "reference": "She sells fresh fish near the zoo station.",
+ "result": {
+  "heard": true,
+  "accuracy": 99.0,
+  "words": [
+   {
+    "word": "she",
+    "startMs": 40,
+    "endMs": 250,
+    "accuracy": 100.0,
+    "errorType": "None",
+    "phonemes": [
+     {
+      "symbol": "ʃ",
+      "accuracy": 100.0
+     },
+     {
+      "symbol": "i",
+      "accuracy": 100.0
+     }
+    ]
+   },
+   {
+    "word": "sells",
+    "startMs": 260,
+    "endMs": 630,
+    "accuracy": 100.0,
+    "errorType": "None",
+    "phonemes": [
+     {
+      "symbol": "s",
+      "accuracy": 100.0
+     },
+     {
+      "symbol": "ɛ",
+      "accuracy": 100.0
+     },
+     {
+      "symbol": "l",
+      "accuracy": 100.0
+     },
+     {
+      "symbol": "z",
+      "accuracy": 100.0
+     }
+    ]
+   },
+   {
+    "word": "fresh",
+    "startMs": 640,
+    "endMs": 940,
+    "accuracy": 97.0,
+    "errorType": "None",
+    "phonemes": [
+     {
+      "symbol": "f",
+      "accuracy": 97.0
+     },
+     {
+      "symbol": "ɹ",
+      "accuracy": 97.0
+     },
+     {
+      "symbol": "ɛ",
+      "accuracy": 97.0
+     },
+     {
+      "symbol": "ʃ",
+      "accuracy": 97.0
+     }
+    ]
+   },
+   {
+    "word": "fish",
+    "startMs": 950,
+    "endMs": 1190,
+    "accuracy": 97.0,
+    "errorType": "None",
+    "phonemes": [
+     {
+      "symbol": "f",
+      "accuracy": 100.0
+     },
+     {
+      "symbol": "ɪ",
+      "accuracy": 100.0
+     },
+     {
+      "symbol": "ʃ",
+      "accuracy": 81.0
+     }
+    ]
+   },
+   {
+    "word": "near",
+    "startMs": 1200,
+    "endMs": 1380,
+    "accuracy": 100.0,
+    "errorType": "None",
+    "phonemes": [
+     {
+      "symbol": "n",
+      "accuracy": 100.0
+     },
+     {
+      "symbol": "ɪɹ",
+      "accuracy": 100.0
+     }
+    ]
+   },
+   {
+    "word": "the",
+    "startMs": 1390,
+    "endMs": 1490,
+    "accuracy": 100.0,
+    "errorType": "None",
+    "phonemes": [
+     {
+      "symbol": "ð",
+      "accuracy": 100.0
+     },
+     {
+      "symbol": "ə",
+      "accuracy": 100.0
+     }
+    ]
+   },
+   {
+    "word": "zoo",
+    "startMs": 1500,
+    "endMs": 1710,
+    "accuracy": 100.0,
+    "errorType": "None",
+    "phonemes": [
+     {
+      "symbol": "z",
+      "accuracy": 100.0
+     },
+     {
+      "symbol": "u",
+      "accuracy": 100.0
+     }
+    ]
+   },
+   {
+    "word": "station",
+    "startMs": 1720,
+    "endMs": 2260,
+    "accuracy": 100.0,
+    "errorType": "None",
+    "phonemes": [
+     {
+      "symbol": "s",
+      "accuracy": 100.0
+     },
+     {
+      "symbol": "t",
+      "accuracy": 100.0
+     },
+     {
+      "symbol": "eɪ",
+      "accuracy": 100.0
+     },
+     {
+      "symbol": "ʃ",
+      "accuracy": 100.0
+     },
+     {
+      "symbol": "ə",
+      "accuracy": 100.0
+     },
+     {
+      "symbol": "n",
+      "accuracy": 100.0
+     }
+    ]
+   }
+  ]
+ }
+}

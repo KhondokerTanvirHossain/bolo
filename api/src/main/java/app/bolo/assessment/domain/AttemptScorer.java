@@ -31,15 +31,13 @@ public final class AttemptScorer {
     public static AttemptResult score(List<SpokenWord> words, boolean upgrade) {
         // Kept in sentence order: each entry remembers the word position it belongs to.
         List<Map.Entry<Integer, AttemptResult.Focus>> at = new ArrayList<>();
-        Set<Integer> seen = new HashSet<>();
         Set<String> clusterWords = new HashSet<>();
-        for (SoundFlags.Flag f : SoundFlags.flags(words, SOUND_BELOW, WORD_BELOW)) {
+        for (SoundFlags.Flag f : SoundFlags.shown(SoundFlags.flags(words, SOUND_BELOW, WORD_BELOW))) {
             if (f.pattern() == SoundPattern.S_CLUSTER_VOWEL) {
                 if (clusterWords.add(f.word())) {
                     at.add(Map.entry(f.position(), new AttemptResult.Focus(f.word(), f.pattern(), AttemptResult.Kind.EXTRA_VOWEL, f.pattern().tip())));
                 }
-            } else if (seen.add(f.position())) {
-                // One sound per word: the first weak pattern sound, as said.
+            } else {
                 at.add(Map.entry(f.position(), new AttemptResult.Focus(f.word(), f.pattern(), AttemptResult.Kind.SOUND, f.pattern().tip())));
             }
         }

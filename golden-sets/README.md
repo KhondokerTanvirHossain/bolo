@@ -53,3 +53,32 @@ Convert other formats first, for example: `ffmpeg -i in.mp3 -ar 16000 -ac 1 -sam
 
 Judge **clarity, not accent** (PRD US-3.2). Label a word only if the swap changes or blurs the word, not just
 because it sounds Bangladeshi.
+
+## Collecting local speakers (2026-11-09)
+
+Aim for **20 people reading once each** (12 at the least), with a mix of English levels (including fluent speakers,
+to catch wrong flags), genders, ages and home districts (Dhaka, Sylhet, Chittagong and others).
+
+**How to record:**
+- Use a phone voice recorder in a quiet room, held about 20 cm from the mouth.
+- Read once at a normal pace, with no retakes unless they badly stumble.
+- Name the files speaker01, speaker02 and so on.
+- Keep a sheet with: age range, gender, home district, English level (weak / okay / good).
+
+**Consent** (spoken or written): "My recording will be used privately to test Bolo's pronunciation feedback. It won't be
+shared or published, and I can ask for it to be deleted."
+
+**The paragraph** (our own text, about 30 s):
+
+> Every Wednesday, my mother and I walk to the small village station. We usually buy fresh fish, seven green
+> vegetables and a bag of sweet oranges. She always says, "Speak slowly and stay calm," when we visit the busy street
+> market. I think the three of us will drive to the zoo next week. Then we will visit my old school and share a story
+> with the teachers.
+
+Each reading gives about:
+- 9 s-at-the-start chances (small, station, sweet, speak, slowly, stay, street, school, story);
+- 6 v (every, village, seven, vegetables, visit, drive);
+- 6 or more w (Wednesday, walk, we, will, week);
+- 7 or more th (mother, think, three, then, with, the);
+- 6 or more z (zoo, busy, always, says, oranges, teachers);
+- 4 sh (she, fresh, fish, share).

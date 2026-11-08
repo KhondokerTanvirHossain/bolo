@@ -104,8 +104,8 @@ Phase 0). It uses the same rule as practice and Try it: `SoundFlags` in the `ass
   - `--offline` uses only saved results. `--refresh` scores everything again.
   - Run it while no talk is live: Azure F0 allows one recognition at a time.
 - **Without the script:** `cd api && ./gradlew goldenSet -Pset=<abs dir> [-Pmode=offline|refresh]`, with
-  `BOLO_AZURE_SPEECH_KEY` set.
-- **Output:** `report.md` in the set's folder, also printed.
+  `BOLO_AZURE_SPEECH_KEY` set. Gradle turns any non-zero exit into 1, so use the script when the exit code matters.
+- **Output:** `report.md` in the set's folder, also printed. Saved results remember the audio and text they were scored on; if either changes, the run stops and asks for `--refresh`.
   - **Exit codes:** 0 means the gate passed or isn't decided yet; 1 means it failed; 2 means a set or vendor error (the message names the recording).
   - **Per sound:**
     - teacher issues;

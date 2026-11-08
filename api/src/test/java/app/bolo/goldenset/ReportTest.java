@@ -28,5 +28,7 @@ class ReportTest {
         assertThat(md).contains("| vans | village |");
         assertThat(md).contains("| 40 |").contains("| 50 |").contains("| 60 |").contains("| 70 |");
         assertThat(md).contains("Measured on scripted reading");
+        // Review I4: the plain figure is dominated by clear words; it must not read as the NFR-10 verdict.
+        assertThat(md).contains("not the gate").doesNotContain("(NFR-10)");
     }
 }

@@ -52,4 +52,14 @@ class SoundFlagsTest {
         assertThat(SoundFlags.patternsIn(w("snow", 90, "None", s("s", 90), s("n", 90)))).containsExactly(SoundPattern.S_CLUSTER_VOWEL);
         assertThat(SoundFlags.patternsIn(w("cat", 90, "None", s("k", 90)))).isEmpty();
     }
+
+    /** Practice tells a learner one sound per word; "shown" is that list, and the accuracy harness measures it. */
+    @Test
+    void shownKeepsTheFirstWeakSoundPerWord() {
+        var words = List.of(w("i", 40, "Insertion"), w("these", 50, "None", s("ð", 20), s("z", 30)), w("school", 90, "None", s("s", 90)));
+        assertThat(SoundFlags.shown(SoundFlags.flags(List.of(words.get(1)), 60, 75)))
+                .extracting(SoundFlags.Flag::pattern).containsExactly(SoundPattern.TH_TD);
+        assertThat(SoundFlags.shown(SoundFlags.flags(List.of(w("i", 40, "Insertion"), w("smooth", 50, "None", s("s", 90), s("ð", 20))), 60, 75)))
+                .extracting(SoundFlags.Flag::pattern).containsExactly(SoundPattern.S_CLUSTER_VOWEL, SoundPattern.TH_TD);
+    }
 }

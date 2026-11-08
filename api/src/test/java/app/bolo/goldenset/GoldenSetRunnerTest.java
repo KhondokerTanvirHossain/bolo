@@ -111,4 +111,32 @@ class GoldenSetRunnerTest {
         Files.delete(dir.resolve("cache/azure/vans.json"));
         Files.delete(dir.resolve("cache/azure/school.json"));
     }
+
+    /** Review I5: a saved result belongs to the exact audio and text it was scored on. */
+    @Test
+    void aChangedReferenceMustBeScoredAgain() throws Exception {
+        Path m = dir.resolve("manifest.json");
+        Files.writeString(m, Files.readString(m).replace("Very few vans visit the village.", "Very few vans visit the old village."));
+        assertThat(run(GoldenSetRunner.Mode.CACHE_THEN_VENDOR, vendor(PronunciationResult.nothingHeard()))).isEqualTo(2);
+        assertThat(calls).hasValue(0);
+        assertThat(printed()).contains("vans").contains("--refresh");
+    }
+
+    @Test
+    void changedAudioMustBeScoredAgain() throws Exception {
+        byte[] wav = Files.readAllBytes(dir.resolve("school.wav"));
+        wav[wav.length - 1] = 9;
+        Files.write(dir.resolve("school.wav"), wav);
+        assertThat(run(GoldenSetRunner.Mode.OFFLINE, vendor(PronunciationResult.nothingHeard()))).isEqualTo(2);
+        assertThat(printed()).contains("school").contains("--refresh");
+    }
+
+    @Test
+    void refreshScoresAChangedRecordingAndSavesItsFingerprint() throws Exception {
+        Path m = dir.resolve("manifest.json");
+        Files.writeString(m, Files.readString(m).replace("Very few vans visit the village.", "Very few vans visit the old village."));
+        assertThat(run(GoldenSetRunner.Mode.REFRESH, vendor(PronunciationResult.nothingHeard()))).isZero();
+        assertThat(run(GoldenSetRunner.Mode.OFFLINE, vendor(PronunciationResult.nothingHeard()))).isZero();
+        assertThat(Files.readString(dir.resolve("cache/azure/vans.json"))).contains("Very few vans visit the old village.");
+    }
 }

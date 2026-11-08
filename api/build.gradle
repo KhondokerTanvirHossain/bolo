@@ -61,5 +61,17 @@ tasks.register('goldenSet', JavaExec) {
     ignoreExitValue = false
 }
 
+// For scripts/golden-set.sh: the Java 21 launcher and the classpath, so the script runs the harness itself and its
+// exit code (0 / 1 gate failed / 2 error) comes through (Gradle turns every non-zero exit into 1).
+tasks.register('goldenSetCommand') {
+    dependsOn 'testClasses'
+    def launcher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(21) }
+    def cp = sourceSets.test.runtimeClasspath
+    doLast {
+        println launcher.get().executablePath.asFile.absolutePath
+        println cp.asPath
+    }
+}
+
 tasks.named('bootJar') { archiveFileName = 'bolo-api.jar' }
 tasks.named('jar') { enabled = false }

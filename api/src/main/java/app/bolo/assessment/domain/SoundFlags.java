@@ -51,6 +51,19 @@ public final class SoundFlags {
         return out;
     }
 
+    /**
+     * What a learner is actually told: one sound per word (the first weak pattern sound), plus the extra vowel. Practice,
+     * Try it and the accuracy harness all use this, so the harness measures what learners see.
+     */
+    public static List<Flag> shown(List<Flag> flags) {
+        List<Flag> out = new ArrayList<>();
+        java.util.Set<Integer> soundAt = new java.util.HashSet<>();
+        for (Flag f : flags) {
+            if (f.pattern() == SoundPattern.S_CLUSTER_VOWEL || soundAt.add(f.position())) out.add(f);
+        }
+        return out;
+    }
+
     /** The patterns this word gives a chance to get wrong: its pattern sounds, and an s + consonant start. */
     public static List<SoundPattern> patternsIn(SpokenWord w) {
         List<SoundPattern> out = new ArrayList<>();

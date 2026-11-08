@@ -108,4 +108,26 @@ class AgreementTest {
         assertThat(v.recall()).isNull();
         assertThat(v.verdict()).isEqualTo(Agreement.Verdict.NOT_ENOUGH_DATA);
     }
+
+    /** Review I3: a word with two weak sounds counts only the one practice would show. */
+    @Test
+    void theHarnessCountsWhatLearnersSee() {
+        var a = Agreement.of(List.of(outcome("these", "these", Set.of(new GoldenSet.Label(0, SoundPattern.Z_J)),
+                new ScoredWord("these", 0, 0, 50, "None", List.of(new ScoredPhoneme("ð", 20), new ScoredPhoneme("z", 30))))), 60, 75, 5);
+        assertThat(a.byPattern().get(SoundPattern.Z_J).fn()).isEqualTo(1);
+        assertThat(a.byPattern().get(SoundPattern.Z_J).tp()).isZero();
+        assertThat(a.byPattern().get(SoundPattern.TH_TD).fp()).isEqualTo(1);
+    }
+
+    /** Review I2: with miscues on, Azure returns unspoken reference words as Omissions; a clip of the wrong text is skipped. */
+    @Test
+    void mostlyOmittedWordsAreSkippedNotMeasured() {
+        var a = Agreement.of(List.of(outcome("wrong", "very few vans visit", Set.of(new GoldenSet.Label(0, V_BH)),
+                new ScoredWord("very", 0, 0, 0, "Omission", List.of()), new ScoredWord("few", 0, 0, 0, "Omission", List.of()),
+                new ScoredWord("vans", 0, 0, 0, "Omission", List.of()), word("visit", 90, "v", 90),
+                new ScoredWord("hello", 0, 0, 60, "Insertion", List.of()))), 60, 75, 5);
+        assertThat(a.skipped()).extracting(Agreement.Skipped::recordingId).containsExactly("wrong");
+        assertThat(a.skipped().get(0).reason()).contains("1 of 4");
+        assertThat(a.byPattern().get(V_BH).fn()).isZero();
+    }
 }

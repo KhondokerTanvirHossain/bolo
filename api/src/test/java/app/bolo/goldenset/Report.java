@@ -41,8 +41,8 @@ public final class Report {
                     .append(" | ").append(s.fp() + s.tn() == 0 ? "–" : pct(s.falseFlagRate()) + " of " + (s.fp() + s.tn()))
                     .append(" | ").append(s.verdict().name().replace('_', ' ')).append(" |\n");
         }
-        md.append("\nPlain agreement (NFR-10): ").append(Double.isNaN(a.rawAgreement()) ? "–" : pct(a.rawAgreement()))
-                .append(" over ").append(a.chances()).append(" word–sound chances.\n\n");
+        md.append("\nPlain agreement, clear words included (not the gate): ").append(Double.isNaN(a.rawAgreement()) ? "–" : pct(a.rawAgreement()))
+                .append(" over ").append(a.chances()).append(" word–sound chances. Most words have no issue, so this stays high even when Bolo misses issues; use the verdicts above.\n\n");
 
         md.append("## Threshold sweep (flags right / issues caught)\n\n| Sound below |");
         for (SoundPattern p : SoundPattern.values()) md.append(' ').append(p.title()).append(" |");
