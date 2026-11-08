@@ -86,3 +86,33 @@ test("on a phone, Me and Privacy fit the screen", async ({ page }) => {
   await expect(page.getByRole("switch", { name: "Keep my recordings" })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 });
+
+test("on a large phone (430 px), the shell uses the phone layout", async ({ page }) => {
+  await page.setViewportSize({ width: 430, height: 932 });
+  await stub(page, true);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Me" }).click();
+  await expect(page.getByText(/rahim@example.com/)).toBeVisible();
+  const look = await page.evaluate(() => {
+    const side = document.querySelector(".dk-side") as HTMLElement;
+    const foot = document.querySelector(".dk-side__foot") as HTMLElement | null;
+    const pageEl = document.querySelector(".dk-page") as HTMLElement;
+    return {
+      footShown: foot ? getComputedStyle(foot).display !== "none" : false,
+      sideScrolls: side.scrollWidth > side.clientWidth,
+      padding: getComputedStyle(pageEl).paddingLeft,
+      width: document.documentElement.scrollWidth,
+    };
+  });
+  expect(look).toEqual({ footShown: false, sideScrolls: false, padding: "16px", width: 430 });
+});
+
+test("the public privacy page scrolls to its last section", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 700 });
+  await page.goto("/privacy");
+  const last = page.getByRole("heading", { level: 2 }).last();
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await page.mouse.move(195, 350);
+  for (let i = 0; i < 10; i++) await page.mouse.wheel(0, 600);
+  await expect(last).toBeInViewport();
+});

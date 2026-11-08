@@ -8,6 +8,8 @@ const section = { margin: "28px 0 0" } as const;
 /** Plain words, from what Bolo actually stores (ACC-3, ACC-4, NFR-16). Linked from Google's sign-in consent screen. */
 export default function PrivacyPage() {
   return (
+    // The app root fills the screen and doesn't scroll (the talk scenes need that), so this page scrolls itself.
+    <div style={{ height: "100%", overflowY: "auto" }}>
     <main style={{ maxWidth: 680, margin: "0 auto", padding: "40px 16px 64px", color: "var(--ink)", font: "500 17px/27px var(--font-sans)" }}>
       <h1 className="bo-flow__title">Privacy at Bolo</h1>
       <p>Bolo helps you practise speaking English. Here is what it keeps about you, and how to remove it. Updated 9 November 2026.</p>
@@ -45,5 +47,6 @@ export default function PrivacyPage() {
       <p>In Me → Privacy you can stop keeping recordings, delete a recording, or delete everything. Deleting everything removes your account and all your data within 7 days.</p>
       <p>Bolo is in a closed beta. If anything here is unclear, ask the person who invited you, and we will answer or delete your data within 7 days.</p>
     </main>
+    </div>
   );
 }

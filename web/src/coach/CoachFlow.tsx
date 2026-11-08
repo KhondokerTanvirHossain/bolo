@@ -45,10 +45,13 @@ export function CoachFlow({ talkId, deviceId = null, onTalkAgain, onDone, onNoDe
   useEffect(() => {
     if (debrief?.status !== "ready" || seen.current === talkId) return;
     seen.current = talkId;
-    void api.post<void>(`/api/talk/${talkId}/debrief/viewed`);
-    void track("debrief_viewed", { fixes_count: debrief.fixes?.length ?? 0 });
+    // Reopening a past talk from History is not a new debrief view (the debrief-completion metric).
+    if (!history) {
+      void api.post<void>(`/api/talk/${talkId}/debrief/viewed`);
+      void track("debrief_viewed", { fixes_count: debrief.fixes?.length ?? 0 });
+    }
     onReady?.();
-  }, [debrief, talkId, onReady]);
+  }, [debrief, talkId, onReady, history]);
 
   if (debrief === null) return null;
   if (debrief.status === "scoring") return <Scoring />;
@@ -102,16 +105,21 @@ function DebriefScreen({ talkId, deviceId, debrief, onTalkAgain, onDone, onPract
   { talkId: string; debrief: Debrief; onRecordingDeleted?: () => void } & Omit<Props, "talkId">) {
   const [askDelete, setAskDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [deleteFailed, setDeleteFailed] = useState(false);
   const removeRecording = async () => {
     setDeleting(true);
+    setDeleteFailed(false);
     const ok = await deleteRecording(talkId);
     setDeleting(false);
+    if (!ok) { setDeleteFailed(true); return; }
     setAskDelete(false);
-    if (ok) onRecordingDeleted?.();
+    onRecordingDeleted?.();
   };
   const hasAnyClip = Boolean(debrief.strength?.clip) || (debrief.fixes ?? []).some((f) => f.clip);
+  // From the server's flags, never from missing links: a talk can lack clips for other reasons.
   const audioNote = debrief.recordingDeleted ? "Recording deleted. Feedback and words are still here."
-    : history && !hasAnyClip ? "Recording not kept, as you chose. Feedback and words are still here." : null;
+    : debrief.recordingNotKept ? "Recording not kept, as you chose. Feedback and words are still here."
+    : debrief.recordingExpired ? "Recordings are kept for 90 days. Feedback and words are still here." : null;
   const [fixes, setFixes] = useState<Fix[]>(debrief.fixes ?? []);
   const [at, setAt] = useState(0);
   const [note, setNote] = useState<string | null>(null);
@@ -153,7 +161,7 @@ function DebriefScreen({ talkId, deviceId, debrief, onTalkAgain, onDone, onPract
           ))}
           <Item n={<Icon name="insights" size="sm" />} title={debrief.firstSession ? "Your starting point" : "Your skills today"}
             sub="Skills and what's next" on={at === cards - 1} onClick={() => setAt(cards - 1)} />
-          <div style={{ marginTop: "auto", padding: "0 14px" }}>
+          <div className="dk-deb__foot">
             <button className="bo-btn bo-btn--quiet-neutral" style={{ padding: 0 }} onClick={onDone}><Icon name="close" size="sm" />{history ? "Back" : "Close feedback"}</button>
             {history && hasAnyClip && (
               <button className="bo-btn bo-btn--quiet-neutral" style={{ padding: 0, display: "flex" }} onClick={() => setAskDelete(true)}>
@@ -187,8 +195,9 @@ function DebriefScreen({ talkId, deviceId, debrief, onTalkAgain, onDone, onPract
           <div className="dk-card" role="dialog" aria-modal="true" aria-labelledby="delrec-title">
             <h1 className="bo-flow__title" id="delrec-title">Delete this recording?</h1>
             <p className="bo-flow__body">Your voice from this talk goes at once. The feedback and words stay.</p>
+            {deleteFailed && <p className="bo-footnote" role="alert">Couldn&apos;t delete it. Try again.</p>}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 18 }}>
-              <button className="bo-btn bo-btn--primary" onClick={() => setAskDelete(false)} autoFocus disabled={deleting}>Keep it</button>
+              <button className="bo-btn bo-btn--primary" onClick={() => { setAskDelete(false); setDeleteFailed(false); }} autoFocus disabled={deleting}>Keep it</button>
               <button className="bo-btn bo-btn--secondary" onClick={() => void removeRecording()} disabled={deleting}>Delete recording</button>
             </div>
           </div>

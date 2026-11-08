@@ -35,8 +35,13 @@ export function ProgressScreen({ onOpen, onSeeAll, onPractise, onTalk }: {
       <p className="dk-sub">{talks} {talks === 1 ? "talk" : "talks"} · {minutes} {minutes === 1 ? "minute" : "minutes"} of speaking</p>
       <h2 className="dk-h2" style={{ marginTop: 28 }}>Skills <span className="bo-row__sub">Last 30 days</span></h2>
       <SkillTrends trends={p.trends} />
-      <h2 className="dk-h2" style={{ marginTop: 28 }}>My patterns</h2>
-      <PatternList patterns={p.patterns} onPractise={onPractise} />
+      {/* ScreenProgressNew / US-6.3: patterns appear after 3 talks; until then the section is hidden, not empty. */}
+      {p.trends.sessions >= p.trends.after && (
+        <>
+          <h2 className="dk-h2" style={{ marginTop: 28 }}>My patterns</h2>
+          <PatternList patterns={p.patterns} onPractise={onPractise} />
+        </>
+      )}
       <h2 className="dk-h2" style={{ marginTop: 28 }}>History <button className="dk-link" onClick={onSeeAll}
         style={{ border: 0, background: "transparent", padding: 0 }}>See all</button></h2>
       <div className="bo-group">{p.latest.map((r) => <SessionRow key={r.talkId} row={r} onOpen={onOpen} />)}</div>
