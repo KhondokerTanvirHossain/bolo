@@ -29,4 +29,11 @@ class ReplyCheckTest {
     void changedWordsAreTheNewOnes() {
         assertThat(ReplyCheck.changedWords("Yesterday I fix bug", "Yesterday I fixed a bug.")).containsExactly("fixed", "a");
     }
+
+    /** Founder test 2026-11-08: both 5-minute talks failed — a quote that repeats a word ("to … to") broke this. */
+    @Test
+    void changedWordsWhenTheLearnerRepeatsAWord() {
+        assertThat(ReplyCheck.changedWords("I want to go to the the office", "I want to go to the office today."))
+                .containsExactly("today");
+    }
 }

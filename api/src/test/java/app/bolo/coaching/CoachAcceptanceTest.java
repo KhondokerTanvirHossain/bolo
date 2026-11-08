@@ -59,6 +59,7 @@ class CoachAcceptanceTest extends PostgresTestBase {
         stt.nextWords(null);
         llm.structuredReply(null);
         llm.failStructured(false);
+        stt.nextText(null);
     }
 
     /** Talks for {@code turns} learner turns, then ends. */
@@ -123,6 +124,21 @@ class CoachAcceptanceTest extends PostgresTestBase {
         String other = client.consentedGuest(5);
         assertThat(get("/api/talk/" + id + "/debrief", other).statusCode()).isEqualTo(404);
         assertThat(get(JsonPath.read(body, "$.fixes[0].clip"), other).statusCode()).isEqualTo(404);
+    }
+
+    /** Founder test 2026-11-08: a long talk's quote repeated a word and the whole debrief failed, three times. */
+    @Test
+    void anUpgradeOfASentenceThatRepeatsAWordStillGetsADebrief() throws Exception {
+        stt.nextText("I want to go to the office");
+        llm.structuredReply("""
+                {"strength":{"turn":1,"quote":"I want to go","text":"You said where you wanted to go."},
+                 "upgrades":[{"turn":1,"said":"I want to go to the office","better":"I want to go to the office today."}],
+                 "sentenceLevel":"GOOD","vocabularyLevel":"BUILDING"}""");
+        talk(3);
+        String body = debriefWhenSettled();
+        assertThat((String) JsonPath.read(body, "$.status")).isEqualTo("ready");
+        List<List<String>> changed = JsonPath.read(body, "$.fixes[?(@.kind == 'upgrade')].changed");
+        assertThat(changed).containsExactly(List.of("today"));
     }
 
     @Test

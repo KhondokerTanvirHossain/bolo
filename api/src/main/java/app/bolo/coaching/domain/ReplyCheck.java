@@ -40,7 +40,8 @@ public final class ReplyCheck {
 
     /** Words in {@code better} that aren't in {@code said}, for highlighting (US-4.4). */
     public static List<String> changedWords(String said, String better) {
-        Set<String> before = Set.of(normalize(said).split(" "));
+        // A learner repeats words ("to go to"); Set.of would throw on the duplicate.
+        Set<String> before = Set.copyOf(Arrays.asList(normalize(said).split(" ")));
         List<String> changed = new ArrayList<>();
         for (String w : better.split("\\s+")) {
             String n = normalize(w);

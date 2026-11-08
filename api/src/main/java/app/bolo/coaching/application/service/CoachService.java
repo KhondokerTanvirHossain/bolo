@@ -106,6 +106,18 @@ public class CoachService implements DebriefUseCase {
         Thread.ofVirtual().name("coach-" + e.id()).start(() -> compose(e.id(), e.learner()));
     }
 
+    /** The exception's type and the first Bolo frame (class.method:line) — enough to find it, never the learner's words. */
+    static String where(Throwable e) {
+        String type = e.getClass().getSimpleName();
+        for (StackTraceElement f : e.getStackTrace()) {
+            if (f.getClassName().startsWith("app.bolo.")) {
+                String cls = f.getClassName().substring(f.getClassName().lastIndexOf('.') + 1);
+                return type + " at " + cls + "." + f.getMethodName() + ":" + f.getLineNumber();
+            }
+        }
+        return type;
+    }
+
     public void failInterrupted() {
         debriefs.failAllScoring(clock.now());
     }
@@ -119,7 +131,7 @@ public class CoachService implements DebriefUseCase {
                 deleteTurnAudio(id);
                 return;
             } catch (RuntimeException e) {
-                log.warn("debrief {} attempt {} failed: {}", id, attempt, e.getClass().getSimpleName());
+                log.warn("debrief {} attempt {} failed: {}", id, attempt, where(e));
                 if (attempt < ATTEMPTS) sleep(backoffMs);
             }
         }
