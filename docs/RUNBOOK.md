@@ -217,3 +217,19 @@ The goal: someone who has never seen Bolo gets from opening it to talk to feedba
     - the Day 1 clip (`learner/<id>/`);
     - then every database row, by cascade.
     The cookie is cleared, and the browser returns to the welcome screen. There's no confirmation email yet, because Bolo can't send email.
+
+## Progress and History
+
+- **Progress** (sidebar → Progress, `GET /api/progress`), from the learner's debriefs:
+  - **effort:** talks and minutes of speaking;
+  - **4 skill trends:** the last 30 days, in words, after 3 finished talks;
+  - **my patterns:** up to 5, tagged New, Improving or Steady, plus Fixed;
+  - **the latest 3 talks**, with **See all**.
+  It never shows a score or a percentage.
+- **Pattern rules:**
+  - **Fixed:** not seen in the last 5 finished talks.
+  - **New:** first seen in the last 2.
+  - **Improving:** seen in fewer of the last 3 talks than the 3 before, or the count fell.
+  - **Steady:** otherwise.
+  New debriefs store every pattern found (`patterns`) and the Coach's 2–5 word `topic`. Older debriefs fall back to their fixes and "Free talk".
+- **History** (`GET /api/history`): every talk with a debrief, newest first, grouped by week. Opening one shows its feedback with **Practise these (3 min)** and **Delete recording** (`POST /api/talk/{id}/recording/delete`). That deletes the talk's clips and model lines at once; the feedback text stays.
