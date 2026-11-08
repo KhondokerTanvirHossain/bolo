@@ -15,6 +15,10 @@ type Props = {
   onPause: () => void;
   onResume: () => void;
   onRepeat: () => void;
+  /** US-2.7 answer to "Keep Bolo slower next time?". */
+  onKeepSlower?: (keep: boolean) => void;
+  /** SET-2: the learner's captions setting, used when this device has no in-talk choice of its own. */
+  captionsDefault?: boolean;
 };
 
 const LIVE = ["connecting", "buddy_speaking", "your_turn", "thinking"];
@@ -26,11 +30,12 @@ function seconds(ms: number): string {
   return (ms / 1000).toFixed(1);
 }
 
-function readCaptions(): boolean {
+function readCaptions(fallback: boolean): boolean {
   try {
-    return window.localStorage.getItem(CAPTIONS_KEY) !== "off";
+    const v = window.localStorage.getItem(CAPTIONS_KEY);
+    return v === null ? fallback : v !== "off";
   } catch {
-    return true;
+    return fallback;
   }
 }
 
@@ -38,7 +43,8 @@ function readCaptions(): boolean {
  * The conversation (TLK-16): the scene, Bolo's caption (TLK-8, toggle), the mic state, the time left, Pause, Done and
  * End; plus the hint card (TLK-6), the paused state (TLK-10) and the crisis card (TLK-14).
  */
-export function TalkScreen({ state, deviceId = null, onDone, onEnd, onTalkAgain, onLeave, onPause, onResume, onRepeat }: Props) {
+export function TalkScreen({ state, deviceId = null, onDone, onEnd, onTalkAgain, onLeave, onPause, onResume, onRepeat, onKeepSlower,
+  captionsDefault = true }: Props) {
   const [asking, setAsking] = useState(false);
   const [noDebrief, setNoDebrief] = useState(false);
   const [captions, setCaptions] = useState(true);
@@ -47,7 +53,7 @@ export function TalkScreen({ state, deviceId = null, onDone, onEnd, onTalkAgain,
   const [now, setNow] = useState(() => Date.now());
   const live = LIVE.includes(state.phase);
 
-  useEffect(() => { setCaptions(readCaptions()); }, []);
+  useEffect(() => { setCaptions(readCaptions(captionsDefault)); }, [captionsDefault]);
 
   useEffect(() => {
     if (!live) return;
@@ -163,6 +169,16 @@ export function TalkScreen({ state, deviceId = null, onDone, onEnd, onTalkAgain,
           </p>
         )}
       </div>
+      {live && state.askKeepSlower && onKeepSlower && (
+        <div className="bo-hint" role="note" aria-label="Keep Bolo slower?"
+          style={{ position: "absolute", left: "50%", top: 72, transform: "translateX(-50%)", width: "min(420px, calc(100% - 32px))", zIndex: 3 }}>
+          <p className="bo-hint__label">Keep Bolo slower next time?</p>
+          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+            <button className="bo-btn bo-btn--secondary" onClick={() => onKeepSlower(true)}>Yes, keep it</button>
+            <button className="bo-btn bo-btn--quiet-neutral" onClick={() => onKeepSlower(false)}>Not now</button>
+          </div>
+        </div>
+      )}
       {yourTurn && state.hint && (
         <div className="bo-hint" role="note"
           style={{ position: "absolute", left: "50%", bottom: 150, transform: "translateX(-50%)", width: "min(520px, calc(100% - 32px))", zIndex: 2 }}>

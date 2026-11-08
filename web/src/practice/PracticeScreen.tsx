@@ -5,12 +5,19 @@ import { fetchPractice, type Pattern } from "./attempts";
 import { ReadAloud } from "./ReadAloud";
 
 /** Practise one sound at a time: pick a sound, read its sentences aloud, see what to work on (ASM-2, US-4.3). */
-export function PracticeScreen({ deviceId, onBack }: { deviceId: string | null; onBack: () => void }) {
+/** {@code initialPattern}: open straight on this sound (Home's "Practise the v sound"). */
+export function PracticeScreen({ deviceId, onBack, initialPattern }: { deviceId: string | null; onBack: () => void; initialPattern?: string }) {
   const [patterns, setPatterns] = useState<Pattern[] | null>(null);
   const [chosen, setChosen] = useState<Pattern | null>(null);
   const [n, setN] = useState(0);
 
-  useEffect(() => { void fetchPractice().then(setPatterns); }, []);
+  useEffect(() => {
+    void fetchPractice().then((p) => {
+      setPatterns(p);
+      const start = initialPattern ? p.find((x) => x.key === initialPattern) : undefined;
+      if (start) setChosen(start);
+    });
+  }, [initialPattern]);
 
   return (
     <section className="dk-screen on" data-screen="drill">

@@ -1,5 +1,7 @@
 "use client";
 import { useCallback, useEffect, useReducer, useRef } from "react";
+import { firstWordSpoken } from "@/analytics/track";
+import { keepSlower } from "@/settings/settings";
 import { api } from "@/api/browser";
 import { classifyMicError } from "@/audio/micErrors";
 import { errorName, openMic } from "@/audio/openMic";
@@ -123,6 +125,8 @@ export function useTalk(deviceId: string | null) {
         return;
       }
       if (m.type === "turn_end") {
+        // R4: the first spoken answer, if Day 1 didn't already count (once per browser).
+        void firstWordSpoken();
         l.turnEndAt = performance.now();
         l.heardTurn = m.turn + 1;
         l.player.newTurn();
@@ -223,5 +227,11 @@ export function useTalk(deviceId: string | null) {
     return () => document.removeEventListener("visibilitychange", onVisibility);
   }, [state.phase, pause]);
 
-  return { state, start, done, end, reset, pause, resume, repeat };
+  /** US-2.7: keep the slower Bolo for next time (Settings), or not; either way the question goes away. */
+  const answerKeepSlower = useCallback((keep: boolean) => {
+    dispatch({ type: "keep_slower_answered" });
+    if (keep) void keepSlower();
+  }, []);
+
+  return { state, start, done, end, reset, pause, resume, repeat, answerKeepSlower };
 }

@@ -1,5 +1,6 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import { track } from "@/analytics/track";
 import { classifyMicCheck, stickyVerdict, type MicCheckResult } from "@/audio/micCheck";
 import { unblockGuidance } from "@/audio/micErrors";
 import { useMicLevel } from "@/audio/useMicLevel";
@@ -36,6 +37,14 @@ const RESULT_COPY = {
 /** "Choose your microphone" (prototype step 2 of 5): picker, live level, read-aloud check (US-1.2, US-1.3, US-1.5). */
 export function MicScreen({ deviceId, headphones, onChooseMic, onForgetMic, onHeadphones, onContinue }: Props) {
   const mic = useMicLevel(deviceId, onForgetMic);
+  // §10: what happened when Bolo asked for the mic (each outcome once per visit to this screen).
+  const reported = useRef(new Set<string>());
+  useEffect(() => {
+    const result = { live: "granted", blocked: "denied", busy: "busy", "no-device": "no_device" }[mic.status as string];
+    if (!result || reported.current.has(result)) return;
+    reported.current.add(result);
+    void track("mic_permission_result", { result });
+  }, [mic.status]);
   const live = classifyMicCheck(mic.history);
   const [result, setResult] = useState<MicCheckResult>("idle");
   useEffect(() => { setResult((prev) => stickyVerdict(prev, live)); }, [live]);

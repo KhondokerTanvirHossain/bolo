@@ -5,6 +5,8 @@ import { Icon } from "@/scene/Scene";
 import { Clip } from "./Clip";
 import { fetchDebrief, pollDebrief, disputeFix, type Debrief, type Fix, type Level } from "./debrief";
 import { highlight } from "./highlight";
+import { api } from "@/api/browser";
+import { track } from "@/analytics/track";
 
 type Props = { talkId: string; deviceId?: string | null; onTalkAgain: () => void; onDone: () => void; onNoDebrief?: () => void };
 
@@ -28,6 +30,15 @@ export function CoachFlow({ talkId, deviceId = null, onTalkAgain, onDone, onNoDe
   }, [talkId]);
 
   useEffect(() => { if (debrief === null) onNoDebrief?.(); }, [debrief, onNoDebrief]);
+
+  // Home stops offering "Finish your feedback" once a ready debrief has been seen (US-6.9); counted once per talk.
+  const seen = useRef<string | null>(null);
+  useEffect(() => {
+    if (debrief?.status !== "ready" || seen.current === talkId) return;
+    seen.current = talkId;
+    void api.post<void>(`/api/talk/${talkId}/debrief/viewed`);
+    void track("debrief_viewed", { fixes_count: debrief.fixes?.length ?? 0 });
+  }, [debrief, talkId]);
 
   if (debrief === null) return null;
   if (debrief.status === "scoring") return <Scoring />;

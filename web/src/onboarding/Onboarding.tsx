@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { api, POLICY_VERSION, type ApiResult, type LearnerView } from "@/api/browser";
 import { toSaveFailure, type SaveFailure } from "./saveFailure";
+import { firstWordSpoken, flushEvents, markFirstOpen, track } from "@/analytics/track";
 import { initialState, isLastQuestion, load, onboarding, reconcile, save, type OnboardingState } from "./steps";
 import { StartScreen } from "./screens/StartScreen";
 import { WelcomeScreen } from "./screens/WelcomeScreen";
@@ -27,6 +28,7 @@ export default function Onboarding() {
   // Resume the stored step only if the server agrees (US-1.7). Reading /api/me creates nothing: a guest is created
   // only when the learner actually gives consent, so page views alone never add rows.
   useEffect(() => {
+    markFirstOpen();
     void (async () => {
       const stored = load(window.localStorage);
       const me = await api.get<LearnerView>("/api/me");
@@ -35,6 +37,7 @@ export default function Onboarding() {
         ? { consent: me.value.consent !== null, profile: me.value.profile !== null }
         : { consent: false, profile: false };
       hasSession.current = me.kind === "ok";
+      if (hasSession.current) void flushEvents();
       dispatch({ type: "replace", state: reconcile(stored, server) });
       setBoot({ kind: "ready" });
     })();
@@ -59,13 +62,24 @@ export default function Onboarding() {
 
   useEffect(() => { if (boot.kind === "ready") save(window.localStorage, state); }, [state, boot]);
 
+  // §10 funnel: each onboarding step the learner leaves, and how long it took (no answers, only the step's name).
+  const stepStart = useRef<{ step: string; at: number } | null>(null);
+  useEffect(() => {
+    if (boot.kind !== "ready") return;
+    const prev = stepStart.current;
+    if (prev && prev.step !== state.step) {
+      void track("onboarding_step_completed", { step: prev.step, duration_s: Math.round((Date.now() - prev.at) / 1000) });
+    }
+    if (!prev || prev.step !== state.step) stepStart.current = { step: state.step, at: Date.now() };
+  }, [state.step, boot]);
+
   const chooseConsent = useCallback(async (keep: boolean) => {
     setBusy(true);
     setFailure(null);
     const res = await withSession(() =>
       api.post<void>("/api/consent", { keepRecordings: keep, over13: state.over13, policyVersion: POLICY_VERSION }));
     setBusy(false);
-    if (res.kind === "ok") dispatch({ type: "chooseConsent", keep }); else setFailure(toSaveFailure(res));
+    if (res.kind === "ok") { dispatch({ type: "chooseConsent", keep }); void flushEvents(); } else setFailure(toSaveFailure(res));
   }, [state.over13, withSession]);
 
   const next = useCallback(async () => {
@@ -122,7 +136,7 @@ export default function Onboarding() {
       return <SetupScreen state={state} busy={busy} failure={failure} onAnswer={answer} onNext={() => void next()}
         onBack={() => dispatch({ type: "prevQuestion" })} />;
     case "day1":
-      return <Day1Screen deviceId={state.micDeviceId} onSaved={toTalk} />;
+      return <Day1Screen deviceId={state.micDeviceId} onSaved={() => { void firstWordSpoken(); toTalk(); }} />;
     case "talk":
       return <FirstTalkScreen deviceId={state.micDeviceId} />;
   }

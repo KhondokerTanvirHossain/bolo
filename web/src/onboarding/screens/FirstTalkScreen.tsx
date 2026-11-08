@@ -1,17 +1,27 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { loadClip } from "@/audio/clipStore";
-import { Icon, Scene } from "@/scene/Scene";
-import { WORDMARK_SMALL_SVG } from "@/scene/art";
+import { CoachFlow } from "@/coach/CoachFlow";
+import { fetchHome, type Home } from "@/home/home";
+import { HomeScreen } from "@/home/HomeScreen";
 import { PracticeScreen } from "@/practice/PracticeScreen";
+import { fetchSettings } from "@/settings/settings";
+import { SettingsCard } from "@/settings/SettingsCard";
 import { TalkScreen } from "@/talk/TalkScreen";
 import { useTalk } from "@/talk/useTalk";
 
-/** Where talks start (US-1.6 → TLK-1): "Start talking" opens a talk with Bolo; the Day 1 clip can still be played back. */
+type View = { kind: "home" } | { kind: "practice"; pattern?: string } | { kind: "feedback"; talkId: string } | { kind: "settings" };
+
+/**
+ * After onboarding: Home (US-6.9) with its one next step, and from there a talk, the Coach's feedback, practice or
+ * Settings. Home is read again whenever the learner comes back to it.
+ */
 export function FirstTalkScreen({ deviceId }: { deviceId: string | null }) {
   const [url, setUrl] = useState<string | null>(null);
   const conversation = useTalk(deviceId);
-  const [practising, setPractising] = useState(false);
+  const [view, setView] = useState<View>({ kind: "home" });
+  const [home, setHome] = useState<Home | null>(null);
+  const [captions, setCaptions] = useState(true);
   const audio = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
@@ -24,44 +34,37 @@ export function FirstTalkScreen({ deviceId }: { deviceId: string | null }) {
     return () => { if (objectUrl) URL.revokeObjectURL(objectUrl); };
   }, []);
 
-  if (practising) return <PracticeScreen deviceId={deviceId} onBack={() => setPractising(false)} />;
+  const idle = conversation.state.phase === "idle";
+  useEffect(() => {
+    if (!idle || view.kind !== "home") return;
+    let cancelled = false;
+    void fetchHome().then((h) => { if (!cancelled) setHome(h); });
+    void fetchSettings().then((s) => { if (!cancelled) setCaptions(s.captions); });
+    return () => { cancelled = true; };
+  }, [idle, view.kind]);
 
-  if (conversation.state.phase !== "idle") {
+  const toHome = useCallback(() => setView({ kind: "home" }), []);
+  const talk = useCallback(() => { setView({ kind: "home" }); void conversation.start(); }, [conversation]);
+
+  if (!idle) {
     return <TalkScreen state={conversation.state} deviceId={deviceId} onDone={conversation.done} onEnd={conversation.end}
       onTalkAgain={() => void conversation.start()} onLeave={conversation.reset} onPause={conversation.pause}
-      onResume={conversation.resume} onRepeat={conversation.repeat} />;
+      onResume={conversation.resume} onRepeat={conversation.repeat} onKeepSlower={conversation.answerKeepSlower}
+      captionsDefault={captions} />;
   }
-
+  if (view.kind === "practice") return <PracticeScreen deviceId={deviceId} onBack={toHome} initialPattern={view.pattern} />;
+  if (view.kind === "feedback") {
+    return <CoachFlow talkId={view.talkId} deviceId={deviceId} onTalkAgain={talk} onDone={toHome} onNoDebrief={toHome} />;
+  }
   return (
-    <section className="dk-screen on" data-screen="talk">
-      <Scene />
-      <div className="dk-talk__top">
-        <span style={{ display: "flex", height: 28 }} dangerouslySetInnerHTML={{ __html: WORDMARK_SMALL_SVG }} />
-      </div>
-      <div className="dk-talk__cap">
-        <div className="bo-caption" aria-live="polite">
-          <p className="bo-caption__text">
-            Ready when you are. Bolo talks out loud, so turn your sound on.
-            {url && <>{" "}<span className="dim">Your Day 1 clip is saved on this device.</span></>}
-          </p>
-        </div>
-      </div>
-      <div className="dk-dock">
-        <button className="bo-btn bo-btn--primary" onClick={() => void conversation.start()} autoFocus>
-          <Icon name="mic" fill />Start talking
-        </button>
-        <button className="bo-scenebtn" onClick={() => setPractising(true)}>
-          <Icon name="record_voice_over" />Practise sounds
-        </button>
-        {url && (
-          <>
-            <button className="bo-scenebtn" onClick={() => void audio.current?.play()}>
-              <Icon name="play_arrow" fill />Play my Day 1 clip
-            </button>
-            <audio ref={audio} src={url} preload="auto" data-testid="day1-audio" />
-          </>
-        )}
-      </div>
-    </section>
+    <>
+      <HomeScreen home={home} hasDay1={url !== null} onTalk={talk}
+        onPractice={(pattern) => setView({ kind: "practice", pattern })}
+        onFeedback={(talkId) => setView({ kind: "feedback", talkId })}
+        onSettings={() => setView({ kind: "settings" })}
+        onPlayDay1={() => void audio.current?.play()} />
+      {view.kind === "settings" && <SettingsCard onClose={toHome} />}
+      {url && <audio ref={audio} src={url} preload="auto" data-testid="day1-audio" />}
+    </>
   );
 }

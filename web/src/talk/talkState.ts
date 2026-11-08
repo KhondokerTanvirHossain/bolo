@@ -21,6 +21,8 @@ export type TalkState = {
   hint: string[] | null;
   /** TLK-14: the approved crisis content, which stays on screen. */
   crisis: Crisis | null;
+  /** US-2.7: "Slower please" was heard; ask whether to keep the slower Bolo. */
+  askKeepSlower: boolean;
 };
 
 export type ServerMessage =
@@ -32,7 +34,8 @@ export type ServerMessage =
   | { type: "hint"; starters: string[] }
   | { type: "paused"; reason: string }
   | { type: "resumed" }
-  | ({ type: "crisis" } & Crisis);
+  | ({ type: "crisis" } & Crisis)
+  | { type: "slower" };
 
 export type TalkAction =
   | ServerMessage
@@ -41,9 +44,10 @@ export type TalkAction =
   | { type: "busy" }
   | { type: "no_mic"; problem: MicProblem }
   | { type: "socket_closed" }
-  | { type: "reset" };
+  | { type: "reset" }
+  | { type: "keep_slower_answered" };
 
-export const initialTalk: TalkState = { phase: "idle", talkId: null, minutes: 5, caption: "", captionTurn: -1, hint: null, crisis: null };
+export const initialTalk: TalkState = { phase: "idle", talkId: null, minutes: 5, caption: "", captionTurn: -1, hint: null, crisis: null, askKeepSlower: false };
 
 const FINAL: TalkPhase[] = ["ended", "busy", "no_voice", "no_mic", "idle", "crisis"];
 
@@ -64,6 +68,10 @@ export function talk(state: TalkState, action: TalkAction): TalkState {
       // While paused, only "resumed" brings the talk back (a late Bolo line must not reopen the mic).
       if (state.phase === "paused") return state;
       return { ...state, phase: action.value, hint: action.value === "your_turn" ? state.hint : null };
+    case "slower":
+      return { ...state, askKeepSlower: true };
+    case "keep_slower_answered":
+      return { ...state, askKeepSlower: false };
     case "hint":
       return { ...state, hint: action.starters };
     case "paused":

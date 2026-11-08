@@ -22,8 +22,9 @@ async function call<T>(method: "GET" | "POST" | "PUT", path: string, body?: unkn
     const code = await res.json().then((j: { code?: string }) => j.code ?? "unknown").catch(() => "unknown");
     return { kind: "refused", code };
   }
-  if (res.status === 204) return { kind: "ok", value: undefined as T };
-  return { kind: "ok", value: (await res.json()) as T };
+  // 202/204 and other empty answers carry no body.
+  const text = await res.text().catch(() => "");
+  return { kind: "ok", value: (text ? JSON.parse(text) : undefined) as T };
 }
 
 export const api = {
