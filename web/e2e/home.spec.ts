@@ -52,14 +52,15 @@ test("Home offers the last feedback's sound, and opens practice on it", async ({
   await expect(page.getByText("Very few vans visit.")).toBeVisible();
 });
 
-test("Settings saves a slower Bolo for the next talk", async ({ page }) => {
+test("Me saves a slower Bolo for the next talk", async ({ page }) => {
   const s = await stub(page, null);
   await page.goto("/");
-  await page.getByRole("button", { name: "Settings" }).click();
+  await page.getByRole("button", { name: "Me" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Me" })).toBeVisible();
   await page.getByRole("button", { name: "Slower" }).click();
   await expect.poll(() => s.puts.at(-1) ?? "").toContain("\"buddySpeed\":\"slower\"");
-  await page.getByRole("button", { name: "Done" }).click();
-  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.getByRole("button", { name: "Talk" }).click();
+  await expect(page.getByRole("button", { name: "Start talking" })).toBeVisible();
 });
 
 test("after 'Slower please' Bolo asks to keep it slower, and Yes saves it", async ({ page }) => {
@@ -74,7 +75,7 @@ test("after 'Slower please' Bolo asks to keep it slower, and Yes saves it", asyn
   await expect(page.getByText("Keep Bolo slower next time?")).toHaveCount(0);
 });
 
-test("on a phone, Home with its card and the Settings card fit the screen", async ({ page }) => {
+test("on a phone, Home with its card and the Me page fit the screen", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await stub(page, { kind: "feedback", talkId: TALK });
   await page.goto("/");
@@ -82,8 +83,7 @@ test("on a phone, Home with its card and the Settings card fit the screen", asyn
   const card = (await page.locator("[data-home-card]").boundingBox())!;
   expect(card.x).toBeGreaterThanOrEqual(15);
   expect(card.x + card.width).toBeLessThanOrEqual(375);
-  await page.getByRole("button", { name: "Settings" }).click();
-  const dialog = (await page.getByRole("dialog").boundingBox())!;
-  expect(dialog.x + dialog.width).toBeLessThanOrEqual(375);
+  await page.getByRole("button", { name: "Me" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Me" })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 });

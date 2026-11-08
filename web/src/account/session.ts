@@ -43,6 +43,11 @@ const PERSONAL_KEYS = [STORAGE_KEY, "bolo.loop.v1", "bolo.captions", "bolo.event
 
 export async function signOut(): Promise<void> {
   await api.post<void>("/api/auth/sign-out");
+  await clearThisBrowser();
+}
+
+/** Removes the person's Bolo state from this browser (sign-out, delete everything). */
+export async function clearThisBrowser(): Promise<void> {
   for (const k of PERSONAL_KEYS) {
     try {
       window.localStorage.removeItem(k);

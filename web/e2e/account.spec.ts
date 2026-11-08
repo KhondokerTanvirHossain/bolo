@@ -65,8 +65,8 @@ test("Continue with Google signs in and keeps everything", async ({ page }) => {
   await expect.poll(() => s.posted.google.length).toBe(1);
   expect(s.posted.google[0]).toContain("fake:u1:rahim@example.com");
   await expect(page.getByText("See you tomorrow. Bolo will be here.")).toBeVisible();
-  await page.getByRole("button", { name: "Settings" }).click();
-  await expect(page.getByText("Signed in as rahim@example.com")).toBeVisible();
+  await page.getByRole("button", { name: "Me" }).click();
+  await expect(page.getByText(/rahim@example.com/)).toBeVisible();
 });
 
 test("the 4th guest talk asks to sign in, and Not now leaves Home as it was", async ({ page }) => {

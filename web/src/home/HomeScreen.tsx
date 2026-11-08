@@ -28,7 +28,7 @@ export function HomeScreen({ home, hasDay1, onTalk, onPractice, onFeedback, onSe
       <div className="dk-talk__top">
         <span style={{ display: "flex", height: 28 }} dangerouslySetInnerHTML={{ __html: WORDMARK_SMALL_SVG }} />
         <span />
-        <button className="bo-scenebtn" aria-label="Settings" onClick={onSettings}><Icon name="settings" size="sm" /></button>
+        <button className="bo-scenebtn" onClick={onSettings}><Icon name="person" size="sm" />Me</button>
       </div>
       <div className="dk-talk__cap">
         <div className="bo-caption" aria-live="polite">

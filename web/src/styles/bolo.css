@@ -714,6 +714,18 @@ button { font: inherit; color: inherit; -webkit-tap-highlight-color: transparent
 /* me: two panes */
 .dk-me { display: grid; grid-template-columns: 260px 1fr; gap: 40px; margin-top: 28px; align-items: start; }
 .dk-me__nav { display: flex; flex-direction: column; gap: 2px; position: sticky; top: 0; }
+/* Phones: the sidebar becomes a top bar; Me's two panes stack. */
+@media (max-width: 720px) {
+  .dk-app { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+  .dk-side { flex-direction: row; align-items: center; padding: 10px 16px; border-right: 0; border-bottom: 1px solid var(--separator); }
+  .dk-side .dk-logo { margin: 0 8px 0 0; height: 24px; }
+  .dk-side .dk-logo svg { height: 24px; }
+  .dk-side__foot { display: none; }
+  .dk-page { padding: 20px 16px 40px; }
+  .dk-h1 { font-size: 32px; line-height: 38px; }
+  .dk-me { grid-template-columns: 1fr; gap: 16px; }
+  .dk-page .bo-row { flex-wrap: wrap; }
+}
 /* drills */
 .dk-stagecard { max-width: 640px; margin: 0 auto; background: var(--surface); border-radius: var(--radius-xl); box-shadow: var(--shadow-card); padding: 32px 40px; }
 .dk-qr { width: 132px; height: 132px; border-radius: 12px; background: #fff; padding: 10px; box-shadow: inset 0 0 0 1px var(--separator); display: grid; grid-template-columns: repeat(11, 1fr); gap: 1px; }

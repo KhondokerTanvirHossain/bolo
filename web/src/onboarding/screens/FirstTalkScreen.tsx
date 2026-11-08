@@ -10,11 +10,14 @@ import { afterDebrief, loadLoop, saveAnswered, saveLoop, seenSeeYou, type Loop }
 import { GuestLimit } from "@/account/GuestLimit";
 import { SaveProgress } from "@/account/SaveProgress";
 import { fetchAuthConfig, fetchMe } from "@/account/session";
-import { SettingsCard } from "@/settings/SettingsCard";
+import { AppShell } from "@/me/AppShell";
+import { MeScreen } from "@/me/MeScreen";
+import { PrivacyScreen } from "@/me/PrivacyScreen";
+import { clearThisBrowser } from "@/account/session";
 import { TalkScreen } from "@/talk/TalkScreen";
 import { useTalk } from "@/talk/useTalk";
 
-type View = { kind: "home" } | { kind: "practice"; pattern?: string } | { kind: "feedback"; talkId: string } | { kind: "settings" };
+type View = { kind: "home" } | { kind: "practice"; pattern?: string } | { kind: "feedback"; talkId: string } | { kind: "me" } | { kind: "privacy" };
 
 /**
  * After onboarding: Home (US-6.9) with its one next step, and from there a talk, the Coach's feedback, practice or
@@ -58,6 +61,13 @@ export function FirstTalkScreen({ deviceId }: { deviceId: string | null }) {
   }, [idle, view.kind]);
 
   useEffect(() => { void fetchAuthConfig().then((c) => setSignInOn(c.enabled)); }, []);
+  // Me and Privacy always show the latest (a privacy choice made there must show when coming back).
+  useEffect(() => {
+    if (view.kind !== "me" && view.kind !== "privacy") return;
+    let cancelled = false;
+    void fetchMe().then((m) => { if (!cancelled && m) setMe(m); });
+    return () => { cancelled = true; };
+  }, [view.kind]);
 
   // "See you tomorrow" once, on the Home after the first loop (US-6.8).
   useEffect(() => {
@@ -98,6 +108,16 @@ export function FirstTalkScreen({ deviceId }: { deviceId: string | null }) {
     return <CoachFlow talkId={view.talkId} deviceId={deviceId} onTalkAgain={talk} onDone={toHome} onNoDebrief={toHome}
       onPractise={(pattern) => setView({ kind: "practice", pattern })} />;
   }
+  if (view.kind === "me" || view.kind === "privacy") {
+    return (
+      <AppShell tab="me" onTab={(t) => { setSeeYou(false); setView({ kind: t === "talk" ? "home" : "me" }); }}>
+        {view.kind === "me"
+          ? <MeScreen me={me} onPrivacy={() => setView({ kind: "privacy" })} onSignedIn={signedIn} />
+          : <PrivacyScreen keep={me?.consent?.keepRecordings === true}
+              onDeleted={() => void clearThisBrowser().then(() => window.location.assign("/"))} />}
+      </AppShell>
+    );
+  }
   // US-6.8 / US-8.2: a guest's save step comes before Home (also when it was missed last time). With sign-in off, skip it.
   if (loop.pendingSave) {
     if (guest && signInOn === true) {
@@ -109,9 +129,8 @@ export function FirstTalkScreen({ deviceId }: { deviceId: string | null }) {
       <HomeScreen home={home} note={seeYou ? "See you tomorrow. Bolo will be here." : undefined} hasDay1={url !== null} onTalk={talk}
         onPractice={(pattern) => setView({ kind: "practice", pattern })}
         onFeedback={(talkId) => setView({ kind: "feedback", talkId })}
-        onSettings={() => setView({ kind: "settings" })}
+        onSettings={() => setView({ kind: "me" })}
         onPlayDay1={() => void audio.current?.play()} />
-      {view.kind === "settings" && <SettingsCard onClose={() => { setSeeYou(false); toHome(); }} />}
       {url && <audio ref={audio} src={url} preload="auto" data-testid="day1-audio" />}
     </>
   );
