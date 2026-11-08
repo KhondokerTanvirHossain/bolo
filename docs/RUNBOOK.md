@@ -174,3 +174,29 @@ The goal: someone who has never seen Bolo gets from opening it to talk to feedba
 5. **Afterwards:** run `scripts/metrics.sh 1`.
    - Their first word should be within **60 s** of opening, and their first talk turn within **3 min**.
    - Write the notes in `docs/product/feedback-log.md`.
+
+## Accounts (Google sign-in) and the closed beta
+
+- **Sign-in:** Firebase Auth with Google, popup only (desktop beta), project `bolo-d44c2`.
+  - The four public values `BOLO_FIREBASE_API_KEY`, `_AUTH_DOMAIN`, `_PROJECT_ID` and `_APP_ID` live in `~/bolo/bolo.env`.
+  - The API serves them at `GET /api/auth/config`, and the web reads them at runtime.
+  - No service account: the API verifies ID tokens against Google's securetoken keys (iss and aud = the project; email verified; a sign-in within the last 5 minutes).
+  - Remove the four values and restart the API to switch sign-in off. Everyone is then a guest, with no guest limit.
+- **Firebase console checklist:**
+  - Authentication → Sign-in method → Google is **enabled**.
+  - Authentication → Settings → Authorized domains includes **bolo.eliooo.org**. Without it the popup fails with `auth/unauthorized-domain`.
+- **What happens on "Continue with Google"** (`POST /api/auth/google`):
+  - **A guest with no account yet:** the guest becomes the account, keeping everything.
+  - **A guest signing into an existing account** (for example on a new browser): the guest's talks, practice attempts, events and usage move to the account, and the guest is deleted. The account keeps its own consent, profile and settings, and takes the guest's only where it has none.
+  - **No guest on this browser** ("I already have an account"): signs straight in.
+  - **Every time:** the session cookie is rotated.
+  - **Sign-out:** `POST /api/auth/sign-out`. It's in Settings for now; Me comes next.
+- **Guests:**
+  - Up to 3 talks. The 4th is refused (`422 sign-in`), and the web shows "Save your progress to keep talking".
+  - The save prompt comes after the 1st talk (end of the first loop), then once after the 2nd and the 3rd.
+- **Day 1 clip:** uploaded after sign-in only if the learner chose to keep recordings. It's stored encrypted as `learner/<id>/day1.webm` (or `.mp4`), and downloaded on a new browser.
+- **Closed beta** (`BOLO_INVITES_REQUIRED=true` in production):
+  - A new guest or a new Google account needs an invite link; returning learners never do.
+  - **Make one:** `scripts/invite.sh "<who it's for>" <max-uses>` prints `https://bolo.eliooo.org/?invite=CODE`.
+  - **See them:** `scripts/box.sh` then `box "docker exec bolo-db psql -U bolo -d bolo -c 'select code,label,max_uses,uses from invite'"`.
+  - **The checks' own invite:** the smoke test and live probes use `~/bolo/probe-invite` on the box (`scripts/probe-invite.sh` creates it).
