@@ -10,6 +10,7 @@ import app.bolo.common.time.BoloClock;
 import app.bolo.talk.application.port.in.TalkEnded;
 import app.bolo.talk.application.port.in.TalkStarted;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
@@ -18,6 +19,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /** Stores §10 events: allow-listed browser events (rate-limited) and the talk's own start and end. */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AnalyticsService implements RecordEventUseCase {
@@ -41,13 +43,22 @@ public class AnalyticsService implements RecordEventUseCase {
         events.insert(learner, name, props == null ? Map.of() : props, now);
     }
 
+    /** Runs inside the talk's own path; analytics must never break a talk (or the Coach's clean-up listening after it). */
     @EventListener
     public void onTalkStarted(TalkStarted e) {
-        events.insert(e.learner(), "session_started", Map.of(), clock.now());
+        quietly(() -> events.insert(e.learner(), "session_started", Map.of(), clock.now()));
     }
 
     @EventListener
     public void onTalkEnded(TalkEnded e) {
-        events.insert(e.learner(), "session_ended", Map.of("turns", e.learnerTurns(), "end_reason", e.reason()), clock.now());
+        quietly(() -> events.insert(e.learner(), "session_ended", Map.of("turns", e.learnerTurns(), "end_reason", e.reason()), clock.now()));
+    }
+
+    private static void quietly(Runnable insert) {
+        try {
+            insert.run();
+        } catch (RuntimeException ex) {
+            log.warn("analytics event not stored: {}", ex.getClass().getSimpleName());
+        }
     }
 }

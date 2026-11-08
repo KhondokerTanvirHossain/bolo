@@ -3,7 +3,7 @@ import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { api, POLICY_VERSION, type ApiResult, type LearnerView } from "@/api/browser";
 import { toSaveFailure, type SaveFailure } from "./saveFailure";
 import { firstWordSpoken, flushEvents, markFirstOpen, track } from "@/analytics/track";
-import { initialState, isLastQuestion, load, onboarding, reconcile, save, type OnboardingState } from "./steps";
+import { initialState, isLastQuestion, load, onboarding, reconcile, save, STORAGE_KEY, type OnboardingState } from "./steps";
 import { StartScreen } from "./screens/StartScreen";
 import { WelcomeScreen } from "./screens/WelcomeScreen";
 import { ConsentScreen } from "./screens/ConsentScreen";
@@ -28,7 +28,8 @@ export default function Onboarding() {
   // Resume the stored step only if the server agrees (US-1.7). Reading /api/me creates nothing: a guest is created
   // only when the learner actually gives consent, so page views alone never add rows.
   useEffect(() => {
-    markFirstOpen();
+    // A browser with onboarding progress already stored used Bolo before tracking began.
+    markFirstOpen(Date.now(), window.localStorage.getItem(STORAGE_KEY) !== null);
     void (async () => {
       const stored = load(window.localStorage);
       const me = await api.get<LearnerView>("/api/me");
@@ -103,7 +104,6 @@ export default function Onboarding() {
 
   const toConsent = useCallback(() => dispatch({ type: "go", step: "consent" }), []);
   const forgetMic = useCallback(() => dispatch({ type: "forgetMic" }), []);
-  const toTalk = useCallback(() => dispatch({ type: "go", step: "talk" }), []);
   // Stable: Day 1 restarts its "saved" timer whenever this changes.
   const day1Saved = useCallback(() => { void firstWordSpoken(); dispatch({ type: "go", step: "talk" }); }, []);
 

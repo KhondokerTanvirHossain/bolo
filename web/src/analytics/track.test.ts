@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { firstWordSpoken, flushEvents, markFirstOpen, track } from "./track";
 
+
 type Sent = { name: string; props: Record<string, unknown> };
 let sent: Sent[] = [];
 let status = 202;
@@ -50,5 +51,13 @@ describe("track", () => {
     expect(sent.map((e) => e.name)).toEqual(["app_first_open", "onboarding_step_completed"]);
     await flushEvents();
     expect(sent).toHaveLength(2);
+  });
+
+  /** Review I2: a browser that used Bolo before tracking began is not a new opener and has no honest first word. */
+  it("treats a returning browser as not new", async () => {
+    markFirstOpen(Date.now(), true);
+    await flushEvents();
+    await firstWordSpoken();
+    expect(sent).toHaveLength(0);
   });
 });

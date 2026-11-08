@@ -37,4 +37,12 @@ class EventRulesTest {
         assertThat(EventRules.problem("onboarding_step_completed", Map.of("step", "day1", "duration_s", 12.5))).isEmpty();
         assertThat(EventRules.problem("debrief_viewed", Map.of("fixes_count", 3, "first_session", true))).isEmpty();
     }
+
+    /** Review I1: a short lower-case sentence or a phone number must not get into the event table. */
+    @Test
+    void sentencesAndPhoneNumbersCannotGetIn() {
+        assertThat(EventRules.problem("onboarding_step_completed", Map.of("step", "my name is rahim i live in mirpur 10"))).isPresent();
+        assertThat(EventRules.problem("onboarding_step_completed", Map.of("duration_s", 1711223344L))).isPresent();
+        assertThat(EventRules.problem("first_word_spoken", Map.of("seconds_since_first_open", 86_400))).isEmpty();
+    }
 }

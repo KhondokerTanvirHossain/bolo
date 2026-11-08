@@ -16,7 +16,10 @@ public final class EventRules {
     public static final Set<String> SERVER = Set.of("session_started", "session_ended");
     static final int MAX_PROPS = 8;
     private static final Pattern KEY = Pattern.compile("[a-z0-9_]{1,40}");
-    private static final Pattern VALUE = Pattern.compile("[a-z0-9_ -]{0,40}");
+    /** Single keys only (no spaces), so not even a short lower-case sentence fits. */
+    private static final Pattern VALUE = Pattern.compile("[a-z0-9_-]{1,40}");
+    /** Large enough for any count or duration we send; too small for a phone number. */
+    static final double MAX_NUMBER = 10_000_000;
 
     private EventRules() {
     }
@@ -30,7 +33,7 @@ public final class EventRules {
             if (!KEY.matcher(e.getKey()).matches()) return Optional.of("bad prop name");
             Object v = e.getValue();
             boolean ok = v instanceof Boolean
-                    || v instanceof Number n && Double.isFinite(n.doubleValue())
+                    || v instanceof Number n && Double.isFinite(n.doubleValue()) && Math.abs(n.doubleValue()) < MAX_NUMBER
                     || v instanceof String s && VALUE.matcher(s).matches();
             if (!ok) return Optional.of("bad value for " + e.getKey());
         }

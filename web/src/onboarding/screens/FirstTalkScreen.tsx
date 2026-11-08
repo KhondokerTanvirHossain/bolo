@@ -39,7 +39,7 @@ export function FirstTalkScreen({ deviceId }: { deviceId: string | null }) {
     if (!idle || view.kind !== "home") return;
     let cancelled = false;
     void fetchHome().then((h) => { if (!cancelled) setHome(h); });
-    void fetchSettings().then((s) => { if (!cancelled) setCaptions(s.captions); });
+    void fetchSettings().then((s) => { if (!cancelled && s) setCaptions(s.captions); });
     return () => { cancelled = true; };
   }, [idle, view.kind]);
 

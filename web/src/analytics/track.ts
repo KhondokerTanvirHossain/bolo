@@ -66,10 +66,22 @@ export async function flushEvents(): Promise<void> {
   }
 }
 
-/** First launch on this browser: remembers when, and queues app_first_open (sent once a session exists). */
-export function markFirstOpen(now: number = Date.now()): void {
+/**
+ * First launch on this browser: remembers when, and queues app_first_open (sent once a session exists). A browser that
+ * used Bolo before tracking began ({@code returning}) isn't a new opener and has no honest first word: it's marked done.
+ */
+export function markFirstOpen(now: number = Date.now(), returning = false): void {
   const s = store();
   if (!s || s.getItem(FIRST_OPEN_KEY)) return;
+  if (returning) {
+    try {
+      s.setItem(FIRST_OPEN_KEY, "returning");
+      s.setItem(FIRST_WORD_KEY, "1");
+    } catch {
+      // nothing to record
+    }
+    return;
+  }
   try {
     s.setItem(FIRST_OPEN_KEY, String(now));
   } catch {

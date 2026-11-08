@@ -6,7 +6,8 @@ import { DEFAULT_SETTINGS, fetchSettings, saveSettings, type Settings } from "./
 export function SettingsCard({ onClose }: { onClose: () => void }) {
   const [s, setS] = useState<Settings | null>(null);
   const [failed, setFailed] = useState(false);
-  useEffect(() => { void fetchSettings().then(setS); }, []);
+  const [unreadable, setUnreadable] = useState(false);
+  useEffect(() => { void fetchSettings().then((v) => { if (v) setS(v); else setUnreadable(true); }); }, []);
 
   const change = async (next: Settings) => {
     setS(next);
@@ -37,6 +38,7 @@ export function SettingsCard({ onClose }: { onClose: () => void }) {
             {choice("Off", !cur.captions, () => void change({ ...cur, captions: false }))}
           </div>
         </fieldset>
+        {unreadable && <p className="bo-footnote" role="alert" style={{ marginTop: 12 }}>Settings can&apos;t load right now. Check your connection and try again.</p>}
         {failed && <p className="bo-footnote" role="alert" style={{ marginTop: 12 }}>That didn&apos;t save. Check your connection and try again.</p>}
         <button className="bo-btn bo-btn--primary bo-btn--block" style={{ marginTop: 20 }} onClick={onClose} autoFocus>Done</button>
       </div>
