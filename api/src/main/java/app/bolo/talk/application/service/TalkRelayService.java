@@ -10,6 +10,7 @@ import app.bolo.talk.application.port.in.StartTalkUseCase;
 import app.bolo.talk.application.port.in.TalkConnection;
 import app.bolo.talk.application.port.in.TalkOutput;
 import app.bolo.talk.application.port.in.TalkRelayUseCase;
+import app.bolo.talk.application.port.in.TalkStarted;
 import app.bolo.talk.application.port.in.TalkView;
 import app.bolo.talk.application.port.out.TurnPort;
 import app.bolo.talk.domain.TurnPolicy;
@@ -74,6 +75,7 @@ public class TalkRelayService implements TalkRelayUseCase {
         TalkConversation c = new TalkConversation(talk, new TalkContext(learner, talk.id()), out, recogniser, voice, llm,
                 talks, turns, audioStore, settings, () -> System.nanoTime() / 1_000_000, events::publishEvent, safety, starters);
         c.start();
+        events.publishEvent(new TalkStarted(talk.id(), learner));
         return c;
     }
 }
