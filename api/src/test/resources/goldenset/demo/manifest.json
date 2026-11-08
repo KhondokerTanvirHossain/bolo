@@ -1,0 +1,11 @@
+{
+  "name": "demo",
+  "source": "synthetic (test only): silent audio with hand-made results in cache/",
+  "licence": "ours",
+  "recordings": [
+    {"id": "vans", "audio": "vans.wav", "reference": "Very few vans visit the village.", "labelledBy": "test",
+     "issues": [{"word": "very", "pattern": "V_BH"}]},
+    {"id": "school", "audio": "school.wav", "reference": "I study at a small school near the station.", "labelledBy": "test",
+     "issues": [{"word": "school", "pattern": "S_CLUSTER_VOWEL"}, {"word": "station", "pattern": "S_CLUSTER_VOWEL"}]}
+  ]
+}
