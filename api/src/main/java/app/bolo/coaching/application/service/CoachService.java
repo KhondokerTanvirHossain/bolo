@@ -196,6 +196,14 @@ public class CoachService implements DebriefUseCase, LatestDebriefUseCase {
         skills.put("vocabulary", level(reply.vocabularyLevel()));
         body.put("firstSession", debriefs.readyCountFor(learner, id) == 0);
         body.put("speechMs", scored.speechMs());
+        body.put("topic", reply.topicOrDefault());
+        // PRG-3: every pattern found in this talk (not only the three shown), for "My patterns" over time.
+        ArrayNode patterns = body.putArray("patterns");
+        for (var sc : scored.sounds()) patterns.addObject().put("pattern", sc.pattern()).put("count", sc.count());
+        scored.habit().ifPresent(h -> {
+            ObjectNode habit = patterns.addObject().put("habit", h.kind()).put("count", h.count());
+            if (h.word() != null) habit.put("word", h.word());
+        });
         ObjectNode latency = body.putObject("latency");
         List<Integer> waits = record.turns().stream().filter(t -> !t.learner() && t.idx() > 0 && t.latencyMs() != null)
                 .map(TalkRecord.Turn::latencyMs).sorted().toList();

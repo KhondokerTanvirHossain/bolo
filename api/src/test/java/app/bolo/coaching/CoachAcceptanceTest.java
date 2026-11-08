@@ -141,6 +141,28 @@ class CoachAcceptanceTest extends PostgresTestBase {
         assertThat(changed).containsExactly(List.of("today"));
     }
 
+    /** PRG-8 / PRG-3: History names the talk; Progress needs every pattern found, not only the three shown. */
+    @Test
+    void theDebriefNamesTheTalkAndListsItsPatterns() throws Exception {
+        talk(3);
+        String body = debriefWhenSettled();
+        assertThat((String) JsonPath.read(body, "$.topic")).isEqualTo("Saying hello to Bolo");
+        List<String> patterns = JsonPath.read(body, "$.patterns[*].pattern");
+        assertThat(patterns).contains("V_BH");
+        List<Integer> counts = JsonPath.read(body, "$.patterns[?(@.pattern == 'V_BH')].count");
+        assertThat(counts.get(0)).isGreaterThanOrEqualTo(2);
+    }
+
+    @Test
+    void aMissingOrOverlongTopicFallsBackToFreeTalk() throws Exception {
+        llm.structuredReply("""
+                {"strength":{"turn":1,"quote":"hello bolo","text":"You greeted Bolo straight away, warmly."},
+                 "upgrades":[],"sentenceLevel":"GOOD","vocabularyLevel":"BUILDING",
+                 "topic":"A very long and rambling name for a talk that goes on and on and on"}""");
+        talk(3);
+        assertThat((String) JsonPath.read(debriefWhenSettled(), "$.topic")).isEqualTo("Free talk");
+    }
+
     @Test
     void anInventedQuoteIsDropped() throws Exception {
         llm.structuredReply("""

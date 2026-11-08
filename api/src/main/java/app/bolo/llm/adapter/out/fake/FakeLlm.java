@@ -20,7 +20,7 @@ public class FakeLlm implements LlmPort {
             {"strength":{"turn":1,"quote":"hello bolo","text":"You greeted Bolo straight away, warmly."},
              "upgrades":[{"turn":1,"said":"hello bolo","better":"Hello Bolo, it's nice to talk with you."},
                          {"turn":3,"said":"hello bolo","better":"Hello again, Bolo, I have more to tell you."}],
-             "sentenceLevel":"GOOD","vocabularyLevel":"BUILDING"}""";
+             "sentenceLevel":"GOOD","vocabularyLevel":"BUILDING","topic":"Saying hello to Bolo"}""";
 
     public static final String SAFE = "{\"crisis\":false}";
     public static final String STARTERS = "{\"starters\":[\"I think that...\",\"For example, ...\"]}";

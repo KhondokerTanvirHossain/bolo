@@ -26,6 +26,7 @@ public final class CoachPrompt {
                 fixes the grammar, adds at most one linking word or detail, sounds natural when spoken, and is at most \
                 25 words. Pick sentences where the upgrade helps most. Skip a sentence that is already fine.
                 - sentenceLevel and vocabularyLevel: BUILDING, GOOD or STRONG for this talk.
+                - topic: name the talk in 2 to 5 plain words, the way the learner would say it, e.g. "The payment bug demo".
                 Judge clarity, not accent. Never use the words: mistake, wrong, error, bad, fail, incorrect, poor, accent.
                 """;
     }
@@ -50,8 +51,8 @@ public final class CoachPrompt {
                 "properties", Map.of("turn", Map.of("type", "integer"), "said", Map.of("type", "string"),
                         "better", Map.of("type", "string")));
         return Map.of("type", "object", "additionalProperties", false,
-                "required", List.of("strength", "upgrades", "sentenceLevel", "vocabularyLevel"),
+                "required", List.of("strength", "upgrades", "sentenceLevel", "vocabularyLevel", "topic"),
                 "properties", Map.of("strength", strength, "upgrades", Map.of("type", "array", "items", upgrade),
-                        "sentenceLevel", level, "vocabularyLevel", level));
+                        "sentenceLevel", level, "vocabularyLevel", level, "topic", Map.of("type", "string")));
     }
 }
