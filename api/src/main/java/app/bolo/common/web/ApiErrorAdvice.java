@@ -17,6 +17,12 @@ class ApiErrorAdvice {
         return new ApiError(e.code());
     }
 
+    @ExceptionHandler(app.bolo.common.error.SignInFailedException.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    ApiError signInFailed() {
+        return new ApiError("sign-in-failed");
+    }
+
     @ExceptionHandler(SignedOutException.class)
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
     ApiError signedOut() {

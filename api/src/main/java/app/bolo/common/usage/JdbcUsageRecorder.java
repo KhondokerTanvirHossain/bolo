@@ -26,4 +26,10 @@ class JdbcUsageRecorder implements UsageRecorder {
                         Timestamp.from(clock.now()))
                 .update();
     }
+
+    /** A guest joined an account (US-8.1): its usage rows count for the account. */
+    @org.springframework.context.event.EventListener
+    public void onLearnerMerged(app.bolo.common.event.LearnerMerged e) {
+        jdbc.sql("update usage set learner_id = ? where learner_id = ?").params(e.to().value(), e.from().value()).update();
+    }
 }

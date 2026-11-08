@@ -122,4 +122,10 @@ public class AttemptService implements AttemptUseCase {
         }
         return false;
     }
+
+    /** A guest joined an account (US-8.1, US-8.4): its practice attempts move with it, in the sign-in transaction. */
+    @org.springframework.context.event.EventListener
+    public void onLearnerMerged(app.bolo.common.event.LearnerMerged e) {
+        attempts.moveLearner(e.from(), e.to());
+    }
 }

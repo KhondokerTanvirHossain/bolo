@@ -61,4 +61,10 @@ public class AnalyticsService implements RecordEventUseCase {
             log.warn("analytics event not stored: {}", ex.getClass().getSimpleName());
         }
     }
+
+    /** A guest joined an account (US-8.1, US-8.4): its events move with it, in the sign-in transaction. */
+    @org.springframework.context.event.EventListener
+    public void onLearnerMerged(app.bolo.common.event.LearnerMerged e) {
+        events.moveLearner(e.from(), e.to());
+    }
 }

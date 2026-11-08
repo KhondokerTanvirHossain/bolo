@@ -18,7 +18,16 @@ class AnalyticsServiceTest {
     @Test
     void aFailingInsertNeverBreaksTheTalk() {
         BoloClock clock = new BoloClock(java.time.Clock.fixed(Instant.parse("2026-11-09T10:00:00Z"), java.time.ZoneOffset.UTC));
-        var service = new AnalyticsService((learner, name, props, at) -> { throw new IllegalStateException("db down"); }, clock);
+        var service = new AnalyticsService(new app.bolo.analytics.application.port.out.EventPort() {
+            @Override
+            public void insert(LearnerId learner, String name, java.util.Map<String, Object> props, Instant at) {
+                throw new IllegalStateException("db down");
+            }
+
+            @Override
+            public void moveLearner(LearnerId from, LearnerId to) {
+            }
+        }, clock);
         var learner = new LearnerId(UUID.randomUUID());
         assertThatCode(() -> service.onTalkStarted(new TalkStarted(TalkSessionId.newId(), learner))).doesNotThrowAnyException();
         assertThatCode(() -> service.onTalkEnded(new TalkEnded(TalkSessionId.newId(), learner, 3, "crisis"))).doesNotThrowAnyException();

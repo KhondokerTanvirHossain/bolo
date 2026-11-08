@@ -6,6 +6,7 @@ import app.bolo.common.time.BoloClock;
 import app.bolo.learner.application.port.in.CurrentLearnerUseCase;
 import app.bolo.learner.application.port.in.LearnerView;
 import app.bolo.learner.application.port.in.StartGuestUseCase;
+import app.bolo.learner.application.port.out.AccountPort;
 import app.bolo.learner.application.port.out.ConsentLedgerPort;
 import app.bolo.learner.application.port.out.LearnerPort;
 import app.bolo.learner.application.port.out.ProfilePort;
@@ -37,17 +38,19 @@ public class GuestService implements StartGuestUseCase, CurrentLearnerUseCase {
     private final SessionPort sessions;
     private final ProfilePort profiles;
     private final SettingsPort settings;
+    private final AccountPort accounts;
     private final BoloClock clock;
     private final GuestRateLimiter newGuests;
 
     public GuestService(LearnerPort learners, ConsentLedgerPort consents, SessionPort sessions, ProfilePort profiles,
-                        SettingsPort settings, BoloClock clock, @Value("${bolo.guests-per-ip-per-hour}") int guestsPerIpPerHour,
+                        SettingsPort settings, AccountPort accounts, BoloClock clock, @Value("${bolo.guests-per-ip-per-hour}") int guestsPerIpPerHour,
                         @Value("${bolo.guests-per-hour}") int guestsPerHour) {
         this.learners = learners;
         this.consents = consents;
         this.sessions = sessions;
         this.profiles = profiles;
         this.settings = settings;
+        this.accounts = accounts;
         this.clock = clock;
         this.newGuests = new GuestRateLimiter(guestsPerIpPerHour, guestsPerHour, Duration.ofHours(1));
     }
@@ -82,7 +85,9 @@ public class GuestService implements StartGuestUseCase, CurrentLearnerUseCase {
                 .map(p -> new LearnerView.ProfileView(p.goal().key(), p.fearedMoment().key(), p.talkMinutes()))
                 .orElse(null);
         Settings s = settings.find(id).orElse(Settings.DEFAULTS);
-        return new LearnerView(id, learner.kind().dbValue(), consent, profile, new LearnerView.SettingsView(s.buddySpeed(), s.captions()));
+        LearnerView.AccountView account = accounts.find(id).map(a -> new LearnerView.AccountView(a.email(), a.name())).orElse(null);
+        return new LearnerView(id, learner.kind().dbValue(), consent, profile, new LearnerView.SettingsView(s.buddySpeed(), s.captions()),
+                account);
     }
 
     static String newToken() {

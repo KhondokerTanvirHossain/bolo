@@ -106,4 +106,9 @@ class JdbcTalkSessionAdapter implements TalkSessionPort {
     public void markAudioPurged(TalkSessionId id, Instant at) {
         jdbc.sql("update talk_session set media_purged_at = ? where id = ?").params(Timestamp.from(at), id.value()).update();
     }
+
+    @Override
+    public void moveLearner(LearnerId from, LearnerId to) {
+        jdbc.sql("update talk_session set learner_id = ? where learner_id = ?").params(to.value(), from.value()).update();
+    }
 }

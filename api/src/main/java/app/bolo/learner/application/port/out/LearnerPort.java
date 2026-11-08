@@ -12,6 +12,11 @@ public interface LearnerPort {
 
     Optional<Learner> find(LearnerId id);
 
+    void setKind(LearnerId id, app.bolo.learner.domain.LearnerKind kind);
+
+    /** Deletes the learner; every row that references it goes too (cascade). */
+    void delete(LearnerId id);
+
     /** Deletes guests created before {@code cutoff} who never recorded consent (cascades to their rows). */
     void deleteGuestsWithoutConsentCreatedBefore(Instant cutoff);
 }

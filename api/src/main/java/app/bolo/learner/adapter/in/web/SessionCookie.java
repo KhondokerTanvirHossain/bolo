@@ -36,6 +36,11 @@ final class SessionCookie {
                 .maxAge(MAX_AGE).build().toString();
     }
 
+    /** Clears the cookie (sign-out). */
+    static String cleared(boolean secure) {
+        return ResponseCookie.from(name(secure), "").httpOnly(true).secure(secure).sameSite("Lax").path("/").maxAge(0).build().toString();
+    }
+
     /** The client address for rate limits: Caddy sets X-Forwarded-For to the real client; the API port isn't public. */
     static String clientKey(HttpServletRequest req) {
         String forwarded = req.getHeader("X-Forwarded-For");

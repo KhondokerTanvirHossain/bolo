@@ -4,7 +4,12 @@ import app.bolo.common.id.LearnerId;
 
 /** What other modules and the web adapter may know about a learner. {@code consent}/{@code profile} are null until given. */
 /** {@code settings} is never null: the defaults until the learner changes them. */
-public record LearnerView(LearnerId learnerId, String kind, ConsentView consent, ProfileView profile, SettingsView settings) {
+public record LearnerView(LearnerId learnerId, String kind, ConsentView consent, ProfileView profile, SettingsView settings,
+                          AccountView account) {
+    /** The Google account a learner signed in with (ACC-1); null for guests. */
+    public record AccountView(String email, String name) {
+    }
+
 
     public record ConsentView(boolean keepRecordings, String policyVersion) {
     }

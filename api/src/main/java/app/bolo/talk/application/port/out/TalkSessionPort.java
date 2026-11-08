@@ -34,4 +34,7 @@ public interface TalkSessionPort {
     Optional<TalkSession> findLive(TalkSessionId id, LearnerId learner);
 
     void end(TalkSessionId id, EndReason reason, Instant at);
+
+    /** A guest joined an account (LearnerMerged): its rows become the account's. */
+    void moveLearner(LearnerId from, LearnerId to);
 }

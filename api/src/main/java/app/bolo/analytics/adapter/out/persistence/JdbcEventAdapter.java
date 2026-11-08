@@ -23,4 +23,9 @@ class JdbcEventAdapter implements EventPort {
         jdbc.sql("insert into event (learner_id, name, props, at) values (?, ?, ?::jsonb, ?)")
                 .params(learner.value(), name, JSON.writeValueAsString(props), Timestamp.from(at)).update();
     }
+
+    @Override
+    public void moveLearner(LearnerId from, LearnerId to) {
+        jdbc.sql("update event set learner_id = ? where learner_id = ?").params(to.value(), from.value()).update();
+    }
 }

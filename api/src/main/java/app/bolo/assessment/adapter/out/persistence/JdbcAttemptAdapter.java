@@ -23,4 +23,9 @@ class JdbcAttemptAdapter implements AttemptPort {
                 .params(learner.value(), reference, level, heard, accuracy, focusJson, Timestamp.from(at))
                 .update();
     }
+
+    @Override
+    public void moveLearner(LearnerId from, LearnerId to) {
+        jdbc.sql("update attempt set learner_id = ? where learner_id = ?").params(to.value(), from.value()).update();
+    }
 }

@@ -92,4 +92,10 @@ public class TalkSessionService implements StartTalkUseCase {
         boolean slow = view.settings() != null && "slower".equals(view.settings().buddySpeed());
         return new TalkView(s.id(), s.minutes(), p == null ? null : p.goal(), p == null ? null : p.fearedMoment(), slow);
     }
+
+    /** A guest joined an account (US-8.1, US-8.4): its talks move with it, in the sign-in transaction. */
+    @org.springframework.context.event.EventListener
+    public void onLearnerMerged(app.bolo.common.event.LearnerMerged e) {
+        sessions.moveLearner(e.from(), e.to());
+    }
 }

@@ -9,6 +9,8 @@ public interface SessionPort {
 
     void create(byte[] tokenHash, LearnerId learner, Instant now);
 
+    void delete(byte[] tokenHash);
+
     /** Returns the learner if the session was seen after {@code notBefore}, and marks it seen at {@code now}. */
     Optional<LearnerId> touch(byte[] tokenHash, Instant notBefore, Instant now);
 

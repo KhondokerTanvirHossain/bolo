@@ -39,6 +39,21 @@ class JdbcLearnerAdapter implements LearnerPort, ConsentLedgerPort, SessionPort 
     }
 
     @Override
+    public void setKind(LearnerId id, app.bolo.learner.domain.LearnerKind kind) {
+        jdbc.sql("update learner set kind = ? where id = ?").params(kind.dbValue(), id.value()).update();
+    }
+
+    @Override
+    public void delete(LearnerId id) {
+        jdbc.sql("delete from learner where id = ?").param(id.value()).update();
+    }
+
+    @Override
+    public void delete(byte[] tokenHash) {
+        jdbc.sql("delete from web_session where token_hash = ?").param(tokenHash).update();
+    }
+
+    @Override
     public void append(Consent c) {
         jdbc.sql("""
                 insert into consent_record (learner_id, keep_recordings, over_13, policy_version, recorded_at)
