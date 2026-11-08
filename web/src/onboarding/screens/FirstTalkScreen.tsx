@@ -10,14 +10,17 @@ import { afterDebrief, loadLoop, saveAnswered, saveLoop, seenSeeYou, type Loop }
 import { GuestLimit } from "@/account/GuestLimit";
 import { SaveProgress } from "@/account/SaveProgress";
 import { fetchAuthConfig, fetchMe } from "@/account/session";
-import { AppShell } from "@/me/AppShell";
+import { AppShell, type Tab } from "@/me/AppShell";
+import { HistoryScreen } from "@/progress/HistoryScreen";
+import { ProgressScreen } from "@/progress/ProgressScreen";
 import { MeScreen } from "@/me/MeScreen";
 import { PrivacyScreen } from "@/me/PrivacyScreen";
 import { clearThisBrowser } from "@/account/session";
 import { TalkScreen } from "@/talk/TalkScreen";
 import { useTalk } from "@/talk/useTalk";
 
-type View = { kind: "home" } | { kind: "practice"; pattern?: string } | { kind: "feedback"; talkId: string } | { kind: "me" } | { kind: "privacy" };
+type View = { kind: "home" } | { kind: "practice"; pattern?: string } | { kind: "feedback"; talkId: string } | { kind: "me" } | { kind: "privacy" }
+  | { kind: "progress" } | { kind: "history" } | { kind: "session"; talkId: string; from: "progress" | "history" };
 
 /**
  * After onboarding: Home (US-6.9) with its one next step, and from there a talk, the Coach's feedback, practice or
@@ -108,9 +111,25 @@ export function FirstTalkScreen({ deviceId }: { deviceId: string | null }) {
     return <CoachFlow talkId={view.talkId} deviceId={deviceId} onTalkAgain={talk} onDone={toHome} onNoDebrief={toHome}
       onPractise={(pattern) => setView({ kind: "practice", pattern })} />;
   }
+  const toTab = (t: Tab) => { setSeeYou(false); setView({ kind: t === "talk" ? "home" : t }); };
+  if (view.kind === "session") {
+    return <CoachFlow talkId={view.talkId} deviceId={deviceId} history onTalkAgain={talk} onDone={() => setView({ kind: view.from })}
+      onNoDebrief={() => setView({ kind: view.from })} onPractise={(pattern) => setView({ kind: "practice", pattern })} />;
+  }
+  if (view.kind === "progress" || view.kind === "history") {
+    const open = (talkId: string) => setView({ kind: "session", talkId, from: view.kind as "progress" | "history" });
+    return (
+      <AppShell tab="progress" onTab={toTab}>
+        {view.kind === "progress"
+          ? <ProgressScreen onOpen={open} onSeeAll={() => setView({ kind: "history" })} onTalk={talk}
+              onPractise={(pattern) => setView({ kind: "practice", pattern })} />
+          : <HistoryScreen onOpen={open} onTalk={talk} />}
+      </AppShell>
+    );
+  }
   if (view.kind === "me" || view.kind === "privacy") {
     return (
-      <AppShell tab="me" onTab={(t) => { setSeeYou(false); setView({ kind: t === "talk" ? "home" : "me" }); }}>
+      <AppShell tab="me" onTab={toTab}>
         {view.kind === "me"
           ? <MeScreen me={me} onPrivacy={() => setView({ kind: "privacy" })} onSignedIn={signedIn} />
           : <PrivacyScreen keep={me?.consent?.keepRecordings === true}

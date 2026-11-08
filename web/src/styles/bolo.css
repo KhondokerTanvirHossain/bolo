@@ -716,10 +716,18 @@ button { font: inherit; color: inherit; -webkit-tap-highlight-color: transparent
 .dk-me__nav { display: flex; flex-direction: column; gap: 2px; position: sticky; top: 0; }
 /* Phones: the sidebar becomes a top bar; Me's two panes stack. */
 @media (max-width: 720px) {
-  .dk-app { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+  /* minmax(0, 1fr): the top bar must never widen the page past the screen. */
+  .dk-app { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr; }
+  .dk-side { overflow-x: auto; gap: 2px; }
+  .dk-side .dk-nav { padding: 0 10px; gap: 6px; height: 40px; font-size: 15px; flex: none; }
+  .dk-main { min-width: 0; }
+  .bo-trend { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .dk-side { flex-direction: row; align-items: center; padding: 10px 16px; border-right: 0; border-bottom: 1px solid var(--separator); }
   .dk-side .dk-logo { margin: 0 8px 0 0; height: 24px; }
   .dk-side .dk-logo svg { height: 24px; }
+}
+@media (max-width: 420px) {
+  .dk-side .dk-logo { display: none; }
   .dk-side__foot { display: none; }
   .dk-page { padding: 20px 16px 40px; }
   .dk-h1 { font-size: 32px; line-height: 38px; }

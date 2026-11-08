@@ -24,6 +24,8 @@ export type Debrief = {
   status: "scoring" | "ready" | "too_short" | "failed";
   strength?: { text: string; clip: string | null };
   fixes?: Fix[];
+  /** US-8.6: the talk's audio was deleted; clips are null, the feedback stays. */
+  recordingDeleted?: boolean;
   skills?: { pronunciation: Level | null; fluency: Level; sentenceBuilding: Level; vocabulary: Level };
   firstSession?: boolean;
   latency?: { p50Ms: number | null; p90Ms: number | null };

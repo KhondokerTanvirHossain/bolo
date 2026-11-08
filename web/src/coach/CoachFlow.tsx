@@ -5,6 +5,7 @@ import { Icon } from "@/scene/Scene";
 import { Clip } from "./Clip";
 import { fetchDebrief, pollDebrief, disputeFix, type Debrief, type Fix, type Level } from "./debrief";
 import { highlight } from "./highlight";
+import { deleteRecording } from "@/progress/progress";
 import { api } from "@/api/browser";
 import { track } from "@/analytics/track";
 
@@ -14,6 +15,8 @@ type Props = {
   onReady?: () => void;
   /** US-6.8: the first debrief's last card offers "Practise (3 min)" on its first sound (or the sounds list). */
   onPractise?: (pattern?: string) => void;
+  /** ScreenHistorySession: a past talk — Practise these (3 min) / Back, and a quiet Delete recording (US-8.6). */
+  history?: boolean;
 };
 
 const LEVEL_WORD: Record<Level, string> = { BUILDING: "Building", GOOD: "Good", STRONG: "Strong" };
@@ -24,7 +27,7 @@ function seconds(ms: number): string {
 }
 
 /** After a talk: "Your coach is listening back", then the debrief (DBF-1..5), or the too-short / failed states. */
-export function CoachFlow({ talkId, deviceId = null, onTalkAgain, onDone, onNoDebrief, onReady, onPractise }: Props) {
+export function CoachFlow({ talkId, deviceId = null, onTalkAgain, onDone, onNoDebrief, onReady, onPractise, history = false }: Props) {
   const [debrief, setDebrief] = useState<Debrief | null>({ status: "scoring" });
 
   useEffect(() => {
@@ -58,7 +61,9 @@ export function CoachFlow({ talkId, deviceId = null, onTalkAgain, onDone, onNoDe
     return <Notice title="We couldn't prepare your feedback. Your talk is saved." body="Try another talk in a moment."
       primary="Talk again" onPrimary={onTalkAgain} onDone={onDone} />;
   }
-  return <DebriefScreen talkId={talkId} deviceId={deviceId} debrief={debrief} onTalkAgain={onTalkAgain} onDone={onDone} onPractise={onPractise} />;
+  return <DebriefScreen key={String(debrief.recordingDeleted ?? false)} talkId={talkId} deviceId={deviceId} debrief={debrief}
+    onTalkAgain={onTalkAgain} onDone={onDone} onPractise={onPractise} history={history}
+    onRecordingDeleted={() => void fetchDebrief(talkId).then((d) => { if (d) setDebrief(d); })} />;
 }
 
 function Scoring() {
@@ -93,7 +98,20 @@ function Notice({ title, body, primary, onPrimary, onDone }: { title: string; bo
   );
 }
 
-function DebriefScreen({ talkId, deviceId, debrief, onTalkAgain, onDone, onPractise }: { talkId: string; debrief: Debrief } & Omit<Props, "talkId">) {
+function DebriefScreen({ talkId, deviceId, debrief, onTalkAgain, onDone, onPractise, history = false, onRecordingDeleted }:
+  { talkId: string; debrief: Debrief; onRecordingDeleted?: () => void } & Omit<Props, "talkId">) {
+  const [askDelete, setAskDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const removeRecording = async () => {
+    setDeleting(true);
+    const ok = await deleteRecording(talkId);
+    setDeleting(false);
+    setAskDelete(false);
+    if (ok) onRecordingDeleted?.();
+  };
+  const hasAnyClip = Boolean(debrief.strength?.clip) || (debrief.fixes ?? []).some((f) => f.clip);
+  const audioNote = debrief.recordingDeleted ? "Recording deleted. Feedback and words are still here."
+    : history && !hasAnyClip ? "Recording not kept, as you chose. Feedback and words are still here." : null;
   const [fixes, setFixes] = useState<Fix[]>(debrief.fixes ?? []);
   const [at, setAt] = useState(0);
   const [note, setNote] = useState<string | null>(null);
@@ -128,7 +146,7 @@ function DebriefScreen({ talkId, deviceId, debrief, onTalkAgain, onDone, onPract
     <section className="dk-screen on" data-screen="debrief">
       <div className="dk-deb">
         <div className="dk-deb__list">
-          <div className="bo-eyebrow bo-eyebrow--coach" style={{ padding: "0 14px 12px" }}><span className="bo-coach-mark">C</span>Your coach · today&apos;s talk</div>
+          <div className="bo-eyebrow bo-eyebrow--coach" style={{ padding: "0 14px 12px" }}><span className="bo-coach-mark">C</span>Your coach · {history ? "this talk" : "today\u2019s talk"}</div>
           <Item n={<Icon name="star" fill size="sm" />} title="Something you did well" sub="Strength" on={at === 0} onClick={() => setAt(0)} />
           {fixes.map((f, i) => (
             <Item key={`${f.kind}-${i}-${f.title}`} n={String(i + 1)} title={f.title} sub={subtitle(f)} on={at === i + 1} onClick={() => setAt(i + 1)} />
@@ -136,11 +154,16 @@ function DebriefScreen({ talkId, deviceId, debrief, onTalkAgain, onDone, onPract
           <Item n={<Icon name="insights" size="sm" />} title={debrief.firstSession ? "Your starting point" : "Your skills today"}
             sub="Skills and what's next" on={at === cards - 1} onClick={() => setAt(cards - 1)} />
           <div style={{ marginTop: "auto", padding: "0 14px" }}>
-            <button className="bo-btn bo-btn--quiet-neutral" style={{ padding: 0 }} onClick={onDone}><Icon name="close" size="sm" />Close feedback</button>
+            <button className="bo-btn bo-btn--quiet-neutral" style={{ padding: 0 }} onClick={onDone}><Icon name="close" size="sm" />{history ? "Back" : "Close feedback"}</button>
+            {history && hasAnyClip && (
+              <button className="bo-btn bo-btn--quiet-neutral" style={{ padding: 0, display: "flex" }} onClick={() => setAskDelete(true)}>
+                <Icon name="delete" size="sm" />Delete recording</button>
+            )}
           </div>
         </div>
         <div className="dk-deb__pane">
           {note && <p className="bo-footnote" role="status" style={{ textAlign: "center", marginBottom: 12 }}>{note}</p>}
+          {audioNote && <p className="bo-footnote" style={{ textAlign: "center", marginBottom: 12 }}>{audioNote}</p>}
           {at === 0 && (
             <div className="dk-detail on">
               <div className="bo-card" style={{ background: "var(--hills-soft)", boxShadow: "none", display: "flex", flexDirection: "column", gap: 16, padding: 28 }}>
@@ -154,10 +177,23 @@ function DebriefScreen({ talkId, deviceId, debrief, onTalkAgain, onDone, onPract
             <FixCard key={fixes[at - 1].id ?? at} fix={fixes[at - 1]} n={at} of={fixes.length} disputing={disputing} deviceId={deviceId ?? null}
               onDispute={() => void dispute(fixes[at - 1])} playRef={register} />
           )}
-          {at === cards - 1 && <Skills debrief={debrief} onTalkAgain={onTalkAgain} onDone={onDone} onPractise={onPractise} />}
+          {at === cards - 1 && <Skills debrief={debrief} onTalkAgain={onTalkAgain} onDone={onDone} onPractise={onPractise} history={history} />}
           <div className="dk-deb__nav"><span><span className="dk-kbd">↑</span> <span className="dk-kbd">↓</span> move between cards</span><span><span className="dk-kbd">Space</span> plays your clip</span></div>
         </div>
       </div>
+      {askDelete && (
+        <>
+          <div className="dk-dim" />
+          <div className="dk-card" role="dialog" aria-modal="true" aria-labelledby="delrec-title">
+            <h1 className="bo-flow__title" id="delrec-title">Delete this recording?</h1>
+            <p className="bo-flow__body">Your voice from this talk goes at once. The feedback and words stay.</p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 18 }}>
+              <button className="bo-btn bo-btn--primary" onClick={() => setAskDelete(false)} autoFocus disabled={deleting}>Keep it</button>
+              <button className="bo-btn bo-btn--secondary" onClick={() => void removeRecording()} disabled={deleting}>Delete recording</button>
+            </div>
+          </div>
+        </>
+      )}
     </section>
   );
 }
@@ -230,8 +266,8 @@ function Tip({ text }: { text?: string }) {
   return <div className="bo-tip"><Icon name="sentiment_satisfied" /><p className="bo-tip__text">{text}</p></div>;
 }
 
-function Skills({ debrief, onTalkAgain, onDone, onPractise }: { debrief: Debrief; onTalkAgain: () => void; onDone: () => void;
-  onPractise?: (pattern?: string) => void }) {
+function Skills({ debrief, onTalkAgain, onDone, onPractise, history = false }: { debrief: Debrief; onTalkAgain: () => void; onDone: () => void;
+  onPractise?: (pattern?: string) => void; history?: boolean }) {
   const s = debrief.skills;
   const rows: [string, Level | null | undefined][] = [["Pronunciation", s?.pronunciation], ["Fluency", s?.fluency],
     ["Sentence building", s?.sentenceBuilding], ["Vocabulary", s?.vocabulary]];
@@ -252,7 +288,12 @@ function Skills({ debrief, onTalkAgain, onDone, onPractise }: { debrief: Debrief
         )}
       </div>
       <div style={{ display: "flex", gap: 12, justifyContent: "center", marginTop: 24 }}>
-        {debrief.firstSession && onPractise ? (
+        {history && onPractise ? (
+          <>
+            <button className="bo-btn bo-btn--primary" onClick={() => onPractise(firstSound(debrief))}><Icon name="record_voice_over" fill />Practise these (3 min)</button>
+            <button className="bo-btn bo-btn--secondary" onClick={onDone}>Back</button>
+          </>
+        ) : debrief.firstSession && onPractise ? (
           <>
             {/* US-6.8: the first loop ends calmly: a short practice on what came up, or later. */}
             <button className="bo-btn bo-btn--primary" onClick={() => onPractise(firstSound(debrief))}><Icon name="record_voice_over" fill />Practise (3 min)</button>
