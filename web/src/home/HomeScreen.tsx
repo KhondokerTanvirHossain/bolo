@@ -12,13 +12,15 @@ type Props = {
   onFeedback: (talkId: string) => void;
   onSettings: () => void;
   onPlayDay1: () => void;
+  /** A one-off line in place of the usual caption ("See you tomorrow" after the first loop). */
+  note?: string;
 };
 
 /**
  * Home (HOM-1, US-6.9, R1): one primary button (Talk) and at most one card — finish a feedback you haven't seen, or
  * practise its sound. Everything else is a quiet scene button.
  */
-export function HomeScreen({ home, hasDay1, onTalk, onPractice, onFeedback, onSettings, onPlayDay1 }: Props) {
+export function HomeScreen({ home, hasDay1, onTalk, onPractice, onFeedback, onSettings, onPlayDay1, note }: Props) {
   const card = home?.card ?? null;
   return (
     <section className="dk-screen on" data-screen="talk">
@@ -31,8 +33,8 @@ export function HomeScreen({ home, hasDay1, onTalk, onPractice, onFeedback, onSe
       <div className="dk-talk__cap">
         <div className="bo-caption" aria-live="polite">
           <p className="bo-caption__text">
-            Ready when you are. Bolo talks out loud, so turn your sound on.
-            {hasDay1 && <>{" "}<span className="dim">Your Day 1 clip is saved on this device.</span></>}
+            {note ?? <>Ready when you are. Bolo talks out loud, so turn your sound on.
+              {hasDay1 && <>{" "}<span className="dim">Your Day 1 clip is saved on this device.</span></>}</>}
           </p>
         </div>
       </div>

@@ -3,6 +3,9 @@ import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { api, POLICY_VERSION, type ApiResult, type LearnerView } from "@/api/browser";
 import { toSaveFailure, type SaveFailure } from "./saveFailure";
 import { firstWordSpoken, flushEvents, markFirstOpen, track } from "@/analytics/track";
+import { currentInvite, takeInviteFromUrl } from "@/account/invite";
+import { fetchAuthConfig, restoreDay1, signInWithGoogle } from "@/account/session";
+import { signInProblem } from "@/account/signInCopy";
 import { initialState, isLastQuestion, load, onboarding, reconcile, save, STORAGE_KEY, type OnboardingState } from "./steps";
 import { StartScreen } from "./screens/StartScreen";
 import { WelcomeScreen } from "./screens/WelcomeScreen";
@@ -24,10 +27,16 @@ export default function Onboarding() {
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<SaveFailure>(null);
   const hasSession = useRef(false);
+  const [signInOn, setSignInOn] = useState(false);
+  const [closedBeta, setClosedBeta] = useState(false);
+  const [restoring, setRestoring] = useState(false);
+  const [restoreProblem, setRestoreProblem] = useState<string | null>(null);
 
   // Resume the stored step only if the server agrees (US-1.7). Reading /api/me creates nothing: a guest is created
   // only when the learner actually gives consent, so page views alone never add rows.
   useEffect(() => {
+    takeInviteFromUrl();
+    void fetchAuthConfig().then((c) => setSignInOn(c.enabled));
     // A browser with onboarding progress already stored used Bolo before tracking began.
     markFirstOpen(Date.now(), window.localStorage.getItem(STORAGE_KEY) !== null);
     void (async () => {
@@ -48,7 +57,8 @@ export default function Onboarding() {
    *  if it expired meanwhile. (Later writes never create a session: see the profile save.) */
   const withSession = useCallback(async (write: () => Promise<ApiResult<void>>): Promise<ApiResult<void>> => {
     const start = async (): Promise<ApiResult<unknown>> => {
-      const started = await api.post<LearnerView>("/api/session");
+      const started = await api.post<LearnerView>("/api/session", { invite: currentInvite() });
+      if (started.kind === "refused" && started.code === "invite") setClosedBeta(true);
       hasSession.current = started.kind === "ok";
       return started;
     };
@@ -103,6 +113,28 @@ export default function Onboarding() {
   const answer = useCallback((value: string) => dispatch({ type: "answer", value }), []);
 
   const toConsent = useCallback(() => dispatch({ type: "go", step: "consent" }), []);
+
+  /** US-8.4 / ACC-7: "I already have an account" restores goals, history and the Day 1 clip and skips onboarding. */
+  const restore = useCallback(async () => {
+    setRestoring(true);
+    setRestoreProblem(null);
+    const r = await signInWithGoogle();
+    setRestoring(false);
+    if (r.kind !== "ok") {
+      if (r.kind === "invite") setClosedBeta(true);
+      else setRestoreProblem(signInProblem(r));
+      return;
+    }
+    hasSession.current = true;
+    void flushEvents();
+    if (r.learner.consent && r.learner.profile) {
+      await restoreDay1();
+      dispatch({ type: "go", step: "talk" });
+    } else {
+      // A Google account with no setup yet: carry on from the consent step.
+      dispatch({ type: "go", step: "consent" });
+    }
+  }, []);
   const forgetMic = useCallback(() => dispatch({ type: "forgetMic" }), []);
   // Stable: Day 1 restarts its "saved" timer whenever this changes.
   const day1Saved = useCallback(() => { void firstWordSpoken(); dispatch({ type: "go", step: "talk" }); }, []);
@@ -119,10 +151,21 @@ export default function Onboarding() {
     );
   }
   if (boot.kind === "loading") return null;
+  if (closedBeta) {
+    return (
+      <section className="dk-screen on" data-screen="closed">
+        <div className="dk-card" role="alert">
+          <h1 className="bo-flow__title">Bolo is in a closed beta</h1>
+          <p className="bo-flow__body">It&apos;s invite-only for now. Ask the person who told you about Bolo for an invite link, then open it here.</p>
+        </div>
+      </section>
+    );
+  }
 
   switch (state.step) {
     case "start":
-      return <StartScreen onMeet={() => dispatch({ type: "go", step: "welcome" })} />;
+      return <StartScreen onMeet={() => dispatch({ type: "go", step: "welcome" })} problem={restoreProblem}
+        onRestore={signInOn ? () => void restore() : undefined} restoreBusy={restoring} />;
     case "welcome":
       return <WelcomeScreen onDone={toConsent} />;
     case "consent":

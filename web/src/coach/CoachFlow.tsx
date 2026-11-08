@@ -8,7 +8,13 @@ import { highlight } from "./highlight";
 import { api } from "@/api/browser";
 import { track } from "@/analytics/track";
 
-type Props = { talkId: string; deviceId?: string | null; onTalkAgain: () => void; onDone: () => void; onNoDebrief?: () => void };
+type Props = {
+  talkId: string; deviceId?: string | null; onTalkAgain: () => void; onDone: () => void; onNoDebrief?: () => void;
+  /** A ready debrief was shown (the talk counts as finished for the first loop and the guest save prompts). */
+  onReady?: () => void;
+  /** US-6.8: the first debrief's last card offers "Practise (3 min)" on its first sound (or the sounds list). */
+  onPractise?: (pattern?: string) => void;
+};
 
 const LEVEL_WORD: Record<Level, string> = { BUILDING: "Building", GOOD: "Good", STRONG: "Strong" };
 const LEVEL_BARS: Record<Level, number> = { BUILDING: 1, GOOD: 2, STRONG: 3 };
@@ -18,7 +24,7 @@ function seconds(ms: number): string {
 }
 
 /** After a talk: "Your coach is listening back", then the debrief (DBF-1..5), or the too-short / failed states. */
-export function CoachFlow({ talkId, deviceId = null, onTalkAgain, onDone, onNoDebrief }: Props) {
+export function CoachFlow({ talkId, deviceId = null, onTalkAgain, onDone, onNoDebrief, onReady, onPractise }: Props) {
   const [debrief, setDebrief] = useState<Debrief | null>({ status: "scoring" });
 
   useEffect(() => {
@@ -38,7 +44,8 @@ export function CoachFlow({ talkId, deviceId = null, onTalkAgain, onDone, onNoDe
     seen.current = talkId;
     void api.post<void>(`/api/talk/${talkId}/debrief/viewed`);
     void track("debrief_viewed", { fixes_count: debrief.fixes?.length ?? 0 });
-  }, [debrief, talkId]);
+    onReady?.();
+  }, [debrief, talkId, onReady]);
 
   if (debrief === null) return null;
   if (debrief.status === "scoring") return <Scoring />;
@@ -51,7 +58,7 @@ export function CoachFlow({ talkId, deviceId = null, onTalkAgain, onDone, onNoDe
     return <Notice title="We couldn't prepare your feedback. Your talk is saved." body="Try another talk in a moment."
       primary="Talk again" onPrimary={onTalkAgain} onDone={onDone} />;
   }
-  return <DebriefScreen talkId={talkId} deviceId={deviceId} debrief={debrief} onTalkAgain={onTalkAgain} onDone={onDone} />;
+  return <DebriefScreen talkId={talkId} deviceId={deviceId} debrief={debrief} onTalkAgain={onTalkAgain} onDone={onDone} onPractise={onPractise} />;
 }
 
 function Scoring() {
@@ -86,7 +93,7 @@ function Notice({ title, body, primary, onPrimary, onDone }: { title: string; bo
   );
 }
 
-function DebriefScreen({ talkId, deviceId, debrief, onTalkAgain, onDone }: { talkId: string; debrief: Debrief } & Omit<Props, "talkId">) {
+function DebriefScreen({ talkId, deviceId, debrief, onTalkAgain, onDone, onPractise }: { talkId: string; debrief: Debrief } & Omit<Props, "talkId">) {
   const [fixes, setFixes] = useState<Fix[]>(debrief.fixes ?? []);
   const [at, setAt] = useState(0);
   const [note, setNote] = useState<string | null>(null);
@@ -147,7 +154,7 @@ function DebriefScreen({ talkId, deviceId, debrief, onTalkAgain, onDone }: { tal
             <FixCard key={fixes[at - 1].id ?? at} fix={fixes[at - 1]} n={at} of={fixes.length} disputing={disputing} deviceId={deviceId ?? null}
               onDispute={() => void dispute(fixes[at - 1])} playRef={register} />
           )}
-          {at === cards - 1 && <Skills debrief={debrief} onTalkAgain={onTalkAgain} onDone={onDone} />}
+          {at === cards - 1 && <Skills debrief={debrief} onTalkAgain={onTalkAgain} onDone={onDone} onPractise={onPractise} />}
           <div className="dk-deb__nav"><span><span className="dk-kbd">↑</span> <span className="dk-kbd">↓</span> move between cards</span><span><span className="dk-kbd">Space</span> plays your clip</span></div>
         </div>
       </div>
@@ -223,7 +230,8 @@ function Tip({ text }: { text?: string }) {
   return <div className="bo-tip"><Icon name="sentiment_satisfied" /><p className="bo-tip__text">{text}</p></div>;
 }
 
-function Skills({ debrief, onTalkAgain, onDone }: { debrief: Debrief; onTalkAgain: () => void; onDone: () => void }) {
+function Skills({ debrief, onTalkAgain, onDone, onPractise }: { debrief: Debrief; onTalkAgain: () => void; onDone: () => void;
+  onPractise?: (pattern?: string) => void }) {
   const s = debrief.skills;
   const rows: [string, Level | null | undefined][] = [["Pronunciation", s?.pronunciation], ["Fluency", s?.fluency],
     ["Sentence building", s?.sentenceBuilding], ["Vocabulary", s?.vocabulary]];
@@ -244,9 +252,25 @@ function Skills({ debrief, onTalkAgain, onDone }: { debrief: Debrief; onTalkAgai
         )}
       </div>
       <div style={{ display: "flex", gap: 12, justifyContent: "center", marginTop: 24 }}>
-        <button className="bo-btn bo-btn--primary" onClick={onTalkAgain}><Icon name="mic" fill />Talk again</button>
-        <button className="bo-btn bo-btn--secondary" onClick={onDone}>Done</button>
+        {debrief.firstSession && onPractise ? (
+          <>
+            {/* US-6.8: the first loop ends calmly: a short practice on what came up, or later. */}
+            <button className="bo-btn bo-btn--primary" onClick={() => onPractise(firstSound(debrief))}><Icon name="record_voice_over" fill />Practise (3 min)</button>
+            <button className="bo-btn bo-btn--secondary" onClick={onDone}>Later</button>
+          </>
+        ) : (
+          <>
+            <button className="bo-btn bo-btn--primary" onClick={onTalkAgain}><Icon name="mic" fill />Talk again</button>
+            <button className="bo-btn bo-btn--secondary" onClick={onDone}>Done</button>
+          </>
+        )}
       </div>
     </div>
   );
+}
+
+/** The debrief's first sound fix, as a practice-deck key ("V_BH"), if it has one. */
+function firstSound(d: Debrief): string | undefined {
+  const fix = d.fixes?.find((f) => f.kind === "sound") as (Fix & { pattern?: string }) | undefined;
+  return fix?.pattern;
 }

@@ -3,7 +3,9 @@ import type { MicProblem } from "@/audio/micErrors";
 /** What the talk screen shows. Java decides every phase; the browser only renders what the relay says (TLK-16). */
 export type TalkPhase =
   | "idle" | "connecting" | "buddy_speaking" | "your_turn" | "thinking" | "paused" | "crisis" | "ended" | "busy"
-  | "no_voice" | "no_mic";
+  | "no_voice" | "no_mic"
+  /** ACC-2: the 4th guest talk; Home shows the sign-in sheet. */
+  | "needs_sign_in";
 
 export type Crisis = { title: string; lines: string[]; help: { name: string; number: string; hours: string }[] };
 
@@ -42,6 +44,7 @@ export type TalkAction =
   | { type: "connecting" }
   | { type: "started"; minutes: number; talkId?: string }
   | { type: "busy" }
+  | { type: "needs_sign_in" }
   | { type: "no_mic"; problem: MicProblem }
   | { type: "socket_closed" }
   | { type: "reset" }
@@ -49,7 +52,7 @@ export type TalkAction =
 
 export const initialTalk: TalkState = { phase: "idle", talkId: null, minutes: 5, caption: "", captionTurn: -1, hint: null, crisis: null, askKeepSlower: false };
 
-const FINAL: TalkPhase[] = ["ended", "busy", "no_voice", "no_mic", "idle", "crisis"];
+const FINAL: TalkPhase[] = ["ended", "busy", "no_voice", "no_mic", "idle", "crisis", "needs_sign_in"];
 
 export function talk(state: TalkState, action: TalkAction): TalkState {
   switch (action.type) {
@@ -59,6 +62,8 @@ export function talk(state: TalkState, action: TalkAction): TalkState {
       return { ...state, minutes: action.minutes, talkId: action.talkId ?? state.talkId };
     case "busy":
       return { ...state, phase: "busy" };
+    case "needs_sign_in":
+      return { ...state, phase: "needs_sign_in" };
     case "no_mic":
       return { ...state, phase: "no_mic", micProblem: action.problem };
     case "reset":

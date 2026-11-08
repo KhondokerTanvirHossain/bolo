@@ -1,12 +1,15 @@
 "use client";
 import { useEffect, useState } from "react";
 import { DEFAULT_SETTINGS, fetchSettings, saveSettings, type Settings } from "./settings";
+import { fetchMe, signOut } from "@/account/session";
 
 /** US-9.5, Speaking group (P0 rows only): Bolo's speed and captions. Each choice saves straight away, for the next talk. */
 export function SettingsCard({ onClose }: { onClose: () => void }) {
   const [s, setS] = useState<Settings | null>(null);
   const [failed, setFailed] = useState(false);
   const [unreadable, setUnreadable] = useState(false);
+  const [email, setEmail] = useState<string | null>(null);
+  useEffect(() => { void fetchMe().then((m) => setEmail(m?.account?.email ?? null)); }, []);
   useEffect(() => { void fetchSettings().then((v) => { if (v) setS(v); else setUnreadable(true); }); }, []);
 
   const change = async (next: Settings) => {
@@ -40,6 +43,12 @@ export function SettingsCard({ onClose }: { onClose: () => void }) {
         </fieldset>
         {unreadable && <p className="bo-footnote" role="alert" style={{ marginTop: 12 }}>Settings can&apos;t load right now. Check your connection and try again.</p>}
         {failed && <p className="bo-footnote" role="alert" style={{ marginTop: 12 }}>That didn&apos;t save. Check your connection and try again.</p>}
+        {email && (
+          <p className="bo-footnote" style={{ marginTop: 16, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+            <span>Signed in as {email}</span>
+            <button className="bo-btn bo-btn--quiet-neutral" onClick={() => void signOut().then(() => window.location.reload())}>Sign out</button>
+          </p>
+        )}
         <button className="bo-btn bo-btn--primary bo-btn--block" style={{ marginTop: 20 }} onClick={onClose} autoFocus>Done</button>
       </div>
     </>

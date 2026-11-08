@@ -5,7 +5,11 @@ import { CoachFlow } from "@/coach/CoachFlow";
 import { fetchHome, type Home } from "@/home/home";
 import { HomeScreen } from "@/home/HomeScreen";
 import { PracticeScreen } from "@/practice/PracticeScreen";
-import { fetchSettings } from "@/settings/settings";
+import type { LearnerView } from "@/api/browser";
+import { afterDebrief, loadLoop, saveAnswered, saveLoop, seenSeeYou, type Loop } from "@/account/loop";
+import { GuestLimit } from "@/account/GuestLimit";
+import { SaveProgress } from "@/account/SaveProgress";
+import { fetchAuthConfig, fetchMe } from "@/account/session";
 import { SettingsCard } from "@/settings/SettingsCard";
 import { TalkScreen } from "@/talk/TalkScreen";
 import { useTalk } from "@/talk/useTalk";
@@ -22,6 +26,12 @@ export function FirstTalkScreen({ deviceId }: { deviceId: string | null }) {
   const [view, setView] = useState<View>({ kind: "home" });
   const [home, setHome] = useState<Home | null>(null);
   const [captions, setCaptions] = useState(true);
+  const [me, setMe] = useState<LearnerView | null>(null);
+  /** null until /api/auth/config answers. */
+  const [signInOn, setSignInOn] = useState<boolean | null>(null);
+  const [loop, setLoopState] = useState<Loop>(() => loadLoop());
+  const [seeYou, setSeeYou] = useState(false);
+  const setLoop = useCallback((next: (l: Loop) => Loop) => setLoopState((l) => { const n = next(l); saveLoop(n); return n; }), []);
   const audio = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
@@ -39,31 +49,69 @@ export function FirstTalkScreen({ deviceId }: { deviceId: string | null }) {
     if (!idle || view.kind !== "home") return;
     let cancelled = false;
     void fetchHome().then((h) => { if (!cancelled) setHome(h); });
-    void fetchSettings().then((s) => { if (!cancelled && s) setCaptions(s.captions); });
+    void fetchMe().then((m) => {
+      if (cancelled || !m) return;
+      setMe(m);
+      if (m.settings) setCaptions(m.settings.captions);
+    });
     return () => { cancelled = true; };
   }, [idle, view.kind]);
 
-  const toHome = useCallback(() => setView({ kind: "home" }), []);
-  const talk = useCallback(() => { setView({ kind: "home" }); void conversation.start(); }, [conversation]);
+  useEffect(() => { void fetchAuthConfig().then((c) => setSignInOn(c.enabled)); }, []);
 
+  // "See you tomorrow" once, on the Home after the first loop (US-6.8).
+  useEffect(() => {
+    if (idle && view.kind === "home" && loop.seeYou && !loop.pendingSave) {
+      setSeeYou(true);
+      setLoop(seenSeeYou);
+    }
+  }, [idle, view.kind, loop.seeYou, loop.pendingSave, setLoop]);
+
+  const guest = me?.kind === "guest";
+  // No save step for an account, or while sign-in is off: the pending prompt is simply answered.
+  useEffect(() => {
+    if (loop.pendingSave && me && signInOn !== null && (!guest || !signInOn)) setLoop(saveAnswered);
+  }, [loop.pendingSave, me, signInOn, guest, setLoop]);
+  const coachReady = useCallback(() => setLoop((l) => afterDebrief(l, { guest: me?.kind !== "account" })), [setLoop, me]);
+  const signedIn = useCallback((learner: LearnerView) => { setMe(learner); setLoop(saveAnswered); }, [setLoop]);
+  const toHome = useCallback(() => setView({ kind: "home" }), []);
+  const talk = useCallback(() => { setSeeYou(false); setView({ kind: "home" }); void conversation.start(); }, [conversation]);
+
+  // ACC-2: the 4th guest talk was refused; Home with the sign-in sheet. Not now leaves Home as it was.
+  if (conversation.state.phase === "needs_sign_in") {
+    return (
+      <>
+        <HomeScreen home={home} hasDay1={url !== null} onTalk={talk} onPractice={() => {}} onFeedback={() => {}} onSettings={() => {}} onPlayDay1={() => {}} />
+        <GuestLimit me={me} onClose={conversation.reset} onSignedIn={(l) => { signedIn(l); conversation.reset(); }} />
+      </>
+    );
+  }
   if (!idle) {
     return <TalkScreen state={conversation.state} deviceId={deviceId} onDone={conversation.done} onEnd={conversation.end}
       onTalkAgain={() => void conversation.start()} onLeave={conversation.reset} onPause={conversation.pause}
       onResume={conversation.resume} onRepeat={conversation.repeat} onKeepSlower={conversation.answerKeepSlower}
-      captionsDefault={captions} />;
+      captionsDefault={captions} onCoachReady={coachReady}
+      onPractise={(pattern) => { conversation.reset(); setView({ kind: "practice", pattern }); }} />;
   }
   if (view.kind === "practice") return <PracticeScreen deviceId={deviceId} onBack={toHome} initialPattern={view.pattern} />;
   if (view.kind === "feedback") {
-    return <CoachFlow talkId={view.talkId} deviceId={deviceId} onTalkAgain={talk} onDone={toHome} onNoDebrief={toHome} />;
+    return <CoachFlow talkId={view.talkId} deviceId={deviceId} onTalkAgain={talk} onDone={toHome} onNoDebrief={toHome}
+      onPractise={(pattern) => setView({ kind: "practice", pattern })} />;
+  }
+  // US-6.8 / US-8.2: a guest's save step comes before Home (also when it was missed last time). With sign-in off, skip it.
+  if (loop.pendingSave) {
+    if (guest && signInOn === true) {
+      return <SaveProgress me={me} hasDay1={url !== null} onSignedIn={signedIn} onStayGuest={() => setLoop(saveAnswered)} />;
+    }
   }
   return (
     <>
-      <HomeScreen home={home} hasDay1={url !== null} onTalk={talk}
+      <HomeScreen home={home} note={seeYou ? "See you tomorrow. Bolo will be here." : undefined} hasDay1={url !== null} onTalk={talk}
         onPractice={(pattern) => setView({ kind: "practice", pattern })}
         onFeedback={(talkId) => setView({ kind: "feedback", talkId })}
         onSettings={() => setView({ kind: "settings" })}
         onPlayDay1={() => void audio.current?.play()} />
-      {view.kind === "settings" && <SettingsCard onClose={toHome} />}
+      {view.kind === "settings" && <SettingsCard onClose={() => { setSeeYou(false); toHome(); }} />}
       {url && <audio ref={audio} src={url} preload="auto" data-testid="day1-audio" />}
     </>
   );

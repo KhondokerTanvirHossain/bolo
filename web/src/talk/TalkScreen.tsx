@@ -19,6 +19,9 @@ type Props = {
   onKeepSlower?: (keep: boolean) => void;
   /** SET-2: the learner's captions setting, used when this device has no in-talk choice of its own. */
   captionsDefault?: boolean;
+  /** Passed to the Coach after the talk (first-loop actions, finished-talk counting). */
+  onCoachReady?: () => void;
+  onPractise?: (pattern?: string) => void;
 };
 
 const LIVE = ["connecting", "buddy_speaking", "your_turn", "thinking"];
@@ -44,7 +47,7 @@ function readCaptions(fallback: boolean): boolean {
  * End; plus the hint card (TLK-6), the paused state (TLK-10) and the crisis card (TLK-14).
  */
 export function TalkScreen({ state, deviceId = null, onDone, onEnd, onTalkAgain, onLeave, onPause, onResume, onRepeat, onKeepSlower,
-  captionsDefault = true }: Props) {
+  captionsDefault = true, onCoachReady, onPractise }: Props) {
   const [asking, setAsking] = useState(false);
   const [noDebrief, setNoDebrief] = useState(false);
   const [captions, setCaptions] = useState(true);
@@ -110,7 +113,7 @@ export function TalkScreen({ state, deviceId = null, onDone, onEnd, onTalkAgain,
   // A talk with at least one turn goes to the Coach's debrief (DBF); an empty one keeps the plain summary.
   if (state.phase === "ended" && state.talkId && (state.summary?.turns ?? 0) > 0 && !noDebrief) {
     return <CoachFlow talkId={state.talkId} deviceId={deviceId} onTalkAgain={onTalkAgain} onDone={onLeave}
-      onNoDebrief={() => setNoDebrief(true)} />;
+      onNoDebrief={() => setNoDebrief(true)} onReady={onCoachReady} onPractise={onPractise} />;
   }
   if (state.phase === "crisis" && state.crisis) {
     return <CrisisCard crisis={state.crisis} onClose={onLeave} />;

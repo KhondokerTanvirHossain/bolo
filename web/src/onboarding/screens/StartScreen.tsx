@@ -2,7 +2,10 @@ import { Icon, Scene } from "@/scene/Scene";
 import { WORDMARK_SVG } from "@/scene/art";
 
 /** First visit: one click before any sound, because browsers block autoplay (design system, Voice in a browser). */
-export function StartScreen({ onMeet }: { onMeet: () => void }) {
+/** {@code onRestore}: "I already have an account" (US-8.4), shown only while sign-in is on. */
+export function StartScreen({ onMeet, onRestore, restoreBusy = false, problem = null }: {
+  onMeet: () => void; onRestore?: () => void; restoreBusy?: boolean; problem?: string | null;
+}) {
   return (
     <section className="dk-screen on" data-screen="start">
       <Scene />
@@ -19,6 +22,12 @@ export function StartScreen({ onMeet }: { onMeet: () => void }) {
         <button className="bo-btn bo-btn--primary" style={{ minWidth: 240, height: 60, fontSize: 19 }} onClick={onMeet} autoFocus>
           <Icon name="volume_up" fill />Meet Bolo
         </button>
+        {onRestore && (
+          <div style={{ marginTop: 14 }}>
+            <button className="bo-scenebtn" onClick={onRestore} disabled={restoreBusy} aria-busy={restoreBusy}>I already have an account</button>
+          </div>
+        )}
+        {problem && <p role="alert" style={{ margin: "12px 0 0", font: "500 15px/22px var(--font-sans)", color: "var(--on-scene)" }}>{problem}</p>}
       </div>
     </section>
   );
