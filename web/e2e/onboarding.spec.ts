@@ -34,6 +34,8 @@ async function stubApi(page: Page, opts: { consent?: boolean; profile?: boolean;
   await page.route("**/api/me", (r) =>
     hasSession ? r.fulfill({ json: learner() }) : r.fulfill({ status: 401, json: { code: "signed-out" } }));
   await page.route("**/api/session", (r) => { sessions++; hasSession = true; return r.fulfill({ json: learner() }); });
+  // Funnel events are fire-and-forget; answer them so they never compete with the saves this test checks.
+  await page.route("**/api/events", (r) => r.fulfill({ status: 202 }));
   await page.route("**/api/profile", async (r) => {
     expect(r.request().method()).toBe("PUT");
     const pf = profileFailures.shift();
@@ -138,7 +140,7 @@ test("Meet Bolo through consent to the microphone check", async ({ page }) => {
   await page.getByRole("button", { name: "Next" }).click();
   await page.getByRole("button", { name: "10 minutes" }).click();
   await page.getByRole("button", { name: "Next" }).click();
-  expect(sent.profiles).toEqual([{ goal: "job_interviews", fearedMoment: "phone_calls", talkMinutes: 10 }]);
+  await expect.poll(() => sent.profiles).toEqual([{ goal: "job_interviews", fearedMoment: "phone_calls", talkMinutes: 10 }]);
   await expect(page.getByRole("heading", { name: "Introduce yourself, like at a new job" })).toBeVisible();
 
   // Day 1 clip (US-1.6): a short clip gets one "say a bit more?" prompt; Keep it saves it on this device.
