@@ -1,0 +1,159 @@
+{
+ "heard": true,
+ "accuracy": 78.0,
+ "words": [
+  {
+   "word": "I",
+   "startMs": 0,
+   "endMs": 0,
+   "accuracy": 95,
+   "errorType": "None",
+   "phonemes": [
+    {
+     "symbol": "a",
+     "accuracy": 95
+    }
+   ]
+  },
+  {
+   "word": "study",
+   "startMs": 0,
+   "endMs": 0,
+   "accuracy": 90,
+   "errorType": "None",
+   "phonemes": [
+    {
+     "symbol": "s",
+     "accuracy": 90
+    },
+    {
+     "symbol": "t",
+     "accuracy": 90
+    }
+   ]
+  },
+  {
+   "word": "at",
+   "startMs": 0,
+   "endMs": 0,
+   "accuracy": 95,
+   "errorType": "None",
+   "phonemes": [
+    {
+     "symbol": "t",
+     "accuracy": 95
+    }
+   ]
+  },
+  {
+   "word": "a",
+   "startMs": 0,
+   "endMs": 0,
+   "accuracy": 95,
+   "errorType": "None",
+   "phonemes": [
+    {
+     "symbol": "ə",
+     "accuracy": 95
+    }
+   ]
+  },
+  {
+   "word": "small",
+   "startMs": 0,
+   "endMs": 0,
+   "accuracy": 92,
+   "errorType": "None",
+   "phonemes": [
+    {
+     "symbol": "s",
+     "accuracy": 92
+    },
+    {
+     "symbol": "m",
+     "accuracy": 92
+    }
+   ]
+  },
+  {
+   "word": "i",
+   "startMs": 0,
+   "endMs": 0,
+   "accuracy": 40,
+   "errorType": "Insertion",
+   "phonemes": []
+  },
+  {
+   "word": "school",
+   "startMs": 0,
+   "endMs": 0,
+   "accuracy": 88,
+   "errorType": "None",
+   "phonemes": [
+    {
+     "symbol": "s",
+     "accuracy": 88
+    },
+    {
+     "symbol": "k",
+     "accuracy": 88
+    }
+   ]
+  },
+  {
+   "word": "near",
+   "startMs": 0,
+   "endMs": 0,
+   "accuracy": 95,
+   "errorType": "None",
+   "phonemes": [
+    {
+     "symbol": "n",
+     "accuracy": 95
+    }
+   ]
+  },
+  {
+   "word": "the",
+   "startMs": 0,
+   "endMs": 0,
+   "accuracy": 95,
+   "errorType": "None",
+   "phonemes": [
+    {
+     "symbol": "ð",
+     "accuracy": 95
+    }
+   ]
+  },
+  {
+   "word": "i",
+   "startMs": 0,
+   "endMs": 0,
+   "accuracy": 42,
+   "errorType": "Insertion",
+   "phonemes": []
+  },
+  {
+   "word": "station",
+   "startMs": 0,
+   "endMs": 0,
+   "accuracy": 85,
+   "errorType": "None",
+   "phonemes": [
+    {
+     "symbol": "s",
+     "accuracy": 85
+    },
+    {
+     "symbol": "t",
+     "accuracy": 85
+    },
+    {
+     "symbol": "ʃ",
+     "accuracy": 85
+    }
+   ]
+  }
+ ]
+}

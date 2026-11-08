@@ -1,0 +1,92 @@
+{
+ "heard": true,
+ "accuracy": 80.0,
+ "words": [
+  {
+   "word": "very",
+   "startMs": 0,
+   "endMs": 0,
+   "accuracy": 50,
+   "errorType": "None",
+   "phonemes": [
+    {
+     "symbol": "v",
+     "accuracy": 20
+    },
+    {
+     "symbol": "ɛ",
+     "accuracy": 90
+    }
+   ]
+  },
+  {
+   "word": "few",
+   "startMs": 0,
+   "endMs": 0,
+   "accuracy": 95,
+   "errorType": "None",
+   "phonemes": [
+    {
+     "symbol": "f",
+     "accuracy": 95
+    }
+   ]
+  },
+  {
+   "word": "vans",
+   "startMs": 0,
+   "endMs": 0,
+   "accuracy": 95,
+   "errorType": "None",
+   "phonemes": [
+    {
+     "symbol": "v",
+     "accuracy": 95
+    }
+   ]
+  },
+  {
+   "word": "visit",
+   "startMs": 0,
+   "endMs": 0,
+   "accuracy": 92,
+   "errorType": "None",
+   "phonemes": [
+    {
+     "symbol": "v",
+     "accuracy": 90
+    },
+    {
+     "symbol": "z",
+     "accuracy": 90
+    }
+   ]
+  },
+  {
+   "word": "the",
+   "startMs": 0,
+   "endMs": 0,
+   "accuracy": 95,
+   "errorType": "None",
+   "phonemes": [
+    {
+     "symbol": "ð",
+     "accuracy": 92
+    }
+   ]
+  },
+  {
+   "word": "village",
+   "startMs": 0,
+   "endMs": 0,
+   "accuracy": 90,
+   "errorType": "None",
+   "phonemes": [
+    {
+     "symbol": "v",
+     "accuracy": 85
+    }
+   ]
+  }
+ ]
+}

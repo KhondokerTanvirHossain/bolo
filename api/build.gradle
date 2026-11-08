@@ -52,5 +52,14 @@ tasks.register('liveProbe', Test) {
     outputs.upToDateWhen { false }
 }
 
+// Gate 1 accuracy harness (a developer tool on the test classpath, not shipped):
+// ./gradlew goldenSet -Pset=<dir> [-Pmode=offline|refresh]   — see scripts/golden-set.sh and docs/RUNBOOK.md
+tasks.register('goldenSet', JavaExec) {
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'app.bolo.goldenset.GoldenSetRunner'
+    args = [project.findProperty('set') ?: '', *(project.findProperty('mode') ? ["--${project.property('mode')}"] : [])]
+    ignoreExitValue = false
+}
+
 tasks.named('bootJar') { archiveFileName = 'bolo-api.jar' }
 tasks.named('jar') { enabled = false }

@@ -30,10 +30,18 @@ public class AzureScriptedAssessment implements ScriptedAssessmentPort {
     private final String baseUrl;
     private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
 
-    /** baseUrl: https://{region}.stt.speech.microsoft.com */
+    private final Duration timeout;
+
+    /** baseUrl: https://{region}.stt.speech.microsoft.com. A learner's attempt waits at most 8 s. */
     public AzureScriptedAssessment(String key, String baseUrl) {
+        this(key, baseUrl, Duration.ofSeconds(8));
+    }
+
+    /** A longer {@code timeout} is for long readings (the accuracy harness sends up to 60 s). */
+    public AzureScriptedAssessment(String key, String baseUrl, Duration timeout) {
         this.key = key;
         this.baseUrl = baseUrl;
+        this.timeout = timeout;
     }
 
     @Override
@@ -52,7 +60,7 @@ public class AzureScriptedAssessment implements ScriptedAssessmentPort {
         config.put("PhonemeAlphabet", "IPA");
         String header = Base64.getEncoder().encodeToString(JSON.writeValueAsString(config).getBytes(StandardCharsets.UTF_8));
         HttpRequest request = HttpRequest.newBuilder(URI.create(baseUrl + PATH))
-                .timeout(Duration.ofSeconds(8))
+                .timeout(timeout)
                 .header("Ocp-Apim-Subscription-Key", key)
                 .header("Content-Type", "audio/wav; codecs=audio/pcm; samplerate=16000")
                 .header("Pronunciation-Assessment", header)

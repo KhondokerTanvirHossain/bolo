@@ -70,4 +70,28 @@ class AzureScriptedAssessmentTest {
         AzureScriptedAssessment a = serving(429, "{}");
         assertThatThrownBy(() -> a.assess(new byte[44], "Hello.")).isInstanceOf(SpeechBusyException.class);
     }
+
+    /** The accuracy harness sends 20–60 s readings; Azure can take longer than the 8 s a learner's attempt waits. */
+    @Test
+    void aLongerTimeoutWaitsForASlowAnswer() throws Exception {
+        String body = fixture("pa-scripted-ischool.json");
+        server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/", ex -> {
+            ex.getRequestBody().readAllBytes();
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            byte[] b = body.getBytes(StandardCharsets.UTF_8);
+            ex.sendResponseHeaders(200, b.length);
+            ex.getResponseBody().write(b);
+            ex.close();
+        });
+        server.start();
+        String url = "http://127.0.0.1:" + server.getAddress().getPort();
+        assertThatThrownBy(() -> new AzureScriptedAssessment("key", url, java.time.Duration.ofMillis(300)).assess(new byte[44], "school"))
+                .isInstanceOf(app.bolo.speech.application.port.in.SpeechUnavailableException.class);
+        assertThat(new AzureScriptedAssessment("key", url, java.time.Duration.ofSeconds(3)).assess(new byte[44], "school").heard()).isTrue();
+    }
 }
