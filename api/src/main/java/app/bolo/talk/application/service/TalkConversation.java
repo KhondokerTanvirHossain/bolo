@@ -177,6 +177,7 @@ final class TalkConversation implements TalkConnection {
         this.onEnded = onEnded;
         this.safety = safety;
         this.starters = starters;
+        this.slow = talk.slowVoice();
         this.quiet = new QuietClock(settings.quietEncourageMs(), settings.quietHintMs(), settings.quietPauseMs());
         this.taker = new TurnTaker(settings.policy());
         this.system = BuddyPrompt.system(talk.goal(), talk.fearedMoment(), talk.minutes());
@@ -401,7 +402,11 @@ final class TalkConversation implements TalkConnection {
         if (intent != TalkIntent.NONE && !lastBuddyText.isBlank()) {
             cancel(speculation);
             speculation = null;
-            if (intent == TalkIntent.SLOWER) slow = true;
+            if (intent == TalkIntent.SLOWER && !slow) {
+                slow = true;
+                // US-2.7: ask whether to keep the slower Bolo; the web asks, Settings saves it.
+                out.send(message("slower"));
+            }
             history.add(new Exchange(Exchange.Speaker.BUDDY, lastBuddyText));
             buddyTurn = nextIdx++;
             startSpeaker(buddyTurn, fixed(lastBuddyText), commitAt);

@@ -89,6 +89,7 @@ public class TalkSessionService implements StartTalkUseCase {
 
     private static TalkView toView(TalkSession s, LearnerView view) {
         var p = view.profile();
-        return new TalkView(s.id(), s.minutes(), p == null ? null : p.goal(), p == null ? null : p.fearedMoment());
+        boolean slow = view.settings() != null && "slower".equals(view.settings().buddySpeed());
+        return new TalkView(s.id(), s.minutes(), p == null ? null : p.goal(), p == null ? null : p.fearedMoment(), slow);
     }
 }

@@ -46,7 +46,7 @@ class TalkConversationTest {
         var speech = new SpeechService(new FakeSpeechToText(), new FakeTextToSpeech(), usage, new app.bolo.speech.adapter.out.fake.FakeScriptedAssessment());
         var settings = new TalkSettings(new TurnPolicy(100, 300, 500, Set.of()), "fake", 100, 60_000, 60_000, 20_000,
                 15_000, 30_000, 8_000, 15_000, 45_000, 1_800_000);
-        TalkView talk = new TalkView(TalkSessionId.newId(), 5, null, null);
+        TalkView talk = new TalkView(TalkSessionId.newId(), 5, null, null, false);
         var c = new TalkConversation(talk, new TalkContext(LearnerId.newId(), talk.id()), out, speech, speech,
                 new MeteredLlmClient(new FakeLlm(), usage), mock(StartTalkUseCase.class), mock(TurnPort.class),
                 mock(app.bolo.media.application.port.in.AudioStoreUseCase.class), settings,
