@@ -25,6 +25,12 @@ public interface DebriefPort {
 
     Optional<Last> latestFor(LearnerId learner);
 
+    record Past(String talkId, java.time.Instant startedAt, int minutes, String status, String body) {
+    }
+
+    /** Every talk of the learner that has a debrief, oldest first. */
+    java.util.List<Past> history(LearnerId learner);
+
     /** Sets viewed_at once, for the owner's ready debrief; true when it is (now or already) viewed. */
     boolean markViewed(LearnerId learner, TalkSessionId talk, Instant at);
 

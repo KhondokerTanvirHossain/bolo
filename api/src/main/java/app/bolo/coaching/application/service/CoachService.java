@@ -52,7 +52,7 @@ import java.util.regex.Pattern;
  */
 @Slf4j
 @Service
-public class CoachService implements DebriefUseCase, LatestDebriefUseCase {
+public class CoachService implements DebriefUseCase, LatestDebriefUseCase, app.bolo.coaching.application.port.in.DebriefHistoryUseCase {
 
     private static final JsonMapper JSON = JsonMapper.builder().build();
     private static final Pattern MEDIA_FILE = Pattern.compile("(clip|model)-\\d{1,2}\\.wav");
@@ -199,7 +199,7 @@ public class CoachService implements DebriefUseCase, LatestDebriefUseCase {
         body.put("topic", reply.topicOrDefault());
         // PRG-3: every pattern found in this talk (not only the three shown), for "My patterns" over time.
         ArrayNode patterns = body.putArray("patterns");
-        for (var sc : scored.sounds()) patterns.addObject().put("pattern", sc.pattern()).put("count", sc.count());
+        for (var sc : scored.sounds()) patterns.addObject().put("pattern", sc.pattern()).put("title", sc.title()).put("count", sc.count());
         scored.habit().ifPresent(h -> {
             ObjectNode habit = patterns.addObject().put("habit", h.kind()).put("count", h.count());
             if (h.word() != null) habit.put("word", h.word());
@@ -374,6 +374,11 @@ public class CoachService implements DebriefUseCase, LatestDebriefUseCase {
     }
 
     // ---- reading it back --------------------------------------------------------------------------------------------
+
+    @Override
+    public java.util.List<PastDebrief> list(LearnerId learner) {
+        return debriefs.history(learner).stream().map(p -> new PastDebrief(p.talkId(), p.startedAt(), p.minutes(), p.status(), p.body())).toList();
+    }
 
     @Override
     public boolean markViewed(LearnerId learner, TalkSessionId talk) {

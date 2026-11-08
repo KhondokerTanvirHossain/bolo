@@ -52,6 +52,18 @@ class JdbcDebriefAdapter implements DebriefPort {
     }
 
     @Override
+    public java.util.List<Past> history(LearnerId learner) {
+        return jdbc.sql("""
+                select d.session_id, s.started_at, s.minutes, d.status, d.body::text as body
+                from debrief d join talk_session s on s.id = d.session_id
+                where s.learner_id = ? order by s.started_at""")
+                .param(learner.value())
+                .query((rs, n) -> new Past(rs.getObject("session_id", UUID.class).toString(), rs.getTimestamp("started_at").toInstant(),
+                        rs.getInt("minutes"), rs.getString("status"), rs.getString("body")))
+                .list();
+    }
+
+    @Override
     public boolean markViewed(LearnerId learner, TalkSessionId talk, Instant at) {
         return jdbc.sql("""
                 update debrief d set viewed_at = coalesce(d.viewed_at, ?)
