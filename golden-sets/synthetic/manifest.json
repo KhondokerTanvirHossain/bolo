@@ -1,0 +1,114 @@
+{
+  "name": "synthetic",
+  "source": "macOS voices (Samantha en-US, Daniel en-GB, Karen en-AU, Rishi en-IN) reading our own sentences, plus Bolo's two practice test clips",
+  "licence": "ours",
+  "recordings": [
+    {
+      "id": "vans-samantha",
+      "audio": "vans-samantha.wav",
+      "reference": "Very few vans visit the village on Wednesday.",
+      "labelledBy": "none (clear synthetic voice)",
+      "issues": []
+    },
+    {
+      "id": "think-samantha",
+      "audio": "think-samantha.wav",
+      "reference": "I think these three thick books are worth it.",
+      "labelledBy": "none (clear synthetic voice)",
+      "issues": []
+    },
+    {
+      "id": "fish-samantha",
+      "audio": "fish-samantha.wav",
+      "reference": "She sells fresh fish near the zoo station.",
+      "labelledBy": "none (clear synthetic voice)",
+      "issues": []
+    },
+    {
+      "id": "vans-daniel",
+      "audio": "vans-daniel.wav",
+      "reference": "Very few vans visit the village on Wednesday.",
+      "labelledBy": "none (clear synthetic voice)",
+      "issues": []
+    },
+    {
+      "id": "think-daniel",
+      "audio": "think-daniel.wav",
+      "reference": "I think these three thick books are worth it.",
+      "labelledBy": "none (clear synthetic voice)",
+      "issues": []
+    },
+    {
+      "id": "fish-daniel",
+      "audio": "fish-daniel.wav",
+      "reference": "She sells fresh fish near the zoo station.",
+      "labelledBy": "none (clear synthetic voice)",
+      "issues": []
+    },
+    {
+      "id": "vans-karen",
+      "audio": "vans-karen.wav",
+      "reference": "Very few vans visit the village on Wednesday.",
+      "labelledBy": "none (clear synthetic voice)",
+      "issues": []
+    },
+    {
+      "id": "think-karen",
+      "audio": "think-karen.wav",
+      "reference": "I think these three thick books are worth it.",
+      "labelledBy": "none (clear synthetic voice)",
+      "issues": []
+    },
+    {
+      "id": "fish-karen",
+      "audio": "fish-karen.wav",
+      "reference": "She sells fresh fish near the zoo station.",
+      "labelledBy": "none (clear synthetic voice)",
+      "issues": []
+    },
+    {
+      "id": "vans-rishi",
+      "audio": "vans-rishi.wav",
+      "reference": "Very few vans visit the village on Wednesday.",
+      "labelledBy": "none (clear synthetic voice)",
+      "issues": []
+    },
+    {
+      "id": "think-rishi",
+      "audio": "think-rishi.wav",
+      "reference": "I think these three thick books are worth it.",
+      "labelledBy": "none (clear synthetic voice)",
+      "issues": []
+    },
+    {
+      "id": "fish-rishi",
+      "audio": "fish-rishi.wav",
+      "reference": "She sells fresh fish near the zoo station.",
+      "labelledBy": "none (clear synthetic voice)",
+      "issues": []
+    },
+    {
+      "id": "practice-ischool",
+      "audio": "practice-ischool.wav",
+      "reference": "I study at a small school near the station.",
+      "labelledBy": "by construction (the clip says 'ischool' and 'istation')",
+      "issues": [
+        {
+          "word": "school",
+          "pattern": "S_CLUSTER_VOWEL"
+        },
+        {
+          "word": "station",
+          "pattern": "S_CLUSTER_VOWEL"
+        }
+      ]
+    },
+    {
+      "id": "practice-very",
+      "audio": "practice-very.wav",
+      "reference": "It is very important to visit the village.",
+      "labelledBy": "none (clear synthetic voice)",
+      "issues": []
+    }
+  ]
+}

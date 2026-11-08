@@ -92,3 +92,45 @@ ssh … 'docker stats --no-stream bolo-api bolo-web bolo-db; free -m'     # "ava
 
 `docker exec -it bolo-db psql -U bolo -d bolo` (schema `bolo`). Backups: not yet automated; add a nightly `pg_dump` to S3
 before the closed beta (plan 1c).
+
+## Accuracy harness (Gate 1)
+
+The harness measures whether Bolo's sound flags agree with a pronunciation teacher (PRD NFR-10; Architecture §10,
+Phase 0). It uses the same rule as practice and Try it: `SoundFlags` in the `assessment` domain.
+
+- **Run:** `scripts/golden-set.sh golden-sets/<name>`.
+  - The script reads the Azure key from the box into this run only. It is never printed or saved.
+  - Each recording goes to Azure once. Its result is saved under `cache/azure/`, so reruns cost nothing.
+  - `--offline` uses only saved results. `--refresh` scores everything again.
+  - Run it while no talk is live: Azure F0 allows one recognition at a time.
+- **Without the script:** `cd api && ./gradlew goldenSet -Pset=<abs dir> [-Pmode=offline|refresh]`, with
+  `BOLO_AZURE_SPEECH_KEY` set.
+- **Output:** `report.md` in the set's folder, also printed.
+  - **Exit codes:** 0 means the gate passed or isn't decided yet; 1 means it failed; 2 means a set or vendor error (the message names the recording).
+  - **Per sound:**
+    - teacher issues;
+    - Bolo flags;
+    - right, wrong and missed;
+    - "flags right" (precision);
+    - "issues caught" (recall);
+    - false flags on clear words;
+    - the verdict.
+  - **Also included:** plain agreement (NFR-10), a sweep of the sound threshold (40/50/60/70) and every
+    disagreement, for the teacher's review.
+- **Bar (founder-approved 2026-11-08):**
+  - **Per sound:** flags right ≥ 80% and issues caught ≥ 60%, judged only with ≥ 5 teacher issues.
+  - **Gate passes:** at least 4 sounds pass and none fail.
+  - **Gate fails:** any judged sound fails.
+  - **Otherwise:** NOT DECIDED.
+- **Sets:** `golden-sets/` (see its README for the folder layout and the teacher's label format).
+  - **Only `synthetic/` is committed:** AI voices plus Bolo's practice clips.
+  - **Its baseline (2026-11-09):** 0 wrong flags in 108 chances on clear speech; the extra vowel caught 2 of 2;
+    gate NOT DECIDED (no accented recordings yet).
+- **Limit:** the harness measures scripted reading. The Coach scores free talk with unscripted recognition and a
+  sound threshold of 50, which can behave differently, so that path needs its own check.
+- **Next:**
+  - GMU Bengali speakers, once permission is settled (convert mp3 to 16 kHz mono WAV);
+  - 5–8 local speakers;
+  - the teacher's labels;
+  - a second pronunciation vendor, as another vendor function in `GoldenSetRunner`.
+

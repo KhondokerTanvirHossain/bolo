@@ -3,3 +3,8 @@ __pycache__/
 node_modules/
 .superpowers/
 deploy/bolo.env
+
+# Golden sets for the accuracy harness: real recordings never go into git (licences, privacy).
+golden-sets/*
+!golden-sets/README.md
+!golden-sets/synthetic/

@@ -27,6 +27,15 @@ class GoldenSetTest {
                 new GoldenSet.Label(5, SoundPattern.S_CLUSTER_VOWEL), new GoldenSet.Label(8, SoundPattern.S_CLUSTER_VOWEL));
     }
 
+    /** The committed synthetic set (clear AI voices plus our two practice clips) stays loadable. */
+    @Test
+    void theSyntheticSetLoads() {
+        GoldenSet set = GoldenSet.load(Path.of("../golden-sets/synthetic"));
+        assertThat(set.recordings()).hasSize(14);
+        assertThat(set.recordings().stream().filter(r -> !r.labels().isEmpty())).extracting(GoldenSet.Recording::id)
+                .containsExactly("practice-ischool");
+    }
+
     @Test
     void nthPicksTheOccurrence() throws Exception {
         write("Ask her to bring these things with her.", "{\"word\": \"her\", \"nth\": 2, \"pattern\": \"Z_J\"}");
