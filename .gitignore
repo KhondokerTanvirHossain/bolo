@@ -8,3 +8,6 @@ deploy/bolo.env
 golden-sets/*
 !golden-sets/README.md
 !golden-sets/synthetic/
+
+# Real speakers' recordings for the accuracy test: never committed (they agreed to private use only).
+test-audio/

@@ -1,5 +1,6 @@
 import { api, type LearnerView } from "@/api/browser";
-import { loadClip, saveClip } from "@/audio/clipStore";
+import { deleteClip, loadClip, saveClip } from "@/audio/clipStore";
+import { STORAGE_KEY } from "@/onboarding/steps";
 import { googleIdToken, type FirebaseWebConfig } from "./firebase";
 import { currentInvite } from "./invite";
 
@@ -37,16 +38,39 @@ export async function signInWithGoogle(): Promise<SignInResult> {
   return res.kind === "refused" && res.code === "invite" ? { kind: "invite" } : { kind: "failed" };
 }
 
+/** Bolo's per-person state in this browser; sign-out removes it, so a shared computer keeps nothing of them. */
+const PERSONAL_KEYS = [STORAGE_KEY, "bolo.loop.v1", "bolo.captions", "bolo.events.queue"];
+
 export async function signOut(): Promise<void> {
   await api.post<void>("/api/auth/sign-out");
+  for (const k of PERSONAL_KEYS) {
+    try {
+      window.localStorage.removeItem(k);
+    } catch {
+      // nothing stored
+    }
+  }
+  await deleteClip("day1");
+}
+
+/** The keep-recordings choice made on this browser's consent screen (the clip was recorded under it). */
+function deviceKeepsRecordings(): boolean {
+  try {
+    return (JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "{}") as { keepRecordings?: boolean }).keepRecordings === true;
+  } catch {
+    return false;
+  }
 }
 
 /** ONB-4: the Day 1 clip goes with the account only if the learner chose to keep recordings. */
 export async function uploadDay1(learner: LearnerView): Promise<void> {
-  if (!learner.consent?.keepRecordings) return;
+  if (!learner.consent?.keepRecordings || !deviceKeepsRecordings()) return;
   try {
     const clip = await loadClip("day1");
     if (!clip) return;
+    // Never replace the account's own Day 1 voice with one recorded on another browser.
+    const existing = await fetch("/api/me/day1", { credentials: "same-origin" });
+    if (existing.ok) return;
     const form = new FormData();
     form.append("audio", clip, "day1");
     await fetch("/api/me/day1", { method: "PUT", credentials: "same-origin", headers: { "X-Bolo": "1" }, body: form });

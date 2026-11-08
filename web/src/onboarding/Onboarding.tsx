@@ -157,6 +157,11 @@ export default function Onboarding() {
         <div className="dk-card" role="alert">
           <h1 className="bo-flow__title">Bolo is in a closed beta</h1>
           <p className="bo-flow__body">It&apos;s invite-only for now. Ask the person who told you about Bolo for an invite link, then open it here.</p>
+          {signInOn && (
+            <button className="bo-btn bo-btn--secondary bo-btn--block" style={{ marginTop: 16 }} onClick={() => { setClosedBeta(false); void restore(); }}
+              disabled={restoring}>I already have an account</button>
+          )}
+          {restoreProblem && <p className="bo-footnote" role="alert" style={{ marginTop: 12 }}>{restoreProblem}</p>}
         </div>
       </section>
     );

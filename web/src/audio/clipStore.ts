@@ -36,6 +36,21 @@ export async function saveClip(key: string, blob: Blob): Promise<void> {
   void withStore("readwrite", (s) => s.put(blob, key)).catch(() => {});
 }
 
+/** Removes a clip from this device (sign-out). */
+export async function deleteClip(key: string): Promise<void> {
+  try {
+    const db = await open();
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(STORE, "readwrite");
+      tx.objectStore(STORE).delete(key);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch {
+    // nothing stored, or storage unavailable
+  }
+}
+
 export async function loadClip(key: string): Promise<Blob | null> {
   const inMemory = memory.get(key);
   if (inMemory) return inMemory;

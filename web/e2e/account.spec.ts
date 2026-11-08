@@ -104,3 +104,17 @@ test("on a phone the save card fits", async ({ page }) => {
   expect(card.x).toBeGreaterThanOrEqual(15);
   expect(card.x + card.width).toBeLessThanOrEqual(375);
 });
+
+/** Review I2: a returning account holder who lands on the closed-beta card can still sign in. */
+test("the closed-beta card offers 'I already have an account'", async ({ page }) => {
+  await stub(page, { onboarded: false });
+  await page.route("**/api/session", (r) => r.fulfill({ status: 422, json: { code: "invite" } }));
+  await page.goto("/");
+  await page.getByRole("button", { name: "Meet Bolo" }).click();
+  await page.getByRole("button", { name: "Skip intro" }).click();
+  await page.getByText("I'm 13 or older").click();
+  await page.getByRole("button", { name: "Yes, keep them" }).click();
+  await expect(page.getByRole("heading", { name: "Bolo is in a closed beta" })).toBeVisible();
+  await page.getByRole("button", { name: "I already have an account" }).click();
+  await expect(page.getByRole("button", { name: "Start talking" })).toBeVisible();
+});

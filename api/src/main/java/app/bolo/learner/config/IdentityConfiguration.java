@@ -23,13 +23,14 @@ class IdentityConfiguration {
     }
 
     @Bean
-    @ConditionalOnProperty(name = "bolo.auth.vendor", havingValue = "firebase")
+    @ConditionalOnProperty(name = "bolo.auth.vendor", havingValue = "firebase", matchIfMissing = true)
     IdentityPort firebaseIdentity(SignInConfig config) {
         return config.enabled() ? FirebaseIdTokens.forGoogle(config.projectId(), Clock.systemUTC()) : token -> Optional.empty();
     }
 
     @Bean
-    @ConditionalOnProperty(name = "bolo.auth.vendor", havingValue = "fake", matchIfMissing = true)
+    // Only tests set this (src/test/resources/application.properties): the fake accepts "fake:<uid>:<email>" for anyone.
+    @ConditionalOnProperty(name = "bolo.auth.vendor", havingValue = "fake")
     IdentityPort fakeIdentity() {
         return new FakeIdentity();
     }
