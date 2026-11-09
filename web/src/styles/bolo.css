@@ -658,6 +658,8 @@ button { font: inherit; color: inherit; -webkit-tap-highlight-color: transparent
 .dk-talk__top { position: absolute; top: 24px; left: 32px; right: 32px; display: flex; justify-content: space-between; align-items: center; z-index: 2; }
 .dk-talk__cap { position: absolute; top: 96px; left: 50%; transform: translateX(-50%); width: min(760px, calc(100% - 64px)); z-index: 2; }
 .dk-dock { position: absolute; left: 50%; bottom: 36px; transform: translateX(-50%); display: flex; align-items: center; gap: 28px; padding: 14px 22px; border-radius: var(--radius-full); background: var(--scene-plate); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); z-index: 2; }
+/* ScreenHomeFree: the free-talks footnote under the dock, never a banner */
+.dk-freeline { position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); margin: 0; color: var(--on-scene-secondary); font: 500 14px/20px var(--font-sans); z-index: 2; text-align: center; width: max-content; max-width: calc(100% - 32px); }
 .dk-keys { position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); color: var(--on-scene-secondary); font: 500 13px/18px var(--font-sans); display: flex; gap: 16px; z-index: 2; white-space: nowrap; }
 .dk-keys .dk-kbd { background: rgba(255, 248, 239, .14); color: var(--on-scene); box-shadow: none; margin-right: 4px; }
 /* centred card over the dusk (onboarding, dialogs) */

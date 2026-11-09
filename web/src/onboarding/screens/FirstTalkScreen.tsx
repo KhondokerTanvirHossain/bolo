@@ -8,6 +8,7 @@ import { PracticeScreen } from "@/practice/PracticeScreen";
 import type { LearnerView } from "@/api/browser";
 import { afterDebrief, loadLoop, saveAnswered, saveLoop, seenSeeYou, type Loop } from "@/account/loop";
 import { GuestLimit } from "@/account/GuestLimit";
+import { FreeLimit } from "@/plan/FreeLimit";
 import { SaveProgress } from "@/account/SaveProgress";
 import { fetchAuthConfig, fetchMe } from "@/account/session";
 import { AppShell, type Tab } from "@/me/AppShell";
@@ -96,6 +97,15 @@ export function FirstTalkScreen({ deviceId }: { deviceId: string | null }) {
       <>
         <HomeScreen home={home} hasDay1={url !== null} onTalk={talk} onPractice={() => {}} onFeedback={() => {}} onSettings={() => {}} onPlayDay1={() => {}} />
         <GuestLimit me={me} onClose={conversation.reset} onSignedIn={(l) => { signedIn(l); conversation.reset(); }} />
+      </>
+    );
+  }
+  // US-8.7: no free talks left; Home with the sheet saying when they come back. Practice stays free.
+  if (conversation.state.phase === "out_of_talks") {
+    return (
+      <>
+        <HomeScreen home={home} hasDay1={url !== null} onTalk={talk} onPractice={() => {}} onFeedback={() => {}} onSettings={() => {}} onPlayDay1={() => {}} />
+        <FreeLimit freeTalks={home?.freeTalks ?? null} onClose={conversation.reset} />
       </>
     );
   }

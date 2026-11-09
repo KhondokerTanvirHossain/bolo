@@ -39,7 +39,7 @@ export async function signInWithGoogle(): Promise<SignInResult> {
 }
 
 /** Bolo's per-person state in this browser; sign-out removes it, so a shared computer keeps nothing of them. */
-const PERSONAL_KEYS = [STORAGE_KEY, "bolo.loop.v1", "bolo.captions", "bolo.events.queue"];
+const PERSONAL_KEYS = [STORAGE_KEY, "bolo.loop.v1", "bolo.captions", "bolo.events.queue", "bolo.freeWeekOverSeen"];
 
 export async function signOut(): Promise<void> {
   await api.post<void>("/api/auth/sign-out");

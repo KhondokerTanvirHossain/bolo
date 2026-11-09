@@ -8,12 +8,15 @@ const profile = { goal: "job_interviews", fearedMoment: "interviews", talkMinute
 const guestMe = { learnerId: "g1", kind: "guest", consent, profile, settings: { buddySpeed: "normal", captions: true }, account: null };
 const accountMe = { ...guestMe, learnerId: "a1", kind: "account", account: { email: "rahim@example.com", name: "Rahim" } };
 
-async function stub(page: Page, { signIn = true, onboarded = true, talkRefusal = false } = {}) {
+type FreeTalks = { window: "first_week" | "month"; left: number; total: number; resetsOn: string | null };
+
+async function stub(page: Page, { signIn = true, onboarded = true, talkRefusal = "" as string, account = false,
+  freeTalks = null as FreeTalks | null } = {}) {
   if (onboarded) {
     await page.addInitScript(() => window.localStorage.setItem("bolo.onboarding.v1", JSON.stringify({ step: "talk" })));
   }
   await page.addInitScript(() => { (window as unknown as { __boloFakeIdToken: string }).__boloFakeIdToken = "fake:u1:rahim@example.com"; });
-  let me: object | null = onboarded ? guestMe : null;
+  let me: object | null = onboarded ? (account ? accountMe : guestMe) : null;
   const posted: { google: string[]; day1Gets: number } = { google: [], day1Gets: 0 };
   await page.route("**/api/me", (r) => (me ? r.fulfill({ json: me }) : r.fulfill({ status: 401, json: { code: "signed-out" } })));
   await page.route("**/api/auth/config", (r) => r.fulfill({ json: signIn
@@ -24,12 +27,12 @@ async function stub(page: Page, { signIn = true, onboarded = true, talkRefusal =
     await r.fulfill({ json: accountMe });
   });
   await page.route("**/api/me/day1", (r) => { posted.day1Gets++; return r.fulfill({ status: 404 }); });
-  await page.route("**/api/home", (r) => r.fulfill({ json: { primary: "talk", card: null } }));
+  await page.route("**/api/home", (r) => r.fulfill({ json: { primary: "talk", card: null, freeTalks } }));
   await page.route("**/api/events", (r) => r.fulfill({ status: 202 }));
   await page.route(`**/api/talk/${TALK}/debrief/viewed`, (r) => r.fulfill({ status: 204 }));
   await page.route(`**/api/talk/${TALK}/debrief`, (r) => r.fulfill({ json: FIRST }));
   await page.route("**/api/talk", (r) => (talkRefusal
-    ? r.fulfill({ status: 422, json: { code: "sign-in" } }) : r.fulfill({ status: 201, json: { id: TALK, minutes: 5 } })));
+    ? r.fulfill({ status: 422, json: { code: talkRefusal } }) : r.fulfill({ status: 201, json: { id: TALK, minutes: 5 } })));
   let ws: WebSocketRoute | null = null;
   await page.routeWebSocket("**/ws/talk/**", (w) => { ws = w; });
   return { posted, ws: () => ws };
@@ -69,13 +72,14 @@ test("Continue with Google signs in and keeps everything", async ({ page }) => {
   await expect(page.getByText(/rahim@example.com/)).toBeVisible();
 });
 
-test("the 4th guest talk asks to sign in, and Not now leaves Home as it was", async ({ page }) => {
-  await stub(page, { talkRefusal: true });
+test("a guest signs in before the first talk, and Not now leaves Home as it was", async ({ page }) => {
+  await stub(page, { talkRefusal: "sign-in" });
   await page.goto("/");
   await page.getByRole("button", { name: "Start talking" }).click();
-  await expect(page.getByRole("heading", { name: "Save your progress to keep talking" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Sign in to start talking" })).toBeVisible();
+  await expect(page.getByText(/7 talks in your first week, then 2 every month/)).toBeVisible();
   await page.getByRole("button", { name: "Not now" }).click();
-  await expect(page.getByRole("heading", { name: "Save your progress to keep talking" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Sign in to start talking" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Start talking" })).toBeVisible();
 });
 
@@ -117,4 +121,40 @@ test("the closed-beta card offers 'I already have an account'", async ({ page })
   await expect(page.getByRole("heading", { name: "Bolo is in a closed beta" })).toBeVisible();
   await page.getByRole("button", { name: "I already have an account" }).click();
   await expect(page.getByRole("button", { name: "Start talking" })).toBeVisible();
+});
+
+test("Home counts the free talks left", async ({ page }) => {
+  await stub(page, { account: true, freeTalks: { window: "first_week", left: 4, total: 7, resetsOn: "2026-11-16" } });
+  await page.goto("/");
+  await expect(page.getByText("4 of 7 free talks left in your first week")).toBeVisible();
+});
+
+test("out of free talks: the sheet says when they come back, and Wait closes it", async ({ page }) => {
+  await stub(page, { account: true, talkRefusal: "free-limit", freeTalks: { window: "month", left: 0, total: 2, resetsOn: "2026-12-01" } });
+  await page.addInitScript(() => window.localStorage.setItem("bolo.freeWeekOverSeen", "1"));
+  await page.goto("/");
+  await expect(page.getByText("Free talks come back on 1 December")).toBeVisible();
+  await page.getByRole("button", { name: "Start talking" }).click();
+  await expect(page.getByRole("heading", { name: "You've had this month's 2 free talks" })).toBeVisible();
+  await expect(page.getByText("They come back on 1 December.")).toBeVisible();
+  await page.getByRole("button", { name: "Wait for 1 December" }).click();
+  await expect(page.getByRole("heading", { name: "You've had this month's 2 free talks" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Start talking" })).toBeVisible();
+});
+
+test("Me shows the free plan and no closed-beta copy", async ({ page }) => {
+  await stub(page, { account: true, freeTalks: { window: "month", left: 1, total: 2, resetsOn: "2026-12-01" } });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Me" }).click();
+  await expect(page.getByText("rahim@example.com · Free plan")).toBeVisible();
+  await expect(page.getByText("1 of 2 free talks left this month")).toBeVisible();
+  await expect(page.getByText(/closed beta/i)).toHaveCount(0);
+});
+
+test("the day the free week ends, Home says so once", async ({ page }) => {
+  await stub(page, { account: true, freeTalks: { window: "month", left: 2, total: 2, resetsOn: "2026-12-01" } });
+  await page.goto("/");
+  await expect(page.getByText("Your free week is over. From now on you get 2 free talks a month.")).toBeVisible();
+  await page.reload();
+  await expect(page.getByText("2 of 2 free talks left this month")).toBeVisible();
 });

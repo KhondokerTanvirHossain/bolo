@@ -23,9 +23,6 @@ export function AppShell({ tab, onTab, children }: { tab: Tab; onTab: (t: Tab) =
           {nav("talk", "graphic_eq", "Talk")}
           {nav("progress", "insights", "Progress")}
           {nav("me", "person", "Me")}
-          <div className="dk-side__foot">
-            <div className="dk-side__card"><b>Closed beta</b><span>Bolo is free while we test it together.</span></div>
-          </div>
         </aside>
         <main className="dk-main"><div className="dk-page">{children}</div></main>
       </div>

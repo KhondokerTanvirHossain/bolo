@@ -2,6 +2,8 @@
 import { Icon, Scene } from "@/scene/Scene";
 import { WORDMARK_SMALL_SVG } from "@/scene/art";
 import type { Home } from "./home";
+import { counterLine, freeWeekOverNote } from "@/plan/freeTalks";
+import { useMemo } from "react";
 
 type Props = {
   /** null while loading or when Home couldn't load: then only the Talk button shows. */
@@ -22,6 +24,9 @@ type Props = {
  */
 export function HomeScreen({ home, hasDay1, onTalk, onPractice, onFeedback, onSettings, onPlayDay1, note }: Props) {
   const card = home?.card ?? null;
+  const free = home?.freeTalks ?? null;
+  // ScreenHomeFree: one footnote line; the day the free week ends, it says so once.
+  const freeLine = useMemo(() => (free ? freeWeekOverNote(free) ?? counterLine(free) : null), [free]);
   return (
     <section className="dk-screen on" data-screen="talk">
       <Scene />
@@ -70,6 +75,7 @@ export function HomeScreen({ home, hasDay1, onTalk, onPractice, onFeedback, onSe
           </button>
         )}
       </div>
+      {freeLine && <p className="dk-freeline" data-free-talks>{freeLine}</p>}
     </section>
   );
 }

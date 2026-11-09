@@ -45,7 +45,6 @@ export default function PrivacyPage() {
 
       <h2 className="title-2" style={section}>Deleting your data</h2>
       <p>In Me → Privacy you can stop keeping recordings, delete a recording, or delete everything. Deleting everything removes your account and all your data within 7 days.</p>
-      <p>Bolo is in a closed beta. If anything here is unclear, ask the person who invited you, and we will answer or delete your data within 7 days.</p>
     </main>
     </div>
   );
