@@ -1,4 +1,6 @@
 "use client";
+import { useRef } from "react";
+import { useDialog } from "@/ui/useDialog";
 import { comeBackDay, limitTitle, type FreeTalks } from "./freeTalks";
 
 /**
@@ -7,10 +9,12 @@ import { comeBackDay, limitTitle, type FreeTalks } from "./freeTalks";
  */
 export function FreeLimit({ freeTalks, onClose }: { freeTalks: FreeTalks | null; onClose: () => void }) {
   const day = freeTalks ? comeBackDay(freeTalks) : "";
+  const box = useRef<HTMLDivElement>(null);
+  useDialog(box, onClose);
   return (
     <>
       <div className="dk-dim" />
-      <div className="dk-card" role="dialog" aria-modal="true" aria-labelledby="freelimit-title">
+      <div className="dk-card" ref={box} role="dialog" aria-modal="true" aria-labelledby="freelimit-title">
         <h1 className="bo-flow__title" id="freelimit-title">{freeTalks ? limitTitle(freeTalks) : "You've had your free talks for now"}</h1>
         <p className="bo-flow__body">{day ? `They come back on ${day}.` : "They come back soon."} Practising sounds from past feedback stays free.</p>
         <div style={{ display: "grid", gap: 10, marginTop: 20 }}>

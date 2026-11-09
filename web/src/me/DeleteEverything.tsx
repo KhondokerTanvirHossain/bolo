@@ -1,5 +1,6 @@
 "use client";
-import { useState } from "react";
+import { useDialog } from "@/ui/useDialog";
+import { useState, useRef } from "react";
 import { api } from "@/api/browser";
 
 /** US-8.6: Delete everything, confirmed by typing DELETE. The app's only critical button (design: ScreenPrivacy). */
@@ -16,10 +17,12 @@ export function DeleteEverything({ onCancel, onDeleted }: { onCancel: () => void
     if (r.kind === "ok") onDeleted();
     else setFailed(true);
   };
+  const box = useRef<HTMLDivElement>(null);
+  useDialog(box, () => { if (!busy) onCancel(); });
   return (
     <>
       <div className="dk-dim" />
-      <div className="dk-card" role="dialog" aria-modal="true" aria-labelledby="delete-title">
+      <div className="dk-card" ref={box} role="dialog" aria-modal="true" aria-labelledby="delete-title">
         <h1 className="bo-flow__title" id="delete-title">Delete everything?</h1>
         <p className="bo-flow__body">Your account, your talks, your feedback and your recordings are deleted for good. This can&apos;t be undone.</p>
         <label className="bo-fix__label" htmlFor="delete-confirm" style={{ display: "block", marginTop: 16 }}>Type DELETE to confirm</label>

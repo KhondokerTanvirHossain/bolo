@@ -1,5 +1,6 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { useDialog } from "@/ui/useDialog";
 import type { LearnerView } from "@/api/browser";
 import { GoogleButton } from "./GoogleButton";
 import { KeepList } from "./KeepList";
@@ -14,6 +15,8 @@ export function GuestLimit({ me, onSignedIn, onClose }: { me: LearnerView | null
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const kept = me?.consent?.keepRecordings !== false;
+  const box = useRef<HTMLDivElement>(null);
+  useDialog(box, () => { if (!busy) onClose(); });
   const google = async () => {
     setBusy(true);
     setProblem(null);
@@ -25,7 +28,7 @@ export function GuestLimit({ me, onSignedIn, onClose }: { me: LearnerView | null
   return (
     <>
       <div className="dk-dim" />
-      <div className="dk-card" role="dialog" aria-modal="true" aria-labelledby="limit-title">
+      <div className="dk-card" ref={box} role="dialog" aria-modal="true" aria-labelledby="limit-title">
         <h1 className="bo-flow__title" id="limit-title">Sign in to start talking</h1>
         <p className="bo-flow__body">Bolo is free with your Google account: 7 talks in your first week, then 2 every month. Your answers{kept ? " and your Day 1 clip" : ""} come with you.</p>
         <KeepList rows={[

@@ -101,6 +101,8 @@ export function FirstTalkScreen({ deviceId }: { deviceId: string | null }) {
   /** The dashboard Home (P1f) inside the shell; {@code sheet} sits over it and turns its Space key off. */
   const homePage = (sheet?: ReactNode) => (
     <>
+      {/* Behind a sheet, Home can't be reached by keyboard or click (the sheet keeps focus; Esc closes it). */}
+      <div inert={sheet ? true : undefined} style={{ display: "contents" }}>
       <AppShell tab="talk" onTab={toTab} foot={foot}>
         <HomeDashboard home={home} name={me?.account?.name} minutes={minutes} freeLine={freeLine} note={seeYou ? "See you tomorrow. Bolo will be here." : undefined}
           hasDay1={url !== null} keysOn={!sheet} onTalk={talk}
@@ -110,6 +112,7 @@ export function FirstTalkScreen({ deviceId }: { deviceId: string | null }) {
           onIntro={(day) => setView({ kind: "intro", day })}
           onPlayDay1={() => void audio.current?.play()} />
       </AppShell>
+      </div>
       {url && <audio ref={audio} src={url} preload="auto" data-testid="day1-audio" />}
       {sheet}
     </>

@@ -15,15 +15,16 @@ export function WeekCard({ week }: { week: Week }) {
         <b>{title}</b>
         {week.restUsed && <span className="subhead" style={{ color: "var(--ink-secondary)" }}>1 rest day used</span>}
       </div>
-      <ol className="bo-week" style={{ listStyle: "none", margin: 0, padding: 0 }}>
+      <ol className="bo-week" aria-label="This week" style={{ listStyle: "none", margin: 0, padding: 0 }}>
         {week.days.map((d, i) => (
-          <li key={d.date} className={`bo-day bo-day--${d.state}`} aria-label={`${LONG[i]}: ${SAID[d.state] ?? d.state}`}>
+          <li key={d.date} className={`bo-day bo-day--${d.state}`}>
+            <span className="bo-sr">{`${LONG[i]}: ${SAID[d.state] ?? d.state}`}</span>
             <span className="bo-day__dot">
               {d.state === "done" && <Icon name="wb_sunny" fill />}
               {d.state === "rest" && <Icon name="bedtime" />}
               {d.state === "today" && <Icon name="wb_sunny" />}
             </span>
-            {NAMES[i]}
+            <span aria-hidden="true">{NAMES[i]}</span>
           </li>
         ))}
       </ol>

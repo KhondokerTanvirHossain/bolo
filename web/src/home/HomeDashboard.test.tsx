@@ -29,7 +29,7 @@ describe("the dashboard Home (P1f)", () => {
     render(<WeekCard week={{ run: 6, restUsed: true, welcomeBack: false, days: days(["done", "done", "rest", "done", "done", "today", "future"]) }} />);
     expect(screen.getByText("6-day run")).toBeTruthy();
     expect(screen.getByText("1 rest day used")).toBeTruthy();
-    expect(screen.getByLabelText("Monday: rest day")).toBeTruthy();
+    expect(screen.getByText("Monday: rest day")).toBeTruthy();
   });
 
   it("welcomeBackHasNoGuilt", () => {

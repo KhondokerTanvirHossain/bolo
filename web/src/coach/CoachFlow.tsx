@@ -10,6 +10,7 @@ import { api } from "@/api/browser";
 import { track } from "@/analytics/track";
 import { fetchChat, type Chat } from "./chat";
 import { ChatScreen } from "./ChatScreen";
+import { DialogCard } from "@/ui/DialogCard";
 
 type Props = {
   talkId: string; deviceId?: string | null; onTalkAgain: () => void; onDone: () => void; onNoDebrief?: () => void;
@@ -222,7 +223,7 @@ function DebriefScreen({ talkId, deviceId, debrief, onTalkAgain, onDone, onPract
       {askDelete && (
         <>
           <div className="dk-dim" />
-          <div className="dk-card" role="dialog" aria-modal="true" aria-labelledby="delrec-title">
+          <DialogCard labelledBy="delrec-title" onEscape={() => { if (!deleting) { setAskDelete(false); setDeleteFailed(false); } }}>
             <h1 className="bo-flow__title" id="delrec-title">Delete this recording?</h1>
             <p className="bo-flow__body">Your voice from this talk goes at once. The feedback and words stay.</p>
             {deleteFailed && <p className="bo-footnote" role="alert">Couldn&apos;t delete it. Try again.</p>}
@@ -230,7 +231,7 @@ function DebriefScreen({ talkId, deviceId, debrief, onTalkAgain, onDone, onPract
               <button className="bo-btn bo-btn--primary" onClick={() => { setAskDelete(false); setDeleteFailed(false); }} autoFocus disabled={deleting}>Keep it</button>
               <button className="bo-btn bo-btn--secondary" onClick={() => void removeRecording()} disabled={deleting}>Delete recording</button>
             </div>
-          </div>
+          </DialogCard>
         </>
       )}
     </section>

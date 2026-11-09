@@ -132,3 +132,19 @@ test("typing a space into Delete everything's box never starts a talk", async ({
   await page.waitForTimeout(300);
   expect(talks).toBe(0);
 });
+
+test("Delete everything keeps focus inside, and Esc keeps my data", async ({ page }) => {
+  const s = await stub(page, true);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Me", exact: true }).click();
+  await page.getByRole("button", { name: /Privacy/ }).click();
+  await page.getByRole("button", { name: "Delete everything" }).click();
+  const dialog = page.getByRole("dialog");
+  for (let i = 0; i < 6; i++) {
+    await page.keyboard.press("Tab");
+    expect(await dialog.evaluate((d) => d.contains(document.activeElement))).toBe(true);
+  }
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+  expect(s.deleted).toBe(false);
+});

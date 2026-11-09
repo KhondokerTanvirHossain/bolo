@@ -234,3 +234,14 @@ test("Esc leaves a past talk's feedback, and closes the chat first", async ({ pa
   await page.keyboard.press("Escape");
   await expect(page.getByRole("heading", { level: 1, name: "Progress" })).toBeVisible();
 });
+
+test("Esc on the Delete recording sheet keeps the recording", async ({ page }) => {
+  const s = await stub(page);
+  await openPastTalk(page);
+  await page.getByRole("button", { name: "Delete recording" }).click();
+  await expect(page.getByRole("heading", { name: "Delete this recording?" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("heading", { name: "Delete this recording?" })).toHaveCount(0);
+  await expect(page.getByText("You explained the bug clearly.")).toBeVisible();
+  expect(s.wasDeleted()).toBe(false);
+});

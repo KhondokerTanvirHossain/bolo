@@ -199,3 +199,27 @@ test("on a 360 px phone, Bolo's line never sits under the Talk disc", async ({ p
   expect(line.y + line.height).toBeLessThanOrEqual(disc.y);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
 });
+
+test("the free-limit sheet keeps focus, the page behind can't be reached, and Esc closes it", async ({ page }) => {
+  await stub(page, { account: true, talkRefusal: "free-limit", freeTalks: { window: "month", left: 0, total: 2, resetsOn: "2026-12-01" } });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Start talking" }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible();
+  for (let i = 0; i < 4; i++) {
+    await page.keyboard.press("Tab");
+    expect(await dialog.evaluate((d) => d.contains(document.activeElement))).toBe(true);
+  }
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Start talking" })).toBeVisible();
+});
+
+test("Esc on the sign-in sheet is Not now", async ({ page }) => {
+  await stub(page, { talkRefusal: "sign-in" });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Start talking" }).click();
+  await expect(page.getByRole("heading", { name: "Sign in to start talking" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("heading", { name: "Sign in to start talking" })).toHaveCount(0);
+});

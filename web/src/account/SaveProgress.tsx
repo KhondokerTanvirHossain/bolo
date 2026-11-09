@@ -1,4 +1,5 @@
 "use client";
+import { DialogCard } from "@/ui/DialogCard";
 import { useState } from "react";
 import type { LearnerView } from "@/api/browser";
 import { GOAL_LABEL } from "./labels";
@@ -36,7 +37,7 @@ export function SaveProgress({ me, hasDay1, onSignedIn, onStayGuest }: Props) {
     <section className="dk-screen on" data-screen="save">
       <div className="dk-dim" />
       {stage === "save" ? (
-        <div className="dk-card" role="dialog" aria-modal="true" aria-labelledby="save-title">
+        <DialogCard labelledBy="save-title" onEscape={() => { if (!busy) setStage("notnow"); }}>
           <h1 className="bo-flow__title" id="save-title">Save your progress</h1>
           <p className="bo-flow__body">Keep your Day 1 voice and today&apos;s feedback, on this computer and your phone.</p>
           <KeepList rows={rows} />
@@ -45,16 +46,16 @@ export function SaveProgress({ me, hasDay1, onSignedIn, onStayGuest }: Props) {
             <button className="bo-btn bo-btn--quiet-neutral bo-btn--block" onClick={() => setStage("notnow")} disabled={busy}>Not now</button>
           </div>
           {problem && <p className="bo-footnote" role="alert" style={{ marginTop: 12 }}>{problem}</p>}
-        </div>
+        </DialogCard>
       ) : (
-        <div className="dk-card" role="dialog" aria-modal="true" aria-labelledby="notnow-title">
+        <DialogCard labelledBy="notnow-title" onEscape={() => setStage("save")}>
           <h1 className="bo-flow__title" id="notnow-title">Stay a guest for now?</h1>
           <p className="bo-flow__body">Your progress stays in this browser only. If you clear your browsing data, it goes too.</p>
           <div style={{ display: "grid", gap: 10, marginTop: 20 }}>
             <button className="bo-btn bo-btn--primary bo-btn--block" onClick={() => setStage("save")} autoFocus>Save my progress</button>
             <button className="bo-btn bo-btn--secondary bo-btn--block" onClick={onStayGuest}>Stay a guest</button>
           </div>
-        </div>
+        </DialogCard>
       )}
     </section>
   );
