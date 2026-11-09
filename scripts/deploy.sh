@@ -1,16 +1,14 @@
 #!/usr/bin/env bash
 # Build both images locally for linux/amd64, ship them over SSH and restart Bolo on the shared box.
-# Usage: scripts/deploy.sh   Deploys the current HEAD, built from a clean detached copy of that commit (so work in
+# Usage: scripts/deploy.sh [sha]   Deploys that commit (default HEAD), built from a clean detached copy of it (so work in
 #        progress in this tree can never leak into an image, and the tag always means exactly that commit).
 #        To roll back, don't pass an old sha here — see docs/RUNBOOK.md → Rollback (it reuses the image on the box).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 source scripts/box.sh
 
-SHA="$(git rev-parse --short HEAD)"
-if [[ $# -gt 0 && "$1" != "$SHA" ]]; then
-  echo "Refusing: this builds HEAD ($SHA), so it can't be tagged '$1'. For a rollback see docs/RUNBOOK.md." >&2; exit 1
-fi
+# An explicit commit (scripts/ship.sh passes the one CI checked) or HEAD.
+SHA="$(git rev-parse --short "${1:-HEAD}")"
 echo "==> Building $SHA (clean copy of the commit)"
 BUILD="$(mktemp -d)/bolo-$SHA"
 git worktree add --detach -q "$BUILD" "$SHA"
