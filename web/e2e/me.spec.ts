@@ -118,6 +118,8 @@ test("the public privacy page scrolls to its last section", async ({ page }) => 
   await expect(last).toBeInViewport();
   // P1d task 6: what stays after "delete everything" is disclosed.
   await expect(page.getByText(/one-way code made from your Google account/)).toBeVisible();
+  // The founder's contact address for privacy questions (2026-11-10).
+  await expect(page.getByRole("link", { name: "k.tanvir.hossain@gmail.com" })).toHaveAttribute("href", "mailto:k.tanvir.hossain@gmail.com");
 });
 
 test("typing a space into Delete everything's box never starts a talk", async ({ page }) => {
