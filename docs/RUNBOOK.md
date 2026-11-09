@@ -253,3 +253,15 @@ The goal: someone who has never seen Bolo gets from opening it to talk to feedba
   - the smoke test and live probes, which use the probes invite (`scripts/probe-invite.sh`, `invite.unlimited = true`).
   - The live-talk cap (`BOLO_TALK_MAX_LIVE`) still applies to everyone.
 - **Known gap:** deleting everything and signing in again starts a new free week. Preventing that would mean keeping a one-way code of the Google account after deletion, which is a founder decision.
+
+## Full chat
+
+- **See full chat** (DBF-6, US-4.10) is in the debrief's card list, live and from History. It shows the whole talk as bubbles: Bolo on the left, the learner on the right.
+- **`GET /api/talk/{id}/chat`** returns `{topic, turns[{speaker, text}], marks[{turn, start, end, fix, title}]}`.
+  - Only the talk's owner gets it, and only once its feedback is ready; otherwise 404.
+- **Marks:**
+  - Each mark underlines the words a fix is about: a sound fix's word, or an upgrade's phrase.
+  - Tapping a mark opens that fix card, where its clip plays.
+  - New debriefs store each fix's learner `turn`. Older ones find their spot by searching the learner's turns for the words.
+- **No audio in the chat:** the whole talk's audio is deleted once feedback is ready (privacy and disk).
+- The text stays after "Delete recording" ("Feedback and words are still here").
