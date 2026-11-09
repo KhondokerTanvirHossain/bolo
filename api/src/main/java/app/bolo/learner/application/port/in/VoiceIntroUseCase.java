@@ -30,4 +30,7 @@ public interface VoiceIntroUseCase {
     void record(LearnerId learner, int day, byte[] audio);
 
     Optional<Clip> clip(LearnerId learner, int day);
+
+    /** Removes kept intro audio recorded before {@code olderThan} (the 90-day rule); the dates stay. */
+    void expireAudio(java.time.Instant olderThan);
 }

@@ -14,7 +14,8 @@ const dhaka = (offsetDays: number) => new Intl.DateTimeFormat("en-CA", { timeZon
 const PROGRESS = { effort: { talks: 14, minutes: 70 }, latest: [], patterns: { active: [], fixed: [] },
   trends: { sessions: 5, after: 3, skills: { fluency: [{ at: "2026-11-04T10:00:00Z", level: "BUILDING" }, { at: "2026-11-09T10:00:00Z", level: "GOOD" }] } } };
 
-async function stub(page: Page, { keep = true, day1Here = true, recorded = false, due = 7 as number | null } = {}) {
+async function stub(page: Page, { keep = true, day1Here = true, recorded = false, due = 7 as number | null, failFirst = false,
+  serverRefusesAudio = false } = {}) {
   const me = { learnerId: "a1", kind: "account", consent: { keepRecordings: keep, policyVersion: "2026-11-v1" },
     profile: { goal: "job_interviews", fearedMoment: "interviews", talkMinutes: 5 }, settings: { buddySpeed: "normal", captions: true },
     account: { email: "r@x.com", name: "Rafi" } };
@@ -28,7 +29,14 @@ async function stub(page: Page, { keep = true, day1Here = true, recorded = false
     nextDay: due === null ? 7 : 14, nextOn: due === null ? dhaka(3) : dhaka(7),
     recordings: state.recorded ? [{ day: 7, recordedAt: new Date().toISOString(), onServer: keep }] : [] } }));
   await page.route("**/api/me/intro/7", async (r) => {
-    if (r.request().method() === "POST") { state.posts.push(r.request().postDataBuffer()?.toString("latin1") ?? ""); state.recorded = true; return r.fulfill({ status: 204 }); }
+    if (r.request().method() === "POST") {
+      const body = r.request().postDataBuffer()?.toString("latin1") ?? "";
+      state.posts.push(body);
+      if (failFirst && state.posts.length === 1) return r.fulfill({ status: 500 });
+      if (serverRefusesAudio && body.includes('name="audio"')) return r.fulfill({ status: 422, json: { code: "not-kept" } });
+      state.recorded = true;
+      return r.fulfill({ status: 204 });
+    }
     return r.fulfill({ status: 200, contentType: "audio/webm", body: Buffer.alloc(64) });
   });
   await page.route("**/api/me/day1", (r) => r.fulfill({ status: 404 }));
@@ -50,13 +58,13 @@ async function recordIntro(page: Page) {
   await page.waitForTimeout(1500);
   await page.keyboard.press("Space");
   await page.getByRole("button", { name: "Keep it" }).click();
-  await expect(page.getByText("Saved. Here's how far you've come.")).toBeVisible();
 }
 
 test("Day 7: Home offers the intro again, and Progress plays Day 1 and Day 7 side by side", async ({ page }) => {
   const s = await stub(page);
   await page.goto("/");
   await recordIntro(page);
+  await expect(page.getByText("Saved. Here's how far you've come.")).toBeVisible();
   await expect(page.getByRole("heading", { level: 2, name: "Your voice, then and now" })).toBeVisible({ timeout: 10_000 });
   await expect(page.getByRole("button", { name: "Play your Day 1 intro" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Play your Day 7 intro" })).toBeVisible();
@@ -95,4 +103,25 @@ test("on a phone, the voice compare fits with no sideways scroll", async ({ page
   await page.getByRole("button", { name: "Progress", exact: true }).first().click();
   await expect(page.getByRole("button", { name: "Play your Day 7 intro" })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+});
+
+test("a failed save says so, and Try again sends the same clip", async ({ page }) => {
+  const s = await stub(page, { failFirst: true });
+  await page.goto("/");
+  await recordIntro(page);
+  await expect(page.getByRole("heading", { name: "That didn't save" })).toBeVisible();
+  await expect(page.getByText("Saved. Here's how far you've come.")).toHaveCount(0);
+  await page.getByRole("button", { name: "Try again" }).click();
+  await expect(page.getByText("Saved. Here's how far you've come.")).toBeVisible();
+  expect(s.posts).toHaveLength(2);
+  expect(s.posts[1]).toContain('name="audio"');
+});
+
+test("if keeping was switched off since, the intro is noted by date and stays here", async ({ page }) => {
+  const s = await stub(page, { serverRefusesAudio: true });
+  await page.goto("/");
+  await recordIntro(page);
+  await expect(page.getByText("Saved. Here's how far you've come.")).toBeVisible();
+  expect(s.posts).toHaveLength(2);
+  expect(s.posts[1]).toContain('name="kept"');
 });

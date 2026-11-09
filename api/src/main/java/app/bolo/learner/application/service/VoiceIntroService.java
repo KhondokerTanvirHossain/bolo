@@ -48,15 +48,27 @@ public class VoiceIntroService implements VoiceIntroUseCase {
     public void record(LearnerId learner, int day, byte[] clip) {
         LocalDate today = clock.now().atZone(IntroSchedule.ZONE).toLocalDate();
         if (!IntroSchedule.isUnlockDay(day) || IntroSchedule.on(day1(learner), day).isAfter(today)) throw new RefusedException("not-yet");
+        audio.delete(key(learner, day, "webm"));
+        audio.delete(key(learner, day, "mp4"));
         if (clip != null) {
-            boolean kept = consents.latest(learner).map(Consent::keepRecordings).orElse(false);
+            // A guest's intro stays on the device (ONB-4): only an account that keeps recordings sends audio.
+            boolean account = learners.find(learner).map(l -> l.kind() == app.bolo.learner.domain.LearnerKind.ACCOUNT).orElse(false);
+            boolean kept = account && consents.latest(learner).map(Consent::keepRecordings).orElse(false);
             if (!kept) throw new RefusedException("not-kept");
             String ext = Day1Service.kind(clip).orElseThrow(() -> new RefusedException("bad-audio"));
-            audio.delete(key(learner, day, "webm"));
-            audio.delete(key(learner, day, "mp4"));
             audio.put(key(learner, day, ext), clip);
         }
         intros.save(learner, day, clock.now(), clip != null);
+    }
+
+    /** NFR-14: kept intro audio goes after 90 days, like every kept clip; the date stays for the schedule. */
+    @Override
+    public void expireAudio(java.time.Instant olderThan) {
+        for (var due : intros.serverAudioOlderThan(olderThan)) {
+            audio.delete(key(due.learner(), due.day(), "webm"));
+            audio.delete(key(due.learner(), due.day(), "mp4"));
+            intros.markOffServer(due.learner(), due.day());
+        }
     }
 
     @Override

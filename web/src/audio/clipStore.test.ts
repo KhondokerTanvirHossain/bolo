@@ -13,3 +13,14 @@ describe("clipStore", () => {
     expect(loaded).toBeInstanceOf(Blob);
   });
 });
+
+describe("clipStore forgetting (sign-out, delete everything)", () => {
+  it("deleting by prefix forgets the clips held in memory too", async () => {
+    const { deleteClips, loadClip, saveClip } = await import("./clipStore");
+    await saveClip("intro-learnerA-7", new Blob(["a"]));
+    await saveClip("day1", new Blob(["d"]));
+    await deleteClips("intro-");
+    expect(await loadClip("intro-learnerA-7")).toBeNull();
+    expect(await loadClip("day1")).toBeInstanceOf(Blob);
+  });
+});

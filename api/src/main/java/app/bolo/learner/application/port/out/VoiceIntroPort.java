@@ -11,4 +11,11 @@ public interface VoiceIntroPort {
     void save(LearnerId learner, int day, Instant at, boolean onServer);
 
     List<Recording> list(LearnerId learner);
+
+    record Due(LearnerId learner, int day) {
+    }
+
+    List<Due> serverAudioOlderThan(Instant before);
+
+    void markOffServer(LearnerId learner, int day);
 }

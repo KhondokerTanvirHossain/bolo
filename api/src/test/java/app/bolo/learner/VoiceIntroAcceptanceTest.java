@@ -38,8 +38,9 @@ class VoiceIntroAcceptanceTest extends PostgresTestBase {
 
     /** A learner who signed up {@code daysAgo} days ago, keeping recordings or not. */
     String learner(int daysAgo, boolean keep) throws Exception {
-        String cookie = client.guest();
-        client.send("POST", "/api/consent", cookie, "{\"keepRecordings\":" + keep + ",\"over13\":true,\"policyVersion\":\"2026-11-v1\"}");
+        String guest = client.guest();
+        client.send("POST", "/api/consent", guest, "{\"keepRecordings\":" + keep + ",\"over13\":true,\"policyVersion\":\"2026-11-v1\"}");
+        String cookie = client.send("POST", "/api/auth/google", guest, "{\"idToken\":\"fake:vi" + UUID.randomUUID() + ":a@x.com\"}").cookie();
         jdbc.sql("update learner set created_at = now() - make_interval(days => ?) where id = ?").params(daysAgo, id(cookie)).update();
         return cookie;
     }
@@ -148,5 +149,35 @@ class VoiceIntroAcceptanceTest extends PostgresTestBase {
         assertThat(client.send("POST", "/api/me/delete", me, "{\"confirm\":\"DELETE\"}").status()).isEqualTo(204);
         assertThat(audio.children("learner/" + id)).isEmpty();
         assertThat(jdbc.sql("select count(*) from voice_intro where learner_id = ?").param(id).query(Integer.class).single()).isZero();
+    }
+
+    @Autowired app.bolo.talk.application.port.in.AudioRetentionUseCase retention;
+
+    /** Review: a guest's intro stays on the device (ONB-4), so no guest audio is ever orphaned on the server. */
+    @Test
+    void aGuestsAudioIsRefused() throws Exception {
+        String guest = learner(6, true);
+        jdbc.sql("update learner set kind = 'guest' where id = ?").param(id(guest)).update();
+        assertThat(record(guest, 7, WEBM).body()).contains("not-kept");
+    }
+
+    /** Review: intro audio follows the 90-day rule for kept clips (NFR-14); the date stays for the schedule. */
+    @Test
+    void introAudioGoesAfter90Days() throws Exception {
+        String me = learner(100, true);
+        record(me, 7, WEBM);
+        jdbc.sql("update voice_intro set recorded_at = now() - interval '91 days' where learner_id = ?").param(id(me)).update();
+        retention.sweep();
+        assertThat(clip(me, 7).statusCode()).isEqualTo(404);
+        assertThat((Boolean) JsonPath.read(voice(me), "$.recordings[0].onServer")).isFalse();
+    }
+
+    /** Review: recording a day again without audio removes the old server copy. */
+    @Test
+    void aDateOnlyRecordingRemovesTheOldAudio() throws Exception {
+        String me = learner(6, true);
+        record(me, 7, WEBM);
+        assertThat(record(me, 7, null).statusCode()).isEqualTo(204);
+        assertThat(clip(me, 7).statusCode()).isEqualTo(404);
     }
 }

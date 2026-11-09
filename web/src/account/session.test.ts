@@ -6,6 +6,7 @@ vi.mock("@/audio/clipStore", () => ({
   loadClip: vi.fn(async (k: string) => clips.get(k) ?? null),
   saveClip: vi.fn(async (k: string, b: Blob) => { clips.set(k, b); }),
   deleteClip: vi.fn(async (k: string) => { clips.delete(k); }),
+  deleteClips: vi.fn(async (prefix: string) => { for (const k of [...clips.keys()]) if (k.startsWith(prefix)) clips.delete(k); }),
 }));
 
 import { signOut, uploadDay1 } from "./session";
@@ -56,10 +57,12 @@ describe("sign-out", () => {
   it("clears this browser's Bolo state and the Day 1 clip", async () => {
     window.localStorage.setItem("bolo.loop.v1", "{}");
     window.localStorage.setItem("bolo.captions", "off");
+    clips.set("intro-a1-7", new Blob(["x"]));
     await signOut();
     expect(window.localStorage.getItem("bolo.onboarding.v1")).toBeNull();
     expect(window.localStorage.getItem("bolo.loop.v1")).toBeNull();
     expect(window.localStorage.getItem("bolo.captions")).toBeNull();
     expect(clips.has("day1")).toBe(false);
+    expect(clips.has("intro-a1-7")).toBe(false);
   });
 });

@@ -26,6 +26,17 @@ class JdbcVoiceIntroAdapter implements VoiceIntroPort {
     }
 
     @Override
+    public List<Due> serverAudioOlderThan(Instant before) {
+        return jdbc.sql("select learner_id, day from voice_intro where on_server and recorded_at < ?").param(Timestamp.from(before))
+                .query((rs, n) -> new Due(new LearnerId(rs.getObject("learner_id", java.util.UUID.class)), rs.getInt("day"))).list();
+    }
+
+    @Override
+    public void markOffServer(LearnerId learner, int day) {
+        jdbc.sql("update voice_intro set on_server = false where learner_id = ? and day = ?").params(learner.value(), day).update();
+    }
+
+    @Override
     public List<Recording> list(LearnerId learner) {
         return jdbc.sql("select day, recorded_at, on_server from voice_intro where learner_id = ? order by day")
                 .param(learner.value())

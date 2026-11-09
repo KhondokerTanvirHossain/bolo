@@ -22,6 +22,7 @@ public class AudioRetentionService implements AudioRetentionUseCase {
     private final TalkSessionPort sessions;
     private final AudioStoreUseCase audio;
     private final BoloClock clock;
+    private final app.bolo.learner.application.port.in.VoiceIntroUseCase intros;
 
     @Override
     public void sweep() {
@@ -45,6 +46,8 @@ public class AudioRetentionService implements AudioRetentionUseCase {
         if (!due.isEmpty()) log.info("audio retention: purged {} talks", due.size());
         // P1d task 6: a deleted account's remembered free-talk use is kept 12 months.
         sessions.forgetFreeTalkUseBefore(now.minus(FREE_TALK_USE_KEEP));
+        // Intro re-records (PRG-2) follow the same 90 days as kept talk clips.
+        intros.expireAudio(now.minus(MAX_KEEP));
     }
 
     /** Delete everything (ACC-4): every talk's audio and clips go before the learner's rows do. */

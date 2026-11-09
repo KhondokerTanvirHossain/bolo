@@ -134,7 +134,7 @@ export function FirstTalkScreen({ deviceId }: { deviceId: string | null }) {
       onPractise={(pattern) => { conversation.reset(); setView({ kind: "practice", pattern }); }} />;
   }
   if (view.kind === "intro") {
-    return <RecordIntro day={view.day} keep={me?.consent?.keepRecordings === true} deviceId={deviceId}
+    return <RecordIntro day={view.day} learnerId={me?.learnerId ?? "guest"} deviceId={deviceId}
       onDone={() => setView({ kind: "progress" })} onBack={toHome} />;
   }
   if (view.kind === "practice") return <PracticeScreen deviceId={deviceId} onBack={toHome} initialPattern={view.pattern} />;
@@ -151,7 +151,7 @@ export function FirstTalkScreen({ deviceId }: { deviceId: string | null }) {
     return (
       <AppShell tab="progress" onTab={toTab} foot={foot}>
         {view.kind === "progress"
-          ? <ProgressScreen onOpen={open} onSeeAll={() => setView({ kind: "history" })} onTalk={talk}
+          ? <ProgressScreen learnerId={me?.learnerId ?? null} onOpen={open} onSeeAll={() => setView({ kind: "history" })} onTalk={talk}
               onRecordIntro={(day) => setView({ kind: "intro", day })}
               onPractise={(pattern) => setView({ kind: "practice", pattern })} />
           : <HistoryScreen onOpen={open} onTalk={talk} />}

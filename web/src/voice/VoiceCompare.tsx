@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { loadClip } from "@/audio/clipStore";
 import { Clip } from "@/coach/Clip";
 import type { Progress } from "@/progress/progress";
-import { daysUntil, fetchVoice, summaryLine, type Voice } from "./voice";
+import { daysUntil, fetchVoice, introKey, summaryLine, type Voice } from "./voice";
 
 /** A playable source for a clip: this browser first, then the server copy (kept recordings only). */
 function useClipUrl(localKey: string, serverUrl: string | null): string | null {
@@ -13,12 +13,12 @@ function useClipUrl(localKey: string, serverUrl: string | null): string | null {
     let cancelled = false;
     void (async () => {
       const local = await loadClip(localKey);
-      if (local) { made = URL.createObjectURL(local); if (!cancelled) setUrl(made); return; }
+      if (local) { made = URL.createObjectURL(local); if (cancelled) URL.revokeObjectURL(made); else setUrl(made); return; }
       if (!serverUrl) return;
       const res = await fetch(serverUrl, { credentials: "same-origin" }).catch(() => null);
       if (!res?.ok) return;
       made = URL.createObjectURL(await res.blob());
-      if (!cancelled) setUrl(made);
+      if (cancelled) URL.revokeObjectURL(made); else setUrl(made);
     })();
     return () => { cancelled = true; if (made) URL.revokeObjectURL(made); };
   }, [localKey, serverUrl]);
@@ -29,12 +29,13 @@ function useClipUrl(localKey: string, serverUrl: string | null): string | null {
  * Your voice, then and now (ScreenProgress item 2, PRG-2): Day 1 and the latest intro side by side with one line on
  * what changed; between unlocks, Day 1 and when the next one opens.
  */
-export function VoiceCompare({ progress, onRecord }: { progress: Progress | null; onRecord: (day: number) => void }) {
+export function VoiceCompare({ learnerId, progress, onRecord }: { learnerId: string | null; progress: Progress | null;
+  onRecord: (day: number) => void }) {
   const [voice, setVoice] = useState<Voice | null>(null);
   useEffect(() => { void fetchVoice().then(setVoice); }, []);
   const latest = voice?.recordings.length ? voice.recordings[voice.recordings.length - 1] : null;
   const day1 = useClipUrl("day1", "/api/me/day1");
-  const now = useClipUrl(latest ? `intro-${latest.day}` : "none", latest?.onServer ? `/api/me/intro/${latest.day}` : null);
+  const now = useClipUrl(latest && learnerId ? introKey(learnerId, latest.day) : "none", latest?.onServer ? `/api/me/intro/${latest.day}` : null);
   if (!voice) return null;
   const left = daysUntil(voice.nextOn);
   return (

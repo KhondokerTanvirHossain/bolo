@@ -14,17 +14,22 @@ export async function fetchVoice(): Promise<Voice | null> {
  * POST /api/me/intro/{day}: the audio goes only for a learner who keeps recordings; otherwise only the date is noted and
  * the clip stays in this browser.
  */
-export async function recordIntro(day: number, clip: Blob | null): Promise<boolean> {
+export async function recordIntro(day: number, clip: Blob | null): Promise<"ok" | "not-kept" | "failed"> {
   const form = new FormData();
   if (clip) form.append("audio", clip, `intro-${day}.webm`);
   else form.append("kept", "device");
   try {
     const res = await fetch(`/api/me/intro/${day}`, { method: "POST", credentials: "same-origin", headers: { "X-Bolo": "1" }, body: form });
-    return res.ok;
+    if (res.ok) return "ok";
+    if (res.status === 422 && ((await res.json().catch(() => ({}))) as { code?: string }).code === "not-kept") return "not-kept";
+    return "failed";
   } catch {
-    return false;
+    return "failed";
   }
 }
+
+/** The local key of a learner's Day N intro: per learner, so a shared browser never plays someone else's voice. */
+export const introKey = (learnerId: string, day: number) => `intro-${learnerId}-${day}`;
 
 const RANK: Record<string, number> = { BUILDING: 1, GOOD: 2, STRONG: 3 };
 const WORD: Record<string, string> = { BUILDING: "Building", GOOD: "Good", STRONG: "Strong" };

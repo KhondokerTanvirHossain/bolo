@@ -36,8 +36,28 @@ export async function saveClip(key: string, blob: Blob): Promise<void> {
   void withStore("readwrite", (s) => s.put(blob, key)).catch(() => {});
 }
 
+/** Removes every clip whose key starts with {@code prefix} (intro re-records on sign-out, delete everything). */
+export async function deleteClips(prefix: string): Promise<void> {
+  for (const k of [...memory.keys()]) if (k.startsWith(prefix)) memory.delete(k);
+  try {
+    const db = await open();
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(STORE, "readwrite");
+      const store = tx.objectStore(STORE);
+      const req = store.getAllKeys();
+      req.onsuccess = () => { for (const k of req.result) if (String(k).startsWith(prefix)) store.delete(k); };
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+    db.close();
+  } catch {
+    // nothing stored, or storage unavailable
+  }
+}
+
 /** Removes a clip from this device (sign-out). */
 export async function deleteClip(key: string): Promise<void> {
+  memory.delete(key);
   try {
     const db = await open();
     await new Promise<void>((resolve, reject) => {

@@ -1,5 +1,5 @@
 import { api, type LearnerView } from "@/api/browser";
-import { deleteClip, loadClip, saveClip } from "@/audio/clipStore";
+import { deleteClip, deleteClips, loadClip, saveClip } from "@/audio/clipStore";
 import { STORAGE_KEY } from "@/onboarding/steps";
 import { googleIdToken, type FirebaseWebConfig } from "./firebase";
 import { currentInvite } from "./invite";
@@ -56,6 +56,8 @@ export async function clearThisBrowser(): Promise<void> {
     }
   }
   await deleteClip("day1");
+  // Intro re-records (PRG-2): a shared computer keeps nobody's voice.
+  await deleteClips("intro-");
 }
 
 /** The keep-recordings choice made on this browser's consent screen (the clip was recorded under it). */
