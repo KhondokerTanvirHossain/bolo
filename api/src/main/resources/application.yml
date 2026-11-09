@@ -73,7 +73,9 @@ bolo:
       region: ${BOLO_AZURE_SPEECH_REGION:centralindia}
       # en-US: Azure's pronunciation assessment names the sounds (IPA) only for en-US; en-IN returns empty symbols.
       stt-language: en-US
-      buddy-voice: en-IN-NeerjaNeural
+      # Founder (2026-11-10): a warm, friendly British English woman (not seductive: Bolo is a friend, US-P4, 13+).
+      # Alternatives if wanted: en-GB-LibbyNeural (younger, brighter), en-GB-OliviaNeural (calmer, lower).
+      buddy-voice: en-GB-SoniaNeural
       buddy-rate: "-5%"
       # The Coach is a separate character with its own voice (PRD §4).
       coach-voice: en-US-AndrewNeural
