@@ -45,6 +45,7 @@ export default function PrivacyPage() {
 
       <h2 className="title-2" style={section}>Deleting your data</h2>
       <p>In Me → Privacy you can stop keeping recordings, delete a recording, or delete everything. Deleting everything removes your account and all your data within 7 days.</p>
+      <p>One thing stays, so the free plan can&apos;t be reset by deleting and signing in again: a one-way code made from your Google account and the dates of your free talks, kept for 12 months. It can&apos;t be turned back into your email, and it holds none of your words or your voice.</p>
     </main>
     </div>
   );

@@ -17,6 +17,7 @@ public class AudioRetentionService implements AudioRetentionUseCase {
 
     static final Duration NO_CONSENT_KEEP = Duration.ofHours(24);
     static final Duration MAX_KEEP = Duration.ofDays(90);
+    static final Duration FREE_TALK_USE_KEEP = Duration.ofDays(365);
 
     private final TalkSessionPort sessions;
     private final AudioStoreUseCase audio;
@@ -42,6 +43,8 @@ public class AudioRetentionService implements AudioRetentionUseCase {
         var alive = sessions.existing(onDisk);
         for (var id : onDisk) if (!alive.contains(id)) audio.deletePrefix("talk/" + id + "/");
         if (!due.isEmpty()) log.info("audio retention: purged {} talks", due.size());
+        // P1d task 6: a deleted account's remembered free-talk use is kept 12 months.
+        sessions.forgetFreeTalkUseBefore(now.minus(FREE_TALK_USE_KEEP));
     }
 
     /** Delete everything (ACC-4): every talk's audio and clips go before the learner's rows do. */

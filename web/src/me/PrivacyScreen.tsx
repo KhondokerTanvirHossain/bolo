@@ -53,7 +53,7 @@ export function PrivacyScreen({ keep, onDeleted }: { keep: boolean; onDeleted: (
       <div className="bo-group" style={{ marginTop: 16 }}><KeepRecordingsRow key={String(keep)} keep={keep} /></div>
       <div style={{ marginTop: 28 }}>
         <button className="bo-btn bo-btn--critical" onClick={() => setAsking(true)}>Delete everything</button>
-        <p className="bo-row__sub" style={{ margin: "4px 0 0" }}>Your account and all your data, at once.</p>
+        <p className="bo-row__sub" style={{ margin: "4px 0 0" }}>Your account and all your data, at once. Only a one-way code of your Google account and the dates of your free talks stay, for 12 months, so free talks can&apos;t be reset.</p>
       </div>
       {asking && <DeleteEverything onCancel={() => setAsking(false)} onDeleted={onDeleted} />}
     </>

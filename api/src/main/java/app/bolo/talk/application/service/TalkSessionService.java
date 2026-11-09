@@ -32,14 +32,17 @@ public class TalkSessionService implements StartTalkUseCase, app.bolo.talk.appli
     private final int maxLive;
     private final Duration attachWithin;
     private final app.bolo.learner.application.port.in.VoiceAccessUseCase voiceAccess;
+    private final app.bolo.learner.application.port.in.FreePlanKeyUseCase freePlanKeys;
 
 
     public TalkSessionService(TalkSessionPort sessions, CurrentLearnerUseCase learners, BoloClock clock,
                               @Value("${bolo.policy-version}") String policyVersion,
                               @Value("${bolo.talk.max-live-sessions}") int maxLive,
                               @Value("${bolo.talk.attach-within-ms}") long attachWithinMs,
-                              app.bolo.learner.application.port.in.VoiceAccessUseCase voiceAccess) {
+                              app.bolo.learner.application.port.in.VoiceAccessUseCase voiceAccess,
+                              app.bolo.learner.application.port.in.FreePlanKeyUseCase freePlanKeys) {
         this.voiceAccess = voiceAccess;
+        this.freePlanKeys = freePlanKeys;
         this.sessions = sessions;
         this.learners = learners;
         this.clock = clock;
@@ -82,7 +85,16 @@ public class TalkSessionService implements StartTalkUseCase, app.bolo.talk.appli
     }
 
     private FreePlan.Allowance allowanceOf(LearnerId learner) {
-        return FreePlan.allowance(sessions.countedStarts(learner), clock.now());
+        var starts = new java.util.ArrayList<>(sessions.countedStarts(learner));
+        // P1d task 6: free talks used by an earlier, deleted account of the same Google user still count.
+        freePlanKeys.freePlanKey(learner).ifPresent(key -> starts.addAll(sessions.rememberedStarts(key)));
+        return FreePlan.allowance(starts, clock.now());
+    }
+
+    /** Delete everything (ACC-4): the account's counted free talks are kept under its one-way key (P1d task 6). */
+    @org.springframework.context.event.EventListener
+    public void onLearnerDeleting(app.bolo.common.event.LearnerDeleting e) {
+        if (e.freePlanKey() != null) sessions.rememberFreeTalks(e.learner(), e.freePlanKey());
     }
 
     @Override

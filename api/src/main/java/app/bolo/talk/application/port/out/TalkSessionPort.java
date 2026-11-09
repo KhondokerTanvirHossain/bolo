@@ -45,6 +45,13 @@ public interface TalkSessionPort {
      */
     java.util.List<java.time.Instant> countedStarts(LearnerId learner);
 
+    /** P1d task 6: keeps the learner's counted free-talk starts under a one-way key before the account is deleted. */
+    void rememberFreeTalks(LearnerId learner, String key);
+
+    java.util.List<java.time.Instant> rememberedStarts(String key);
+
+    void forgetFreeTalkUseBefore(java.time.Instant before);
+
     /** Serialises talk starts until the caller's transaction ends (the free-plan check, ending old talks and the insert). */
     void lockStarts();
 

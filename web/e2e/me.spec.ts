@@ -85,6 +85,7 @@ test("on a phone, Me and Privacy fit the screen", async ({ page }) => {
   await page.getByRole("button", { name: /Privacy/ }).click();
   await expect(page.getByRole("switch", { name: "Keep my recordings" })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  await expect(page.getByText(/one-way code of your Google account/)).toBeVisible();
 });
 
 test("on a large phone (430 px), the shell uses the phone layout", async ({ page }) => {
@@ -115,4 +116,6 @@ test("the public privacy page scrolls to its last section", async ({ page }) => 
   await page.mouse.move(195, 350);
   for (let i = 0; i < 10; i++) await page.mouse.wheel(0, 600);
   await expect(last).toBeInViewport();
+  // P1d task 6: what stays after "delete everything" is disclosed.
+  await expect(page.getByText(/one-way code made from your Google account/)).toBeVisible();
 });

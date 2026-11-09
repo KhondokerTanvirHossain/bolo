@@ -128,15 +128,33 @@ class JdbcTalkSessionAdapter implements TalkSessionPort {
                 .query((rs, n) -> new app.bolo.common.id.TalkSessionId(rs.getObject("id", java.util.UUID.class))).list());
     }
 
+    /** The free-plan counting rule (see {@link TalkSessionPort#countedStarts}). */
+    private static final String COUNTED = """
+            select s.started_at from talk_session s left join debrief d on d.session_id = s.id
+            where s.learner_id = ? and s.attached_at is not null and coalesce(d.status, '') <> 'failed'
+              and (s.ended_at is null or d.status in ('scoring', 'ready')
+                   or s.ended_at - s.attached_at >= interval '90 seconds')""";
+
     @Override
     public java.util.List<Instant> countedStarts(LearnerId learner) {
-        return jdbc.sql("""
-                select s.started_at from talk_session s left join debrief d on d.session_id = s.id
-                where s.learner_id = ? and s.attached_at is not null and coalesce(d.status, '') <> 'failed'
-                  and (s.ended_at is null or d.status in ('scoring', 'ready')
-                       or s.ended_at - s.attached_at >= interval '90 seconds')""")
-                .param(learner.value())
+        return jdbc.sql(COUNTED).param(learner.value()).query((rs, n) -> rs.getTimestamp("started_at").toInstant()).list();
+    }
+
+    @Override
+    public void rememberFreeTalks(LearnerId learner, String key) {
+        jdbc.sql("insert into free_talk_use (subject_hash, started_at) select ?, c.started_at from (" + COUNTED + ") c "
+                        + "on conflict do nothing").params(key, learner.value()).update();
+    }
+
+    @Override
+    public java.util.List<Instant> rememberedStarts(String key) {
+        return jdbc.sql("select started_at from free_talk_use where subject_hash = ?").param(key)
                 .query((rs, n) -> rs.getTimestamp("started_at").toInstant()).list();
+    }
+
+    @Override
+    public void forgetFreeTalkUseBefore(Instant before) {
+        jdbc.sql("delete from free_talk_use where started_at < ?").param(Timestamp.from(before)).update();
     }
 
     @Override

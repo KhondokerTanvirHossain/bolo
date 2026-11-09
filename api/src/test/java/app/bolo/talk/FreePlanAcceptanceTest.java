@@ -138,6 +138,44 @@ class FreePlanAcceptanceTest {
             assertThat(open).isEqualTo(1);
         }
 
+        @Autowired app.bolo.talk.application.port.in.AudioRetentionUseCase retention;
+
+        String signIn(String uid) throws Exception {
+            String guest = client.consentedGuest(5);
+            return client.send("POST", "/api/auth/google", guest, "{\"idToken\":\"fake:" + uid + ":a@x.com\"}").cookie();
+        }
+
+        /** Task 6 (founder): deleting everything and signing in again doesn't hand out a new free week. */
+        @Test
+        void deletingAndSigningInAgainKeepsTheFreeTalksUsed() throws Exception {
+            String uid = "del" + UUID.randomUUID();
+            String me = signIn(uid);
+            talkTimes(client, jdbc, me, 7);
+            assertThat(client.send("POST", "/api/me/delete", me, "{\"confirm\":\"DELETE\"}").status()).isEqualTo(204);
+            String again = signIn(uid);
+            var r = client.startTalk(again);
+            assertThat(r.status()).isEqualTo(422);
+            assertThat(r.body()).contains("free-limit");
+            String rows = jdbc.sql("select string_agg(subject_hash, ',') from free_talk_use").query(String.class).single();
+            assertThat(rows).doesNotContain(uid).doesNotContain("a@x.com");
+        }
+
+        @Test
+        void anotherGoogleAccountIsUnaffected() throws Exception {
+            String me = signIn("del" + UUID.randomUUID());
+            talkTimes(client, jdbc, me, 7);
+            client.send("POST", "/api/me/delete", me, "{\"confirm\":\"DELETE\"}");
+            assertThat(client.startTalk(signIn("other" + UUID.randomUUID())).status()).isEqualTo(201);
+        }
+
+        @Test
+        void rememberedUseOlderThan12MonthsIsForgotten() {
+            jdbc.sql("insert into free_talk_use (subject_hash, started_at) values ('old-key', now() - interval '13 months'), ('new-key', now())").update();
+            retention.sweep();
+            assertThat(jdbc.sql("select count(*) from free_talk_use where subject_hash = 'old-key'").query(Integer.class).single()).isZero();
+            assertThat(jdbc.sql("select count(*) from free_talk_use where subject_hash = 'new-key'").query(Integer.class).single()).isOne();
+        }
+
         @Test
         void freeTalksAreFiveMinutes() throws Exception {
             var r = client.startTalk(account(10));

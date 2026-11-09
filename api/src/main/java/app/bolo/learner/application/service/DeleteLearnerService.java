@@ -19,12 +19,13 @@ public class DeleteLearnerService implements DeleteLearnerUseCase {
     private final LearnerPort learners;
     private final AudioStoreUseCase audio;
     private final ApplicationEventPublisher events;
+    private final app.bolo.learner.application.port.in.FreePlanKeyUseCase freePlanKeys;
 
     @Override
     @Transactional
     public void deleteEverything(LearnerId learner, String confirm) {
         if (!"DELETE".equals(confirm)) throw new RefusedException("confirm");
-        events.publishEvent(new LearnerDeleting(learner));
+        events.publishEvent(new LearnerDeleting(learner, freePlanKeys.freePlanKey(learner).orElse(null)));
         audio.deletePrefix("learner/" + learner.value() + "/");
         learners.delete(learner);
     }

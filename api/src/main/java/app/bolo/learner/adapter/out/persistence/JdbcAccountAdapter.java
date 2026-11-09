@@ -19,6 +19,11 @@ class JdbcAccountAdapter implements AccountPort, LearnerMergePort {
     private final JdbcClient jdbc;
 
     @Override
+    public Optional<String> uidOf(LearnerId learner) {
+        return jdbc.sql("select firebase_uid from account where learner_id = ?").param(learner.value()).query(String.class).optional();
+    }
+
+    @Override
     public Optional<LearnerId> learnerFor(String firebaseUid) {
         return jdbc.sql("select learner_id from account where firebase_uid = ?").param(firebaseUid)
                 .query((rs, n) -> new LearnerId(rs.getObject("learner_id", UUID.class))).optional();
