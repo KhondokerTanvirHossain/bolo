@@ -1,28 +1,30 @@
 #!/usr/bin/env bash
 # Build both images locally for linux/amd64, ship them over SSH and restart Bolo on the shared box.
-# Usage: scripts/deploy.sh   Deploys the current HEAD (refuses a dirty tree, so the tag means what was built).
+# Usage: scripts/deploy.sh   Deploys the current HEAD, built from a clean detached copy of that commit (so work in
+#        progress in this tree can never leak into an image, and the tag always means exactly that commit).
 #        To roll back, don't pass an old sha here — see docs/RUNBOOK.md → Rollback (it reuses the image on the box).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 source scripts/box.sh
 
-if [[ -n "$(git status --porcelain -- api web deploy)" ]]; then
-  echo "Refusing to deploy: api/, web/ or deploy/ has uncommitted changes." >&2; exit 1
-fi
 SHA="$(git rev-parse --short HEAD)"
 if [[ $# -gt 0 && "$1" != "$SHA" ]]; then
   echo "Refusing: this builds HEAD ($SHA), so it can't be tagged '$1'. For a rollback see docs/RUNBOOK.md." >&2; exit 1
 fi
-echo "==> Building $SHA"
-(cd api && ./gradlew bootJar -q --console=plain)
-(cd web && pnpm build > /dev/null)
-docker buildx build --platform linux/amd64 -t "bolo-api:$SHA" --load api
-docker buildx build --platform linux/amd64 -t "bolo-web:$SHA" --load web
+echo "==> Building $SHA (clean copy of the commit)"
+BUILD="$(mktemp -d)/bolo-$SHA"
+git worktree add --detach -q "$BUILD" "$SHA"
+trap 'git worktree remove --force "$BUILD" >/dev/null 2>&1 || true' EXIT
+ln -s "$PWD/web/node_modules" "$BUILD/web/node_modules"
+(cd "$BUILD/api" && ./gradlew bootJar -q --console=plain)
+(cd "$BUILD/web" && pnpm build > /dev/null)
+docker buildx build --platform linux/amd64 -t "bolo-api:$SHA" --load "$BUILD/api"
+docker buildx build --platform linux/amd64 -t "bolo-web:$SHA" --load "$BUILD/web"
 
 echo "==> Shipping images"
 docker save "bolo-api:$SHA" "bolo-web:$SHA" | gzip -1 | box 'gunzip | docker load'
 box 'mkdir -p ~/bolo'
-scp -q -o BatchMode=yes -i "$BOX_KEY" deploy/compose.prod.yml "$BOX_HOST:bolo/compose.yml"
+scp -q -o BatchMode=yes -i "$BOX_KEY" "$BUILD/deploy/compose.prod.yml" "$BOX_HOST:bolo/compose.yml"
 
 echo "==> Starting"
 box "set -e; cd ~/bolo; test -f bolo.env || { echo 'missing ~/bolo/bolo.env (see deploy/bolo.env.example)'; exit 1; }
