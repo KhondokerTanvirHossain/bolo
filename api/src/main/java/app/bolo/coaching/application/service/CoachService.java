@@ -54,7 +54,8 @@ import java.util.regex.Pattern;
  */
 @Slf4j
 @Service
-public class CoachService implements DebriefUseCase, LatestDebriefUseCase, app.bolo.coaching.application.port.in.DebriefHistoryUseCase {
+public class CoachService implements DebriefUseCase, LatestDebriefUseCase, app.bolo.coaching.application.port.in.DebriefHistoryUseCase,
+        app.bolo.coaching.application.port.in.LoopDaysUseCase {
 
     private static final JsonMapper JSON = JsonMapper.builder().build();
     private static final Pattern MEDIA_FILE = Pattern.compile("(clip|model)-\\d{1,2}\\.wav");
@@ -429,6 +430,17 @@ public class CoachService implements DebriefUseCase, LatestDebriefUseCase, app.b
             }
             return new Latest(d.talkId(), d.status(), d.viewed(), pattern, title);
         });
+    }
+
+    @Override
+    public List<java.time.Instant> loopDays(LearnerId learner) {
+        return debriefs.viewedReady(learner);
+    }
+
+    @Override
+    public Optional<String> lastTopic(LearnerId learner) {
+        return debriefs.latestReadyBody(learner).map(b -> JSON.readTree(b).path("topic").asString(null))
+                .filter(t -> !t.isBlank() && !CoachReply.DEFAULT_TOPIC.equals(t));
     }
 
     @Override

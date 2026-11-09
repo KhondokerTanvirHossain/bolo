@@ -156,6 +156,30 @@ class HomeAcceptanceTest extends PostgresTestBase {
         assertThat(get("/api/home", client.consentedGuest(5)).body()).contains("\"freeTalks\":null");
     }
 
+    /** P1f: Home's week (a completed loop is an active day) and Bolo's line from the last talk's topic. */
+    @Test
+    void homeHasTheWeekAndTheLastTopic() throws Exception {
+        talk(3);
+        debriefWhenSettled();
+        assertThat(client.send("POST", "/api/talk/" + id + "/debrief/viewed", cookie, "{}").status()).isEqualTo(204);
+        String home = get("/api/home", cookie).body();
+        assertThat((String) JsonPath.read(home, "$.lastTopic")).isEqualTo("Saying hello to Bolo");
+        assertThat((Integer) JsonPath.read(home, "$.week.run")).isEqualTo(1);
+        assertThat((java.util.List<?>) JsonPath.read(home, "$.week.days")).hasSize(7);
+        assertThat((Boolean) JsonPath.read(home, "$.week.welcomeBack")).isFalse();
+    }
+
+    @Test
+    void practiceCountsAsAnActiveDay() throws Exception {
+        String other = client.consentedGuest(5);
+        java.util.UUID learner = java.util.UUID.fromString(JsonPath.read(client.send("GET", "/api/me", other, "").body(), "$.learnerId"));
+        jdbc.sql("insert into attempt (learner_id, reference, level, heard, accuracy, focus, at) values (?, 'Hello.', 'NAILED', true, 90, '[]'::jsonb, now())")
+                .param(learner).update();
+        String home = get("/api/home", other).body();
+        assertThat((Integer) JsonPath.read(home, "$.week.run")).isEqualTo(1);
+        assertThat(home).contains("\"lastTopic\":null");
+    }
+
     @Test
     void signedOutIs401() throws Exception {
         assertThat(HttpClient.newHttpClient().send(HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/api/home")).GET().build(),

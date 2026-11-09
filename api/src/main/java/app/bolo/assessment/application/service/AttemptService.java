@@ -39,7 +39,12 @@ import java.util.concurrent.ConcurrentHashMap;
  * N attempts a minute), assessed against the reference by the speech vendor, scored for clarity, stored (scores only).
  */
 @Service
-public class AttemptService implements AttemptUseCase {
+public class AttemptService implements AttemptUseCase, app.bolo.assessment.application.port.in.PracticeDaysUseCase {
+
+    @Override
+    public java.util.List<Instant> practiceDays(LearnerId learner) {
+        return attempts.attemptTimes(learner);
+    }
 
     private static final JsonMapper JSON = JsonMapper.builder().build();
     static final int MAX_WORDS = 30;

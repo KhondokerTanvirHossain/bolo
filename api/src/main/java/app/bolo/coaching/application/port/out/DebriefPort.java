@@ -26,6 +26,12 @@ public interface DebriefPort {
 
     Optional<Last> latestFor(LearnerId learner);
 
+    /** viewed_at of the learner's ready debriefs (completed loops). */
+    java.util.List<java.time.Instant> viewedReady(LearnerId learner);
+
+    /** The body of the learner's latest ready debrief. */
+    Optional<String> latestReadyBody(LearnerId learner);
+
     record Past(String talkId, java.time.Instant startedAt, int minutes, String status, String body) {
     }
 

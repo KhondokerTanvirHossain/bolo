@@ -52,6 +52,22 @@ class JdbcDebriefAdapter implements DebriefPort {
     }
 
     @Override
+    public java.util.List<Instant> viewedReady(LearnerId learner) {
+        return jdbc.sql("""
+                select d.viewed_at from debrief d join talk_session s on s.id = d.session_id
+                where s.learner_id = ? and d.status = 'ready' and d.viewed_at is not null""")
+                .param(learner.value()).query((rs, n) -> rs.getTimestamp("viewed_at").toInstant()).list();
+    }
+
+    @Override
+    public Optional<String> latestReadyBody(LearnerId learner) {
+        return jdbc.sql("""
+                select d.body::text from debrief d join talk_session s on s.id = d.session_id
+                where s.learner_id = ? and d.status = 'ready' order by s.started_at desc limit 1""")
+                .param(learner.value()).query(String.class).optional();
+    }
+
+    @Override
     public java.util.List<Past> history(LearnerId learner) {
         return jdbc.sql("""
                 select d.session_id, s.started_at, d.status, d.body::text as body,

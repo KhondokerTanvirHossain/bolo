@@ -13,6 +13,12 @@ import java.time.Instant;
 @RequiredArgsConstructor
 class JdbcAttemptAdapter implements AttemptPort {
 
+    @Override
+    public java.util.List<java.time.Instant> attemptTimes(app.bolo.common.id.LearnerId learner) {
+        return jdbc.sql("select at from attempt where learner_id = ? and at > now() - interval '60 days'").param(learner.value())
+                .query((rs, n) -> rs.getTimestamp("at").toInstant()).list();
+    }
+
     private final JdbcClient jdbc;
 
     @Override
