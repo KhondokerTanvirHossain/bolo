@@ -30,7 +30,7 @@ export function MeScreen({ me, onPrivacy, onSignedIn }: { me: LearnerView | null
   return (
     <>
       <h1 className="dk-h1">Me</h1>
-      <p className="dk-sub">{account ? `${account.email} · Free plan` : "Guest · your progress is in this browser only"}</p>
+      <p className="dk-sub">{account ? (free ? `${account.email} · Free plan` : account.email) : "Guest · your progress is in this browser only"}</p>
       {!account && me && (
         <div className="bo-group" style={{ marginTop: 20, padding: 20, maxWidth: 420 }}>
           <p className="bo-row__title" style={{ margin: "0 0 12px" }}>Save your progress</p>

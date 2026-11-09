@@ -30,6 +30,18 @@ class FreePlanTest {
         assertThat(a).isEqualTo(new FreePlan.Allowance("first_week", 4, 7, LocalDate.parse("2026-11-10")));
     }
 
+    /** Review: the week ends at midnight in Dhaka, so "come back on 23 November" is true all of 23 November. */
+    @Test
+    void theFirstWeekEndsAtMidnightInDhaka() {
+        // First talk at 21:00 on 16 November in Dhaka; at 09:00 on 23 November the monthly window has begun.
+        List<Instant> starts = new ArrayList<>();
+        for (int i = 0; i < 7; i++) starts.add(at("2026-11-16T15:00:00Z").plus(Duration.ofHours(i)));
+        var a = FreePlan.allowance(starts, at("2026-11-23T03:00:00Z"));
+        assertThat(a.window()).isEqualTo("month");
+        assertThat(a.left()).isEqualTo(2);
+        assertThat(FreePlan.allowance(starts, at("2026-11-22T17:59:00Z")).resetsOn()).isEqualTo(LocalDate.parse("2026-11-23"));
+    }
+
     @Test
     void afterTheFirstWeekItIsTwoAMonth() {
         var a = FreePlan.allowance(List.of(at("2026-10-01T06:00:00Z"), at("2026-11-03T06:00:00Z")), at("2026-11-09T12:00:00Z"));

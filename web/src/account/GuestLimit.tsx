@@ -27,7 +27,7 @@ export function GuestLimit({ me, onSignedIn, onClose }: { me: LearnerView | null
       <div className="dk-dim" />
       <div className="dk-card" role="dialog" aria-modal="true" aria-labelledby="limit-title">
         <h1 className="bo-flow__title" id="limit-title">Sign in to start talking</h1>
-        <p className="bo-flow__body">Bolo is free with your Google account: 7 talks in your first week, then 2 every month. Your answers and your Day 1 clip come with you.</p>
+        <p className="bo-flow__body">Bolo is free with your Google account: 7 talks in your first week, then 2 every month. Your answers{kept ? " and your Day 1 clip" : ""} come with you.</p>
         <KeepList rows={[
           { icon: "flag", title: "Your answers", sub: "What you need English for, and the hardest moment", tone: "coach" },
           { icon: "mic", title: "Your Day 1 clip", sub: kept ? "Kept, as you chose at the start" : "Stays on this device, as you chose", tone: "voice" },

@@ -2,7 +2,16 @@ export type Focus = { word: string; kind: "SOUND" | "MISSING" | "EXTRA_VOWEL"; t
 export type Outcome = { level: "NAILED" | "CLOSER" | "ONCE_MORE"; heard: boolean; focus: Focus[] };
 export type Pattern = { key: string; title: string; example: string; tip: string; sentences: string[] };
 
-export type AttemptReply = { kind: "ok"; outcome: Outcome } | { kind: "busy" } | { kind: "slow-down" } | { kind: "failed" };
+export type AttemptReply = { kind: "ok"; outcome: Outcome } | { kind: "busy" } | { kind: "slow-down" } | { kind: "sign-in" } | { kind: "failed" };
+
+/** What the practice card says when an attempt didn't go through. */
+export function attemptProblem(reply: Exclude<AttemptReply, { kind: "ok" }>): string {
+  if (reply.kind === "busy") return "Bolo is busy for a moment. Try again in a few seconds.";
+  if (reply.kind === "slow-down") return "Take a short break, then try again.";
+  // P1d: practice is free with a Google account; a guest signs in first.
+  if (reply.kind === "sign-in") return "Sign in with Google to practise. It's free.";
+  return "That didn't work. Try again.";
+}
 
 /** POST /api/attempts: the WAV and the sentence the learner read (US-4.3). */
 export async function postAttempt(wav: Blob, reference: string, mode?: "upgrade"): Promise<AttemptReply> {
@@ -16,6 +25,7 @@ export async function postAttempt(wav: Blob, reference: string, mode?: "upgrade"
     if (res.ok) return { kind: "ok", outcome: (await res.json()) as Outcome };
     if (res.status === 429) return { kind: "slow-down" };
     if (res.status === 503) return { kind: "busy" };
+    if (res.status === 422 && ((await res.json().catch(() => ({}))) as { code?: string }).code === "sign-in") return { kind: "sign-in" };
     return { kind: "failed" };
   } catch {
     return { kind: "failed" };

@@ -39,10 +39,14 @@ public interface TalkSessionPort {
     void moveLearner(LearnerId from, LearnerId to);
 
     /**
-     * When each of the learner's free-plan talks started: attached (the socket opened), unless its debrief ended
-     * too_short or failed (not the learner's fault).
+     * When each of the learner's free-plan talks started. A talk counts once its socket opened if it is still open, its
+     * feedback is scoring or ready, or it ran 90 s or more (Bolo ran, whatever the learner said). A failed debrief never
+     * counts, nor a talk that dropped within 90 s without feedback.
      */
     java.util.List<java.time.Instant> countedStarts(LearnerId learner);
+
+    /** Serialises talk starts until the caller's transaction ends (the free-plan check, ending old talks and the insert). */
+    void lockStarts();
 
     /** The keep-recordings choice this talk is made under (US-8.5); the retention sweep follows it. */
     void recordKeepChoice(app.bolo.common.id.TalkSessionId talk, boolean keep);

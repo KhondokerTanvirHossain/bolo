@@ -158,3 +158,22 @@ test("the day the free week ends, Home says so once", async ({ page }) => {
   await page.reload();
   await expect(page.getByText("2 of 2 free talks left this month")).toBeVisible();
 });
+
+test("an unlimited account's Me says nothing about a free plan", async ({ page }) => {
+  await stub(page, { account: true, freeTalks: null });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Me" }).click();
+  await expect(page.getByText(/rahim@example.com/)).toBeVisible();
+  await expect(page.getByText(/Free plan/)).toHaveCount(0);
+});
+
+test("on a phone, the free-week note stays clear of the dock", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await stub(page, { account: true, freeTalks: { window: "month", left: 2, total: 2, resetsOn: "2026-12-01" } });
+  await page.goto("/");
+  const note = page.getByText("Your free week is over. From now on you get 2 free talks a month.");
+  await expect(note).toBeVisible();
+  const n = (await note.boundingBox())!;
+  const d = (await page.locator(".dk-dock").boundingBox())!;
+  expect(n.y >= d.y + d.height || n.y + n.height <= d.y).toBe(true);
+});

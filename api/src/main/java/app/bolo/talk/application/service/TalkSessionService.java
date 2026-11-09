@@ -2,7 +2,6 @@ package app.bolo.talk.application.service;
 
 import app.bolo.talk.domain.FreePlan;
 import app.bolo.talk.application.port.in.FreeTalksUseCase.FreeTalks;
-import app.bolo.learner.application.port.in.SignInConfig;
 import app.bolo.common.error.RefusedException;
 import app.bolo.common.id.LearnerId;
 import app.bolo.common.id.TalkSessionId;
@@ -32,14 +31,15 @@ public class TalkSessionService implements StartTalkUseCase, app.bolo.talk.appli
     private final String policyVersion;
     private final int maxLive;
     private final Duration attachWithin;
-    private final SignInConfig signIn;
+    private final app.bolo.learner.application.port.in.VoiceAccessUseCase voiceAccess;
 
 
     public TalkSessionService(TalkSessionPort sessions, CurrentLearnerUseCase learners, BoloClock clock,
                               @Value("${bolo.policy-version}") String policyVersion,
                               @Value("${bolo.talk.max-live-sessions}") int maxLive,
-                              @Value("${bolo.talk.attach-within-ms}") long attachWithinMs, SignInConfig signIn) {
-        this.signIn = signIn;
+                              @Value("${bolo.talk.attach-within-ms}") long attachWithinMs,
+                              app.bolo.learner.application.port.in.VoiceAccessUseCase voiceAccess) {
+        this.voiceAccess = voiceAccess;
         this.sessions = sessions;
         this.learners = learners;
         this.clock = clock;
@@ -49,10 +49,13 @@ public class TalkSessionService implements StartTalkUseCase, app.bolo.talk.appli
     }
 
     @Override
+    @org.springframework.transaction.annotation.Transactional
     public TalkView start(LearnerId learner) {
         LearnerView view = consented(learner).orElseThrow(() -> new RefusedException("no-consent"));
+        // Review (P1d): starts fired at once must not each pass the free-plan check; one at a time, in one transaction.
+        sessions.lockStarts();
         // P1d: a guest signs in before the first talk (only while sign-in is on); an account talks on the free plan.
-        if (!view.unlimited() && signIn.enabled() && "guest".equals(view.kind())) throw new RefusedException("sign-in");
+        if (!voiceAccess.guestMayUseVoice(view)) throw new RefusedException("sign-in");
         if (!view.unlimited() && "account".equals(view.kind()) && allowanceOf(learner).left() == 0) {
             throw new RefusedException("free-limit");
         }

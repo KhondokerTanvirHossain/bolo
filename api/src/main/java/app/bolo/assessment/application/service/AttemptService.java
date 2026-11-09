@@ -52,10 +52,13 @@ public class AttemptService implements AttemptUseCase {
     private final BoloClock clock;
     private final StartTalkUseCase talks;
     private final int perMinute;
+    private final app.bolo.learner.application.port.in.VoiceAccessUseCase voiceAccess;
     private final Map<LearnerId, Deque<Instant>> recent = new ConcurrentHashMap<>();
 
     public AttemptService(AssessPronunciationUseCase vendor, AttemptPort attempts, CurrentLearnerUseCase learners, BoloClock clock,
-                          StartTalkUseCase talks, @Value("${bolo.assessment.attempts-per-minute}") int perMinute) {
+                          StartTalkUseCase talks, @Value("${bolo.assessment.attempts-per-minute}") int perMinute,
+                          app.bolo.learner.application.port.in.VoiceAccessUseCase voiceAccess) {
+        this.voiceAccess = voiceAccess;
         this.talks = talks;
         this.vendor = vendor;
         this.attempts = attempts;
@@ -66,7 +69,10 @@ public class AttemptService implements AttemptUseCase {
 
     @Override
     public Outcome attempt(LearnerId learner, byte[] wav, String reference, boolean upgrade) {
-        if (learners.view(learner).consent() == null) throw new RefusedException("no-consent");
+        var view = learners.view(learner);
+        if (view.consent() == null) throw new RefusedException("no-consent");
+        // P1d: practice is paid voice time too; a guest signs in first (sign-up is open to anyone).
+        if (!voiceAccess.guestMayUseVoice(view)) throw new RefusedException("sign-in");
         String ref = reference == null ? "" : reference.trim();
         if (ref.isEmpty() || ref.split("\\s+").length > MAX_WORDS) throw new RefusedException("bad-reference");
         if (!isShortWav16kMono(wav)) throw new RefusedException("bad-audio");

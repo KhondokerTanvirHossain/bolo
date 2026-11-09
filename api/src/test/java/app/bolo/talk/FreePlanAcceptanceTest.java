@@ -26,7 +26,7 @@ class FreePlanAcceptanceTest {
             var r = client.startTalk(cookie);
             assertThat(r.status()).as("talk %d: %s", i + 1, r.body()).isEqualTo(201);
             UUID id = UUID.fromString(TalkTestClient.id(r));
-            jdbc.sql("update talk_session set attached_at = now(), ended_at = now(), end_reason = 'learner_ended' where id = ?")
+            jdbc.sql("update talk_session set attached_at = now() - interval '5 minutes', ended_at = now(), end_reason = 'learner_ended' where id = ?")
                     .param(id).update();
             ids.add(id);
         }
@@ -80,12 +80,35 @@ class FreePlanAcceptanceTest {
         }
 
         @Test
-        void tooShortAndFailedTalksDoNotCount() throws Exception {
+        void aShortTooShortTalkAndAFailedOneDoNotCount() throws Exception {
             String me = account(5);
             List<UUID> ids = talkTimes(client, jdbc, me, 7);
             jdbc.sql("insert into debrief (session_id, status, updated_at) values (?, 'too_short', now()), (?, 'failed', now()), (?, 'ready', now())")
                     .params(ids.get(0), ids.get(1), ids.get(2)).update();
+            jdbc.sql("update talk_session set attached_at = now() - interval '40 seconds' where id = ?").param(ids.get(0)).update();
             assertThat(client.startTalk(me).status()).isEqualTo(201);
+        }
+
+        int left(String cookie) throws Exception {
+            return JsonPath.read(client.send("GET", "/api/home", cookie, "").body(), "$.freeTalks.left");
+        }
+
+        /** Review: a talk that ran its course counts even when the learner said too little for feedback (Bolo still ran). */
+        @Test
+        void aLongTooShortTalkCounts() throws Exception {
+            String me = account(5);
+            UUID id = talkTimes(client, jdbc, me, 1).getFirst();
+            jdbc.sql("insert into debrief (session_id, status, updated_at) values (?, 'too_short', now())").param(id).update();
+            assertThat(left(me)).isEqualTo(6);
+        }
+
+        /** Review: a talk that dropped within a minute with no reply (no debrief at all) isn't the learner's free talk. */
+        @Test
+        void aQuickDropWithNoFeedbackDoesNotCount() throws Exception {
+            String me = account(5);
+            UUID id = talkTimes(client, jdbc, me, 1).getFirst();
+            jdbc.sql("update talk_session set attached_at = now() - interval '20 seconds' where id = ?").param(id).update();
+            assertThat(left(me)).isEqualTo(7);
         }
 
         @Test
@@ -95,6 +118,24 @@ class FreePlanAcceptanceTest {
             UUID open = UUID.fromString(TalkTestClient.id(client.startTalk(me)));
             jdbc.sql("update talk_session set attached_at = now() where id = ?").param(open).update();
             assertThat(client.startTalk(me).status()).isEqualTo(422);
+        }
+
+        /** Review: talk starts fired at once can't each pass the check; at most one new talk stays open to attach. */
+        @Test
+        void startsFiredAtOnceLeaveOneOpenTalk() throws Exception {
+            String me = account(5);
+            talkTimes(client, jdbc, me, 6);
+            UUID learner = UUID.fromString(JsonPath.read(client.send("GET", "/api/me", me, "").body(), "$.learnerId"));
+            var pool = java.util.concurrent.Executors.newFixedThreadPool(8);
+            var go = new java.util.concurrent.CountDownLatch(1);
+            List<java.util.concurrent.Future<Integer>> all = new ArrayList<>();
+            for (int i = 0; i < 8; i++) all.add(pool.submit(() -> { go.await(); return new TalkTestClient(port).startTalk(me).status(); }));
+            go.countDown();
+            for (var f : all) f.get();
+            pool.shutdown();
+            int open = jdbc.sql("select count(*) from talk_session where learner_id = ? and ended_at is null").param(learner)
+                    .query(Integer.class).single();
+            assertThat(open).isEqualTo(1);
         }
 
         @Test

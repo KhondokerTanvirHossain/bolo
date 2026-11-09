@@ -43,8 +43,8 @@ prints nothing; `caddy validate`; `caddy reload`; compare the three status codes
   `ssh -t … 'read -rsp "key: " k; echo; sed -i "/^BOLO_ANTHROPIC_API_KEY=/d" ~/bolo/bolo.env; printf "BOLO_ANTHROPIC_API_KEY=%s\n" "$k" >> ~/bolo/bolo.env'`,
   then `docker-compose … up -d bolo-api` (or the next deploy) picks it up.
 - `compose.prod.yml` pins `BOLO_SPEECH_VENDOR=azure` and `BOLO_LLM_VENDOR=anthropic`; the app's defaults are fakes.
-- One live talk at a time (`BOLO_TALK_MAX_LIVE`, default 1) because F0 allows one live recognition. A second learner is
-  told "Bolo is in another talk right now". Raise it after moving the Speech resource to S0.
+- Live talks at once: `BOLO_TALK_MAX_LIVE` (default 1; production 4 in `compose.prod.yml` since the Speech resource moved to
+  S0 on 2026-11-09). Above the cap a learner is told "Bolo is in another talk right now". bolo-api has 512 MB: raise with care.
 - `scripts/talk-probe.sh` runs a real turn against the live site (a new guest, the fixture sentence, real Azure and
   Claude) and prints turn end → first reply audio.
 - Latency over the last day (NFR-1: median ≤ 1.5 s, p90 ≤ 2.5 s), from the browser's own measure:
@@ -181,7 +181,8 @@ The goal: someone who has never seen Bolo gets from opening it to talk to feedba
   - The four public values `BOLO_FIREBASE_API_KEY`, `_AUTH_DOMAIN`, `_PROJECT_ID` and `_APP_ID` live in `~/bolo/bolo.env`.
   - The API serves them at `GET /api/auth/config`, and the web reads them at runtime.
   - No service account: the API verifies ID tokens against Google's securetoken keys (iss and aud = the project; email verified; a sign-in within the last 5 minutes).
-  - Remove the four values and restart the API to switch sign-in off. Everyone is then a guest, with no guest limit.
+  - Without the four values sign-in is off: nobody can make an account, and guests still can't talk or practise (only
+    unlimited learners can). Guests talk freely only where `bolo.guests.may-talk=true` (tests and local development).
 - **Firebase console checklist:**
   - Authentication → Sign-in method → Google is **enabled**.
   - Authentication → Settings → Authorized domains includes **bolo.eliooo.org**. Without it the popup fails with `auth/unauthorized-domain`.
@@ -191,9 +192,8 @@ The goal: someone who has never seen Bolo gets from opening it to talk to feedba
   - **No guest on this browser** ("I already have an account"): signs straight in.
   - **Every time:** the session cookie is rotated.
   - **Sign-out:** `POST /api/auth/sign-out`. It's in Settings for now; Me comes next.
-- **Guests:**
-  - Up to 3 talks. The 4th is refused (`422 sign-in`), and the web shows "Save your progress to keep talking".
-  - The save prompt comes after the 1st talk (end of the first loop), then once after the 2nd and the 3rd.
+- **Guests** (P1d, open sign-up): no talk and no practice without Google sign-in (`422 sign-in`); the web shows
+  "Sign in to start talking". See "Open sign-up and the free plan" below.
 - **Day 1 clip:** uploaded after sign-in only if the learner chose to keep recordings. It's stored encrypted as `learner/<id>/day1.webm` (or `.mp4`), and downloaded on a new browser.
 - **Closed beta** (`BOLO_INVITES_REQUIRED=true` in production):
   - A new guest or a new Google account needs an invite link; returning learners never do.
@@ -236,10 +236,10 @@ The goal: someone who has never seen Bolo gets from opening it to talk to feedba
 
 ## Open sign-up and the free plan
 
-- **Open to everyone** (`BOLO_INVITES_REQUIRED=false` in `~/bolo/bolo.env`).
+- **Open to everyone** (`BOLO_INVITES_REQUIRED: "false"` in `deploy/compose.prod.yml`; that file beats `bolo.env`).
   - Anyone can do welcome, consent, setup, the mic check and the Day 1 clip as a guest.
   - **Starting a talk needs Google sign-in** (422 `sign-in`). Guests are only a browser cookie, so free talks belong to a Google account.
-  - To close sign-up again, set `BOLO_INVITES_REQUIRED=true` and redeploy. Invite links (`scripts/invite.sh`) then work as before.
+  - To close sign-up again, set it to `"true"` in `deploy/compose.prod.yml` and redeploy. Invite links (`scripts/invite.sh`) then work as before.
 - **Free plan** (ACC-5, US-8.7; `talk/domain/FreePlan.java`):
   - **7 talks in the first 7 days**, counted from the first talk; then **2 a month**.
   - The month resets on the 1st at 00:00 Asia/Dhaka.

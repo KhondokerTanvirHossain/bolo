@@ -62,20 +62,22 @@ export function HomeScreen({ home, hasDay1, onTalk, onPractice, onFeedback, onSe
           )}
         </div>
       )}
-      <div className="dk-dock">
-        <button className="bo-btn bo-btn--primary" onClick={onTalk} autoFocus>
-          <Icon name="mic" fill />Start talking
-        </button>
-        <button className="bo-scenebtn" onClick={() => onPractice()}>
-          <Icon name="record_voice_over" />Practise sounds
-        </button>
-        {hasDay1 && (
-          <button className="bo-scenebtn" onClick={onPlayDay1}>
-            <Icon name="play_arrow" fill />Play my Day 1 clip
+      <div className={freeLine ? "dk-bottom" : undefined}>
+        <div className="dk-dock">
+          <button className="bo-btn bo-btn--primary" onClick={onTalk} autoFocus>
+            <Icon name="mic" fill />Start talking
           </button>
-        )}
+          <button className="bo-scenebtn" onClick={() => onPractice()}>
+            <Icon name="record_voice_over" />Practise sounds
+          </button>
+          {hasDay1 && (
+            <button className="bo-scenebtn" onClick={onPlayDay1}>
+              <Icon name="play_arrow" fill />Play my Day 1 clip
+            </button>
+          )}
+        </div>
+        {freeLine && <p className="dk-freeline" data-free-talks>{freeLine}</p>}
       </div>
-      {freeLine && <p className="dk-freeline" data-free-talks>{freeLine}</p>}
     </section>
   );
 }

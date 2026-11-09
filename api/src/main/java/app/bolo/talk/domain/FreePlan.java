@@ -31,7 +31,8 @@ public final class FreePlan {
     public static Allowance allowance(List<Instant> countedStarts, Instant now) {
         if (countedStarts.isEmpty()) return new Allowance("first_week", FIRST_WEEK_TALKS, FIRST_WEEK_TALKS, null);
         Instant first = countedStarts.stream().min(Comparator.naturalOrder()).orElseThrow();
-        Instant weekEnd = first.plus(FIRST_WEEK);
+        // The week ends at midnight in Dhaka, 7 days after the first talk's day: "back on 23 November" holds all day.
+        Instant weekEnd = first.atZone(ZONE).toLocalDate().plusDays(FIRST_WEEK.toDays()).atStartOfDay(ZONE).toInstant();
         if (now.isBefore(weekEnd)) {
             int left = Math.max(0, FIRST_WEEK_TALKS - countedStarts.size());
             return new Allowance("first_week", left, FIRST_WEEK_TALKS, weekEnd.atZone(ZONE).toLocalDate());

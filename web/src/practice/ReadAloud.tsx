@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { startPcmRecording, type PcmRecording } from "@/audio/recordPcm";
 import { highlight } from "@/coach/highlight";
 import { Icon } from "@/scene/Scene";
-import { postAttempt, RESULT, type Outcome } from "./attempts";
+import { postAttempt, RESULT, type Outcome, attemptProblem } from "./attempts";
 
 type Phase = "idle" | "recording" | "checking" | "done" | "error";
 
@@ -44,8 +44,7 @@ export function ReadAloud({ reference, deviceId, showSentence = true, mode, onOu
       setPhase("done");
       onOutcome?.(reply.outcome);
     } else {
-      setError(reply.kind === "busy" ? "Bolo is busy for a moment. Try again in a few seconds."
-        : reply.kind === "slow-down" ? "Take a short break, then try again." : "That didn't work. Try again.");
+      setError(attemptProblem(reply));
       setPhase("error");
     }
   };
