@@ -294,6 +294,9 @@ class CoachAcceptanceTest extends PostgresTestBase {
     void rawTurnAudioIsDeletedOnceTheDebriefIsSettled() throws Exception {
         talk(3);
         String body = debriefWhenSettled();
+        // The debrief is saved first, then the raw turn audio goes: wait briefly for it.
+        long until = System.currentTimeMillis() + 3_000;
+        while (audio.get("talk/" + id + "/turn-1.wav").isPresent() && System.currentTimeMillis() < until) Thread.sleep(50);
         assertThat(audio.get("talk/" + id + "/turn-1.wav")).isEmpty();
         String clip = JsonPath.read(body, "$.fixes[0].clip");
         assertThat(audio.get(clip.substring("/api/media/".length()))).isPresent();
