@@ -151,3 +151,17 @@
 - Full suites, push, CI (deploy only if green), deploy, smoke, then the 4 live probes.
 - RUNBOOK "Free plan and open sign-up" (rules, `unlimited.sh`, what the probes use).
 - Commit `docs: open sign-up and the free plan`.
+
+### Task 6: Deleting everything doesn't reset the free plan (api, web copy) — added 2026-11-09 by founder decision
+- **Founder:** "I need to save, otherwise they can delete and again get 7 day free again and again."
+- **Create** `V15__free_talk_use.sql`: `free_talk_use(subject_hash text not null, started_at timestamptz not null, primary key (subject_hash, started_at))`.
+  - `subject_hash` = hex SHA-256 of `"bolo-free:" + firebase uid`. It's one-way, and there's no email, words or audio.
+- **When an account is deleted** (`LearnerDeleting`), the account module copies the learner's counted talk starts into `free_talk_use` under the hash of its uid. This needs a port in from talk (`FreeTalksUseCase.countedStarts(LearnerId)`) or an event payload; choose by the module rules.
+- **On sign-in, when a new learner is created for a uid** whose hash has rows, the free plan counts those starts too (`FreePlan.allowance(starts ∪ remembered, now)`).
+- **Retention:** rows older than 12 months are removed by the existing sweep.
+- **Privacy page and Me → Privacy:**
+  - "After you delete everything, Bolo keeps only a one-way code made from your Google account and the dates of your free talks, for 12 months, so free talks can't be reset by deleting. It can't be turned back into your email."
+- **Tests:**
+  - `deletingAndSigningInAgainKeepsTheFreeTalksUsed` (7 used → delete → sign in again with the same uid → `free-limit`);
+  - `anotherGoogleAccountIsUnaffected`;
+  - `rememberedUseOlderThan12MonthsIsForgotten`.

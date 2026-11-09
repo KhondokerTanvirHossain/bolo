@@ -67,3 +67,24 @@ Feedback from testing the live app, kept for discussion before it becomes PRD ch
   - The design rules say "no guilt".
   - Challenges aren't in the PRD yet.
 - **Status:** logged only.
+
+## 2026-11-09 (evening) — opening Bolo to everyone
+
+### 6. Admin portal
+- **Founder's idea:** an admin portal to see analytics, manage pricing, and run other admin tasks.
+- **Related (for the discussion):**
+  - Today, analytics are `scripts/metrics.sh` (the onboarding funnel) plus database queries over SSH.
+  - The Gate 2 metrics (Day-7 retention, dispute rate, loop completion) have no view yet (audit 2026-11-09, P1-13).
+  - Plan limits live in code (`FreePlan`: 7 in the first week, then 2 a month); there's no pricing yet (ACC-5 paid plans).
+  - Unlimited accounts are set by `scripts/unlimited.sh`. An admin portal would need its own sign-in, with roles, kept separate from learners.
+- **Status:** logged only.
+
+### 7. Payments in Bangladesh with bKash
+- **Founder's idea:** how to take payment in Bangladesh with bKash.
+- **Related (for the discussion):**
+  - The PRD's ACC-6 already says payment via bKash and card, monthly, with cancel in 2 taps. The plans are Basic ৳300, Premium ৳500 and Ultimate ৳1000, with talk limits set after the cost test.
+  - To check:
+    - bKash's merchant/PGW (tokenized checkout and agreement-based recurring payments) and what a merchant account needs (trade licence, bank account);
+    - card cover through an aggregator such as SSLCommerz;
+    - how refunds and cancellations work.
+- **Status:** logged only.
