@@ -65,9 +65,10 @@ public class GuestService implements StartGuestUseCase, CurrentLearnerUseCase {
             if (known.isPresent()) return new Started(view(known.get()), null);
         }
         if (!newGuests.tryAcquire(clientKey, clock.now())) throw new TooManyRequestsException();
-        inviteGate.admitNewcomer(invite);
+        boolean unlimited = inviteGate.admitNewcomer(invite);
         Learner guest = Learner.newGuest(clock.now());
         learners.save(guest);
+        if (unlimited) learners.setUnlimited(guest.id());
         String token = newToken();
         sessions.create(hash(token), guest.id(), clock.now());
         return new Started(view(guest.id()), token);
@@ -90,7 +91,7 @@ public class GuestService implements StartGuestUseCase, CurrentLearnerUseCase {
         Settings s = settings.find(id).orElse(Settings.DEFAULTS);
         LearnerView.AccountView account = accounts.find(id).map(a -> new LearnerView.AccountView(a.email(), a.name())).orElse(null);
         return new LearnerView(id, learner.kind().dbValue(), consent, profile, new LearnerView.SettingsView(s.buddySpeed(), s.captions()),
-                account);
+                account, learners.unlimited(id));
     }
 
     static String newToken() {

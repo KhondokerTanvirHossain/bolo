@@ -14,6 +14,11 @@ public interface LearnerPort {
 
     void setKind(LearnerId id, app.bolo.learner.domain.LearnerKind kind);
 
+    /** Outside the free plan (P1d). */
+    void setUnlimited(LearnerId id);
+
+    boolean unlimited(LearnerId id);
+
     /** Deletes the learner; every row that references it goes too (cascade). */
     void delete(LearnerId id);
 

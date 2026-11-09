@@ -77,5 +77,32 @@ class InviteAcceptanceTest {
         void withInvitesOffNobodyIsAsked() throws Exception {
             assertThat(new TalkTestClient(port).send("POST", "/api/session", null, "{}").status()).isEqualTo(200);
         }
+
+        @Autowired JdbcClient jdbc;
+
+        boolean unlimitedGuest(String code) throws Exception {
+            TalkTestClient c = new TalkTestClient(port);
+            var r = c.send("POST", "/api/session", null, "{\"invite\":\"" + code + "\"}");
+            assertThat(r.status()).isEqualTo(200);
+            return com.jayway.jsonpath.JsonPath.read(c.send("GET", "/api/me", r.cookie(), "").body(), "$.unlimited");
+        }
+
+        /** P1d: the probes (and the founder) aren't limited by the free plan; they come in through an unlimited invite. */
+        @Test
+        void anUnlimitedInviteMakesAnUnlimitedGuest() throws Exception {
+            String code = invite(jdbc, 5);
+            jdbc.sql("update invite set unlimited = true where code = ?").param(code).update();
+            assertThat(unlimitedGuest(code)).isTrue();
+        }
+
+        @Test
+        void anOrdinaryInviteMakesAnOrdinaryGuest() throws Exception {
+            assertThat(unlimitedGuest(invite(jdbc, 5))).isFalse();
+        }
+
+        @Test
+        void withInvitesOffAnUnknownCodeIsIgnored() throws Exception {
+            assertThat(unlimitedGuest("not-a-code")).isFalse();
+        }
     }
 }

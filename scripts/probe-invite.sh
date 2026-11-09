@@ -8,7 +8,7 @@ code="$(box 'cat ~/bolo/probe-invite 2>/dev/null' || true)"
 if [[ -z "$code" ]]; then
   code="probes$(openssl rand -hex 6)"
   box "docker exec -i bolo-db psql -U bolo -d bolo -q -v ON_ERROR_STOP=1" >/dev/null <<SQL
-insert into invite (code, label, max_uses, created_at) values ('$code', 'smoke and live probes', 1000000, now());
+insert into invite (code, label, max_uses, created_at, unlimited) values ('$code', 'smoke and live probes', 1000000, now(), true);
 SQL
   box "umask 077 && printf '%s' '$code' > ~/bolo/probe-invite"
 fi

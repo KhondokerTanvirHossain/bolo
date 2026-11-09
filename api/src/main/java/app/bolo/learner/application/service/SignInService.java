@@ -78,9 +78,10 @@ public class SignInService implements SignInUseCase {
             accounts.insert(target, who.uid(), who.email(), who.name(), clock.now());
             learners.setKind(target, LearnerKind.ACCOUNT);
         } else {
-            inviteGate.admitNewcomer(invite);
+            boolean unlimited = inviteGate.admitNewcomer(invite);
             Learner fresh = Learner.newAccount(clock.now());
             learners.save(fresh);
+            if (unlimited) learners.setUnlimited(fresh.id());
             accounts.insert(fresh.id(), who.uid(), who.email(), who.name(), clock.now());
             target = fresh.id();
         }
