@@ -19,11 +19,19 @@ export function PracticeScreen({ deviceId, onBack, initialPattern }: { deviceId:
     });
   }, [initialPattern]);
 
+  // Esc closes practice (prototype drill): the card's ✕ does the same.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") { e.preventDefault(); onBack(); } };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onBack]);
+
   return (
     <section className="dk-screen on" data-screen="drill">
       <Scene />
       <div className="dk-dim" />
       <div className={`dk-card${chosen ? " dk-card--wide" : ""}`} role="dialog" aria-modal="true" aria-label="Practise sounds">
+        <button className="bo-btn bo-btn--quiet-neutral dk-card__close" aria-label="Close" onClick={onBack}><Icon name="close" /></button>
         {!chosen ? (
           <>
             <h1 className="bo-flow__title">Practise sounds</h1>
@@ -46,7 +54,7 @@ export function PracticeScreen({ deviceId, onBack, initialPattern }: { deviceId:
             <ReadAloud reference={chosen.sentences[n]} deviceId={deviceId} />
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 24 }}>
               <button className="bo-btn bo-btn--secondary" onClick={() => setChosen(null)}>Other sounds</button>
-              <button className="bo-btn bo-btn--primary" onClick={() => setN((x) => (x + 1) % chosen.sentences.length)}>Next sentence</button>
+              <button className="bo-btn bo-btn--secondary" onClick={() => setN((x) => (x + 1) % chosen.sentences.length)}>Next sentence</button>
             </div>
           </>
         )}

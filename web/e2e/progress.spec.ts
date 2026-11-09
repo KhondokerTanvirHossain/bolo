@@ -223,3 +223,14 @@ test("arrow keys don't move the hidden cards while the chat is open", async ({ p
   await page.getByRole("button", { name: "Back to feedback" }).click();
   await expect(page.getByText("You explained the bug clearly.")).toBeVisible();
 });
+
+test("Esc leaves a past talk's feedback, and closes the chat first", async ({ page }) => {
+  await stub(page);
+  await openPastTalk(page);
+  await page.getByRole("button", { name: "See full chat" }).click();
+  await expect(page.getByText("The logs showed it.")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByText("You explained the bug clearly.")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("heading", { level: 1, name: "Progress" })).toBeVisible();
+});

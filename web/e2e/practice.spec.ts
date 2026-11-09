@@ -94,3 +94,25 @@ test("on a phone the practice card fits the screen", async ({ page }) => {
     expect(box.x + box.width, step).toBeLessThanOrEqual(375);
   }
 });
+
+test("the practice card closes with its ✕ and with Esc", async ({ page }) => {
+  await stub(page, { level: "NAILED", heard: true, focus: [] });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Practise sounds" }).click();
+  await page.getByRole("button", { name: /The v sound/ }).click();
+  await expect(page.getByText("It is very important to visit the village.")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: "Start talking" })).toBeVisible();
+  await page.getByRole("button", { name: "Practise sounds" }).click();
+  await page.getByRole("button", { name: /The v sound/ }).click();
+  await page.getByRole("button", { name: "Close" }).click();
+  await expect(page.getByRole("button", { name: "Start talking" })).toBeVisible();
+});
+
+test("the practice card has one filled button", async ({ page }) => {
+  await stub(page, { level: "NAILED", heard: true, focus: [] });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Practise sounds" }).click();
+  await page.getByRole("button", { name: /The v sound/ }).click();
+  await expect(page.locator('[data-screen="drill"] .bo-btn--primary')).toHaveCount(1);
+});

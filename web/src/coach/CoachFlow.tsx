@@ -144,6 +144,15 @@ function DebriefScreen({ talkId, deviceId, debrief, onTalkAgain, onDone, onPract
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // Esc: closes the chat first, then leaves the feedback (prototype: Esc goes Home). A dialog handles its own Esc.
+      if (e.key === "Escape") {
+        e.preventDefault();
+        if (askDelete) setAskDelete(false);
+        else if (chat) { setChat(null); toTop(); }
+        else onDone();
+        return;
+      }
+      if (askDelete) return;
       // While the full chat shows, the keys belong to it (scrolling), not to the hidden cards.
       if (chat) return;
       if (e.key === "ArrowDown") { e.preventDefault(); setAt((a) => Math.min(cards - 1, a + 1)); setNote(null); }
@@ -152,7 +161,7 @@ function DebriefScreen({ talkId, deviceId, debrief, onTalkAgain, onDone, onPract
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [cards, chat]);
+  }, [cards, chat, askDelete, onDone]);
 
   /** By the fix's stable id, once: a double tap can't remove a second card. */
   const dispute = async (fix: Fix) => {

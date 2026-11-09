@@ -786,3 +786,6 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #0b0816; }
 .dk-bubble__text { margin: 2px 0 0; font: 500 17px/25px var(--font-sans); color: var(--ink); overflow-wrap: anywhere; }
 .dk-mark { appearance: none; border: 0; background: transparent; padding: 0; font: inherit; color: inherit; cursor: pointer; text-decoration: underline; text-decoration-color: var(--coach); text-decoration-thickness: 2px; text-underline-offset: 3px; }
 .dk-mark:hover { background: var(--surface-sunken); border-radius: 4px; }
+
+/* A card's quiet ✕ (practice): top right, never the primary action. */
+.dk-card__close { position: absolute; top: 12px; right: 12px; width: 40px; height: 40px; padding: 0; border-radius: var(--radius-full); justify-content: center; }
