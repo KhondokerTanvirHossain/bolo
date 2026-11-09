@@ -8,6 +8,7 @@ import app.bolo.assessment.application.port.in.AssessTalkUseCase.TalkAssessment;
 import app.bolo.coaching.application.port.in.DebriefUseCase;
 import app.bolo.coaching.application.port.in.LatestDebriefUseCase;
 import app.bolo.coaching.application.port.out.DebriefPort;
+import app.bolo.coaching.domain.ChatMarks;
 import app.bolo.coaching.domain.CoachPrompt;
 import app.bolo.coaching.domain.CoachReply;
 import app.bolo.coaching.domain.ReplyCheck;
@@ -261,6 +262,7 @@ public class CoachService implements DebriefUseCase, LatestDebriefUseCase, app.b
         fix.put("example", at.example());
         fix.put("said", sentence);
         fix.put("saidHighlight", at.word());
+        fix.put("turn", at.turnIdx());
         fix.put("better", sentence);
         fix.put("betterHighlight", at.word());
         fix.put("tip", at.tip());
@@ -275,6 +277,7 @@ public class CoachService implements DebriefUseCase, LatestDebriefUseCase, app.b
         fix.put("kind", "upgrade");
         fix.put("title", "Say it better");
         fix.put("said", u.said().trim());
+        fix.put("turn", u.turn());
         fix.put("better", u.better().trim());
         ArrayNode changed = fix.putArray("changed");
         ReplyCheck.changedWords(u.said(), u.better()).forEach(changed::add);
@@ -438,6 +441,42 @@ public class CoachService implements DebriefUseCase, LatestDebriefUseCase, app.b
             body.put(d.keptAudio() ? "recordingExpired" : "recordingNotKept", true);
             return JSON.writeValueAsString(body);
         });
+    }
+
+    @Override
+    public Optional<String> chat(LearnerId learner, TalkSessionId talk) {
+        var stored = debriefs.find(talk).filter(d -> d.learner().equals(learner) && "ready".equals(d.status()) && d.body() != null);
+        if (stored.isEmpty()) return Optional.empty();
+        var record = talks.record(talk);
+        if (record.isEmpty()) return Optional.empty();
+        JsonNode body = JSON.readTree(stored.get().body());
+        List<TalkRecord.Turn> said = record.get().turns().stream()
+                .filter(t -> t.text() != null && !t.text().isBlank())
+                .sorted(java.util.Comparator.comparingInt(TalkRecord.Turn::idx)).toList();
+        ObjectNode out = JSON.createObjectNode();
+        out.put("topic", body.path("topic").asString(CoachReply.DEFAULT_TOPIC));
+        ArrayNode turns = out.putArray("turns");
+        for (var t : said) turns.addObject().put("speaker", t.learner() ? "learner" : "bolo").put("text", t.text());
+        ArrayNode marks = out.putArray("marks");
+        int n = 0;
+        for (JsonNode fix : body.path("fixes")) {
+            n++;
+            String kind = fix.path("kind").asString("");
+            String words = "sound".equals(kind) ? fix.path("saidHighlight").asString(null)
+                    : "upgrade".equals(kind) ? fix.path("said").asString(null) : null;
+            if (words == null || words.isBlank()) continue;
+            Integer turnIdx = fix.hasNonNull("turn") ? fix.get("turn").asInt() : null;
+            for (int i = 0; i < said.size(); i++) {
+                var t = said.get(i);
+                if (!t.learner() || (turnIdx != null && t.idx() != turnIdx)) continue;
+                int[] at = ChatMarks.find(t.text(), words, "sound".equals(kind));
+                if (at == null) continue;
+                marks.addObject().put("turn", i).put("start", at[0]).put("end", at[1]).put("fix", n)
+                        .put("title", fix.path("title").asString(""));
+                break;
+            }
+        }
+        return Optional.of(JSON.writeValueAsString(out));
     }
 
     @Override

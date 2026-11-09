@@ -188,6 +188,89 @@ class CoachAcceptanceTest extends PostgresTestBase {
         assertThat(client.send("POST", "/api/talk/" + id + "/recording/delete", cookie, "{}").status()).isEqualTo(204);
     }
 
+    // ---- P1e: the full chat ------------------------------------------------------------------------------------------
+
+    static final String CHAT_REPLY = """
+            {"strength":{"turn":1,"quote":"very happy","text":"You said how you felt."},
+             "upgrades":[{"turn":3,"said":"I am very happy","better":"I am really happy today."}],
+             "sentenceLevel":"GOOD","vocabularyLevel":"BUILDING","topic":"A happy day"}""";
+
+    String chat() throws Exception {
+        HttpResponse<String> r = get("/api/talk/" + id + "/chat", cookie);
+        assertThat(r.statusCode()).as(r.body()).isEqualTo(200);
+        return r.body();
+    }
+
+    static String slice(String chat, int mark) {
+        int turn = JsonPath.read(chat, "$.marks[" + mark + "].turn");
+        String text = JsonPath.read(chat, "$.turns[" + turn + "].text");
+        return text.substring((Integer) JsonPath.read(chat, "$.marks[" + mark + "].start"), (Integer) JsonPath.read(chat, "$.marks[" + mark + "].end"));
+    }
+
+    @Test
+    void theChatHasEveryTurnInOrder() throws Exception {
+        talk(3);
+        debriefWhenSettled();
+        String c = chat();
+        List<String> speakers = JsonPath.read(c, "$.turns[*].speaker");
+        assertThat(speakers.getFirst()).isEqualTo("bolo");
+        assertThat(speakers.stream().filter("learner"::equals).count()).isEqualTo(3);
+        assertThat(speakers).containsOnly("bolo", "learner");
+        assertThat((String) JsonPath.read(c, "$.topic")).isEqualTo("Saying hello to Bolo");
+    }
+
+    @Test
+    void fixedSpotsAreMarked() throws Exception {
+        stt.nextText("I am very happy");
+        llm.structuredReply(CHAT_REPLY);
+        talk(3);
+        debriefWhenSettled();
+        String c = chat();
+        List<Integer> fixes = JsonPath.read(c, "$.marks[*].fix");
+        assertThat(fixes).contains(1, 2);
+        for (int i = 0; i < fixes.size(); i++) {
+            if (fixes.get(i) == 1) assertThat(slice(c, i)).isEqualToIgnoringCase("very");
+            if (fixes.get(i) == 2) assertThat(slice(c, i)).isEqualTo("I am very happy");
+        }
+        assertThat((String) JsonPath.read(c, "$.marks[0].title")).isNotBlank();
+    }
+
+    @Test
+    void aRepeatedWordIsMarkedOnceInItsTurn() throws Exception {
+        stt.nextText("I am very happy");
+        llm.structuredReply(CHAT_REPLY);
+        talk(3);
+        debriefWhenSettled();
+        List<Integer> fixes = JsonPath.read(chat(), "$.marks[*].fix");
+        assertThat(fixes.stream().filter(f -> f == 1).count()).isEqualTo(1);
+    }
+
+    @Test
+    void anOldDebriefFindsItsSpotsByText() throws Exception {
+        stt.nextText("I am very happy");
+        llm.structuredReply(CHAT_REPLY);
+        talk(3);
+        debriefWhenSettled();
+        jdbc.sql("""
+                update debrief set body = jsonb_set(body, '{fixes}',
+                  (select jsonb_agg(f - 'turn') from jsonb_array_elements(body->'fixes') f)) where session_id = ?::uuid""").param(id).update();
+        String c = chat();
+        List<Integer> fixes = JsonPath.read(c, "$.marks[*].fix");
+        assertThat(fixes).contains(1, 2);
+    }
+
+    @Test
+    void anotherLearnerCannotReadMyChat() throws Exception {
+        talk(3);
+        debriefWhenSettled();
+        assertThat(get("/api/talk/" + id + "/chat", client.consentedGuest(5)).statusCode()).isEqualTo(404);
+    }
+
+    @Test
+    void noDebriefNoChat() throws Exception {
+        assertThat(get("/api/talk/" + id + "/chat", cookie).statusCode()).isEqualTo(404);
+    }
+
     @Autowired app.bolo.talk.application.port.in.AudioRetentionUseCase retention;
 
     /** Ends the talk long ago under the given keep choice, then runs the real retention sweep. */

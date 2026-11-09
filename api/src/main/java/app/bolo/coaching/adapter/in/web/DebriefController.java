@@ -33,6 +33,15 @@ class DebriefController {
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
+    /** DBF-6 / US-4.10: the whole conversation with the fixed spots, for the talk's owner once its feedback is ready. */
+    @GetMapping("/api/talk/{id}/chat")
+    ResponseEntity<String> chat(@RequestAttribute(name = CurrentLearner.ATTRIBUTE, required = false) LearnerId learner,
+                                @PathVariable String id) {
+        return talk(id).flatMap(t -> debriefs.chat(signedIn(learner), t))
+                .map(json -> ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).cacheControl(CacheControl.noStore()).body(json))
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
     @PostMapping("/api/talk/{id}/debrief/fixes/{fixId}/dispute")
     ResponseEntity<Void> dispute(@RequestAttribute(name = CurrentLearner.ATTRIBUTE, required = false) LearnerId learner,
                                  @PathVariable String id, @PathVariable String fixId) {

@@ -10,6 +10,13 @@ public interface DebriefUseCase {
     /** The debrief JSON ({"status": scoring | ready | too_short | failed, ...}) for the talk's own learner only. */
     Optional<String> view(LearnerId learner, TalkSessionId talk);
 
+    /**
+     * DBF-6: {topic, turns:[{speaker: "bolo"|"learner", text}], marks:[{turn, start, end, fix, title}]} — turn indexes
+     * {@code turns}, start/end are character offsets in its text, fix is the card's 1-based number. Empty unless the
+     * learner owns the talk and its feedback is ready.
+     */
+    Optional<String> chat(LearnerId learner, TalkSessionId talk);
+
     /** DBF-4: removes the fix card (by its stable id) and logs it; false if there is no such card for this learner. */
     boolean dispute(LearnerId learner, TalkSessionId talk, String fixId);
 
