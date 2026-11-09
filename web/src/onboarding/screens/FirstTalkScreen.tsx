@@ -5,6 +5,7 @@ import { CoachFlow } from "@/coach/CoachFlow";
 import { fetchHome, type Home } from "@/home/home";
 import { HomeDashboard } from "@/home/HomeDashboard";
 import { SideCards, useFreeLine } from "@/home/SideCards";
+import { RecordIntro } from "@/voice/RecordIntro";
 import { PracticeScreen } from "@/practice/PracticeScreen";
 import type { LearnerView } from "@/api/browser";
 import { afterDebrief, loadLoop, saveAnswered, saveLoop, seenSeeYou, type Loop } from "@/account/loop";
@@ -22,7 +23,8 @@ import { TalkScreen } from "@/talk/TalkScreen";
 import { useTalk } from "@/talk/useTalk";
 
 type View = { kind: "home" } | { kind: "practice"; pattern?: string } | { kind: "feedback"; talkId: string } | { kind: "me" } | { kind: "privacy" }
-  | { kind: "progress" } | { kind: "history" } | { kind: "session"; talkId: string; from: "progress" | "history" };
+  | { kind: "progress" } | { kind: "history" } | { kind: "session"; talkId: string; from: "progress" | "history" }
+  | { kind: "intro"; day: number };
 
 /**
  * After onboarding: Home (US-6.9) with its one next step, and from there a talk, the Coach's feedback, practice or
@@ -105,6 +107,7 @@ export function FirstTalkScreen({ deviceId }: { deviceId: string | null }) {
           onPractice={(pattern) => setView({ kind: "practice", pattern })}
           onFeedback={(talkId) => setView({ kind: "feedback", talkId })}
           onProgress={() => toTab("progress")}
+          onIntro={(day) => setView({ kind: "intro", day })}
           onPlayDay1={() => void audio.current?.play()} />
       </AppShell>
       {url && <audio ref={audio} src={url} preload="auto" data-testid="day1-audio" />}
@@ -127,6 +130,10 @@ export function FirstTalkScreen({ deviceId }: { deviceId: string | null }) {
       captionsDefault={captions} onCoachReady={coachReady}
       onPractise={(pattern) => { conversation.reset(); setView({ kind: "practice", pattern }); }} />;
   }
+  if (view.kind === "intro") {
+    return <RecordIntro day={view.day} keep={me?.consent?.keepRecordings === true} deviceId={deviceId}
+      onDone={() => setView({ kind: "progress" })} onBack={toHome} />;
+  }
   if (view.kind === "practice") return <PracticeScreen deviceId={deviceId} onBack={toHome} initialPattern={view.pattern} />;
   if (view.kind === "feedback") {
     return <CoachFlow talkId={view.talkId} deviceId={deviceId} onTalkAgain={talk} onDone={toHome} onNoDebrief={toHome}
@@ -142,6 +149,7 @@ export function FirstTalkScreen({ deviceId }: { deviceId: string | null }) {
       <AppShell tab="progress" onTab={toTab} foot={foot}>
         {view.kind === "progress"
           ? <ProgressScreen onOpen={open} onSeeAll={() => setView({ kind: "history" })} onTalk={talk}
+              onRecordIntro={(day) => setView({ kind: "intro", day })}
               onPractise={(pattern) => setView({ kind: "practice", pattern })} />
           : <HistoryScreen onOpen={open} onTalk={talk} />}
       </AppShell>

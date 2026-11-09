@@ -10,7 +10,7 @@ afterEach(cleanup);
 
 const days = (states: string[]) => states.map((state, i) => ({ date: `2026-11-${String(7 + i).padStart(2, "0")}`, state })) as Week["days"];
 const props = (home: Home | null) => ({ home, minutes: 5, hasDay1: false, keysOn: true, onTalk: vi.fn(), onFeedback: vi.fn(),
-  onPractice: vi.fn(), onProgress: vi.fn(), onPlayDay1: vi.fn() });
+  onPractice: vi.fn(), onProgress: vi.fn(), onIntro: vi.fn(), onPlayDay1: vi.fn() });
 
 describe("the dashboard Home (P1f)", () => {
   it("greetingFollowsTheClock", () => {
@@ -80,5 +80,15 @@ describe("Home review fixes", () => {
   it("shows no Next up card while Home is loading", () => {
     const { container } = render(<HomeDashboard {...props(null)} />);
     expect(container.querySelectorAll("[data-home-card]")).toHaveLength(0);
+  });
+});
+
+describe("the intro card (P1g)", () => {
+  it("offers the intro again and opens it on its day", () => {
+    const p = props({ primary: "talk", card: { kind: "intro", day: 7 } });
+    render(<HomeDashboard {...p} />);
+    fireEvent.click(screen.getByRole("button", { name: /Record your intro again/ }));
+    expect(p.onIntro).toHaveBeenCalledWith(7);
+    expect(screen.getByText("Day 7: hear how far you've come")).toBeTruthy();
   });
 });

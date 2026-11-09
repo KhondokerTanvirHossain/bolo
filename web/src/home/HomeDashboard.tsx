@@ -21,6 +21,7 @@ type Props = {
   onFeedback: (talkId: string) => void;
   onPractice: (pattern?: string) => void;
   onProgress: () => void;
+  onIntro: (day: number) => void;
   onPlayDay1: () => void;
 };
 
@@ -28,7 +29,7 @@ type Props = {
  * The dashboard Home (DesktopHome, HOM-1, US-6.9): a greeting, Bolo's line in the scene with the Talk disc (the one
  * primary, R1, one tap away, R2), Next up (at most one card by the priority table), and This week (PRG-4).
  */
-export function HomeDashboard({ home, name, minutes, freeLine, note, hasDay1, keysOn, onTalk, onFeedback, onPractice, onProgress, onPlayDay1 }: Props) {
+export function HomeDashboard({ home, name, minutes, freeLine, note, hasDay1, keysOn, onTalk, onFeedback, onPractice, onProgress, onIntro, onPlayDay1 }: Props) {
   useEffect(() => {
     if (!keysOn) return;
     const onKey = (e: KeyboardEvent) => {
@@ -72,6 +73,13 @@ export function HomeDashboard({ home, name, minutes, freeLine, note, hasDay1, ke
               <span className="bo-homecard__icon"><Icon name="forum" fill /></span>
               <span className="bo-homecard__body"><span className="bo-homecard__title">Finish your feedback</span>
                 <span className="bo-homecard__sub">Your coach&apos;s feedback is ready</span></span>
+              <Icon name="chevron_right" />
+            </button>
+          ) : card?.kind === "intro" ? (
+            <button className="bo-homecard" data-home-card="intro" onClick={() => onIntro(card.day)}>
+              <span className="bo-homecard__icon bo-homecard__icon--sun"><Icon name="mic" fill /></span>
+              <span className="bo-homecard__body"><span className="bo-homecard__title">Record your intro again</span>
+                <span className="bo-homecard__sub">Day {card.day}: hear how far you&apos;ve come</span></span>
               <Icon name="chevron_right" />
             </button>
           ) : card?.kind === "practice" ? (

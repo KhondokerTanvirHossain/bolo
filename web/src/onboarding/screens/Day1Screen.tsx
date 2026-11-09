@@ -9,8 +9,17 @@ import { afterRecording, canRecordAgain, DAY1, startClip } from "../day1";
 type Phase = "ready" | "recording" | "short" | "saved";
 const ARC = 502.7;
 
-/** "Introduce yourself, like at a new job" (prototype day1 card, US-1.6). The clip stays on this device. */
-export function Day1Screen({ deviceId, onSaved }: { deviceId: string | null; onSaved: () => void }) {
+/** The words around the recorder: Day 1 by default, or the intro again on Day 7/14/21 (PRG-2). */
+export type IntroCopy = { step: string; stepRight: string; title: string; body: string; short: string; saved: string };
+export const DAY1_COPY: IntroCopy = {
+  step: "Your Day 1 clip", stepRight: "Last step", title: "Introduce yourself, like at a new job",
+  body: "30 seconds. We'll play it back to you on Day 7.", short: "A few more seconds helps you hear your progress on Day 7.",
+  saved: "Saved. We'll play this back to you on Day 7.",
+};
+
+/** "Introduce yourself, like at a new job" (prototype day1 card, US-1.6). The clip stays on this device ({@code clipKey}). */
+export function Day1Screen({ deviceId, onSaved, clipKey = "day1", copy = DAY1_COPY }: { deviceId: string | null; onSaved: () => void;
+  clipKey?: string; copy?: IntroCopy }) {
   const [phase, setPhase] = useState<Phase>("ready");
   const [left, setLeft] = useState<number>(DAY1.maxSeconds);
   const [recordings, setRecordings] = useState(0);
@@ -30,9 +39,9 @@ export function Day1Screen({ deviceId, onSaved }: { deviceId: string | null; onS
     const seconds = (performance.now() - r.started) / 1000;
     lastClip.current = blob;
     if (afterRecording(seconds, prompted) === "short-prompt") { setPrompted(true); setPhase("short"); return; }
-    await saveClip("day1", blob);
+    await saveClip(clipKey, blob);
     setPhase("saved");
-  }, [prompted]);
+  }, [prompted, clipKey]);
 
   const begin = useCallback(async () => {
     // One recording at a time: a double click or click + Space must not open a second mic and timer.
@@ -62,9 +71,9 @@ export function Day1Screen({ deviceId, onSaved }: { deviceId: string | null; onS
   }, [deviceId, finish]);
 
   const keep = useCallback(async () => {
-    if (lastClip.current) await saveClip("day1", lastClip.current);
+    if (lastClip.current) await saveClip(clipKey, lastClip.current);
     setPhase("saved");
-  }, []);
+  }, [clipKey]);
 
   // Space starts and stops (design system keyboard map).
   useEffect(() => {
@@ -117,11 +126,11 @@ export function Day1Screen({ deviceId, onSaved }: { deviceId: string | null; onS
       <Scene />
       <div className="dk-dim" />
       <div className="dk-card" role="dialog" aria-modal="true" aria-labelledby="day1-title">
-        <div className="dk-steps"><span>Your Day 1 clip</span><span>Last step</span></div>
+        <div className="dk-steps"><span>{copy.step}</span><span>{copy.stepRight}</span></div>
         {phase === "short" ? (
           <>
             <h1 className="bo-flow__title" id="day1-title">Want to say a bit more?</h1>
-            <p className="bo-flow__body">A few more seconds helps you hear your progress on Day 7.</p>
+            <p className="bo-flow__body">{copy.short}</p>
             {canRecordAgain(recordings) && (
               <button className="bo-btn bo-btn--primary bo-btn--block" style={{ marginTop: 20 }} onClick={() => void begin()} autoFocus>
                 Record again
@@ -133,8 +142,8 @@ export function Day1Screen({ deviceId, onSaved }: { deviceId: string | null; onS
           </>
         ) : (
           <>
-            <h1 className="bo-flow__title" id="day1-title">Introduce yourself, like at a new job</h1>
-            <p className="bo-flow__body">30 seconds. We&apos;ll play it back to you on Day 7.</p>
+            <h1 className="bo-flow__title" id="day1-title">{copy.title}</h1>
+            <p className="bo-flow__body">{copy.body}</p>
             <ul className="bo-prompts" style={{ marginTop: 16 }}>
               <li><Icon name="person" size="sm" />Your name and where you&apos;re from</li>
               <li><Icon name="work" size="sm" />What you do</li>
@@ -172,7 +181,7 @@ export function Day1Screen({ deviceId, onSaved }: { deviceId: string | null; onS
         )}
       </div>
       <div className={`dk-toast${phase === "saved" ? " show" : ""}`} role="status" aria-live="polite">
-        {phase === "saved" ? "Saved. We'll play this back to you on Day 7." : ""}
+        {phase === "saved" ? copy.saved : ""}
       </div>
     </section>
   );
