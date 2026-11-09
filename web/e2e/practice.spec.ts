@@ -24,6 +24,7 @@ async function stub(page: Page, outcome: object) {
     profile: { goal: "job_interviews", fearedMoment: "interviews", talkMinutes: 5 } };
   await page.route("**/api/me", (r) => r.fulfill({ json: learner }));
   await page.route("**/api/practice", (r) => r.fulfill({ json: PRACTICE }));
+  await page.route("**/api/home", (r) => r.fulfill({ json: { primary: "talk", card: null } }));
   const posts: string[] = [];
   await page.route("**/api/attempts", async (r) => {
     posts.push(r.request().headers()["content-type"] ?? "");

@@ -180,3 +180,22 @@ test("on a phone, Home shows the free-talk line under Talk, inside the screen", 
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 });
 
+
+test("on a 360 px phone, Bolo's line never sits under the Talk disc", async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 780 });
+  await stub(page, { account: true, freeTalks: { window: "month", left: 2, total: 2, resetsOn: "2026-12-01" } });
+  await page.route("**/api/home", (r) => r.fulfill({ json: { primary: "talk", card: null, lastTopic: "Planning my sister's wedding reception",
+    freeTalks: { window: "month", left: 2, total: 2, resetsOn: "2026-12-01" }, week: null } }));
+  // A Day 1 clip saved on this device (IndexedDB "bolo"/"clips"/"day1"), as after onboarding.
+  await page.addInitScript(() => {
+    const req = indexedDB.open("bolo", 1);
+    req.onupgradeneeded = () => req.result.createObjectStore("clips");
+    req.onsuccess = () => { const tx = req.result.transaction("clips", "readwrite"); tx.objectStore("clips").put(new Blob([new Uint8Array(8)], { type: "audio/webm" }), "day1"); };
+  });
+  await page.goto("/");
+  await expect(page.getByRole("button", { name: "Play my Day 1 clip" })).toBeVisible();
+  const line = (await page.locator(".dk-hero .bo-caption").boundingBox())!;
+  const disc = (await page.getByRole("button", { name: "Start talking" }).boundingBox())!;
+  expect(line.y + line.height).toBeLessThanOrEqual(disc.y);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
+});

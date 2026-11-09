@@ -65,8 +65,9 @@ export function HomeDashboard({ home, name, minutes, freeLine, note, hasDay1, ke
       </div>
       <div className="dk-cols">
         <div>
-          <div className="dk-h2">Next up</div>
-          {card?.kind === "feedback" ? (
+          <h2 className="dk-h2">Next up</h2>
+          {/* While Home loads (or can't), no card: a quick tap must not open practice when feedback is due (US-6.9). */}
+          {home === null ? null : card?.kind === "feedback" ? (
             <button className="bo-homecard" data-home-card="feedback" onClick={() => onFeedback(card.talkId)}>
               <span className="bo-homecard__icon"><Icon name="forum" fill /></span>
               <span className="bo-homecard__body"><span className="bo-homecard__title">Finish your feedback</span>
@@ -90,7 +91,7 @@ export function HomeDashboard({ home, name, minutes, freeLine, note, hasDay1, ke
           )}
         </div>
         <div>
-          <div className="dk-h2">This week <button className="dk-link" style={{ border: 0, background: "transparent", padding: 0 }} onClick={onProgress}>Progress</button></div>
+          <h2 className="dk-h2">This week <button className="dk-link" style={{ border: 0, background: "transparent", padding: 0 }} onClick={onProgress}>Progress</button></h2>
           {home?.week && <WeekCard week={home.week} />}
         </div>
       </div>

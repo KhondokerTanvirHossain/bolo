@@ -69,3 +69,16 @@ describe("the dashboard Home (P1f)", () => {
     expect(q.onTalk).not.toHaveBeenCalled();
   });
 });
+
+describe("Home review fixes", () => {
+  it("Next up and This week are headings", () => {
+    render(<HomeDashboard {...props({ primary: "talk", card: null })} />);
+    expect(screen.getByRole("heading", { level: 2, name: "Next up" })).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 2, name: /This week/ })).toBeTruthy();
+  });
+
+  it("shows no Next up card while Home is loading", () => {
+    const { container } = render(<HomeDashboard {...props(null)} />);
+    expect(container.querySelectorAll("[data-home-card]")).toHaveLength(0);
+  });
+});
