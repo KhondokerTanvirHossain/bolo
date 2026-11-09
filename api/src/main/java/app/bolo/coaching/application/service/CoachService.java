@@ -469,7 +469,7 @@ public class CoachService implements DebriefUseCase, LatestDebriefUseCase, app.b
             for (int i = 0; i < said.size(); i++) {
                 var t = said.get(i);
                 if (!t.learner() || (turnIdx != null && t.idx() != turnIdx)) continue;
-                int[] at = ChatMarks.find(t.text(), words, "sound".equals(kind));
+                int[] at = ChatMarks.find(t.text(), words);
                 if (at == null) continue;
                 marks.addObject().put("turn", i).put("start", at[0]).put("end", at[1]).put("fix", n)
                         .put("title", fix.path("title").asString(""));

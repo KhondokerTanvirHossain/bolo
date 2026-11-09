@@ -1,4 +1,4 @@
-import { expect, test, type Page, type WebSocketRoute } from "@playwright/test";
+import { expect, test, type Page, type WebSocketRoute } from "./fixtures";
 
 test.beforeEach(async ({ page, browserName }) => {
   await page.addInitScript(() => {

@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page } from "./fixtures";
 
 // Firefox's fake stream goes silent when echo cancellation or noise suppression is requested (a fake-device
 // artefact, not app behaviour), so on Firefox only the test strips those constraints. The app keeps them.

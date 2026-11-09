@@ -1,4 +1,4 @@
-import { expect, test, type Page, type WebSocketRoute } from "@playwright/test";
+import { expect, test, type Page, type WebSocketRoute } from "./fixtures";
 
 const TALK = "44444444-4444-4444-4444-444444444444";
 const FIRST = { status: "ready", strength: { text: "You kept going for a whole minute.", clip: null }, fixes: [],

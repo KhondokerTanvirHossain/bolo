@@ -1,4 +1,4 @@
-import { expect, test, type Page, type WebSocketRoute } from "@playwright/test";
+import { expect, test, type Page, type WebSocketRoute } from "./fixtures";
 
 // Same Firefox fake-stream workaround as onboarding.spec.ts: the test strips processing constraints, the app keeps them.
 test.beforeEach(async ({ page, browserName }) => {

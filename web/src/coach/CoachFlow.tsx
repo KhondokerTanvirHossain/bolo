@@ -127,11 +127,14 @@ function DebriefScreen({ talkId, deviceId, debrief, onTalkAgain, onDone, onPract
   // DBF-6: the full chat replaces the card pane; a marked spot goes back to its fix card.
   const [chat, setChat] = useState<Chat | null>(null);
   const [chatMissing, setChatMissing] = useState(false);
-  const go = (i: number) => { setChat(null); setChatMissing(false); setAt(i); };
+  // The pane scrolls; switching between the chat and a card starts the new view at its top.
+  const pane = useRef<HTMLDivElement | null>(null);
+  const toTop = () => { if (pane.current) pane.current.scrollTop = 0; };
+  const go = (i: number) => { setChat(null); setChatMissing(false); setAt(i); toTop(); };
   const openChat = async () => {
     setChatMissing(false);
     const c = await fetchChat(talkId);
-    if (c) setChat(c); else setChatMissing(true);
+    if (c) { setChat(c); toTop(); } else setChatMissing(true);
   };
   const [note, setNote] = useState<string | null>(null);
   const [disputing, setDisputing] = useState(false);
@@ -141,13 +144,15 @@ function DebriefScreen({ talkId, deviceId, debrief, onTalkAgain, onDone, onPract
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // While the full chat shows, the keys belong to it (scrolling), not to the hidden cards.
+      if (chat) return;
       if (e.key === "ArrowDown") { e.preventDefault(); setAt((a) => Math.min(cards - 1, a + 1)); setNote(null); }
       else if (e.key === "ArrowUp") { e.preventDefault(); setAt((a) => Math.max(0, a - 1)); setNote(null); }
       else if (e.key === " " && playMine.current) { e.preventDefault(); playMine.current(); }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [cards]);
+  }, [cards, chat]);
 
   /** By the fix's stable id, once: a double tap can't remove a second card. */
   const dispute = async (fix: Fix) => {
@@ -182,7 +187,7 @@ function DebriefScreen({ talkId, deviceId, debrief, onTalkAgain, onDone, onPract
             )}
           </div>
         </div>
-        <div className="dk-deb__pane">
+        <div className="dk-deb__pane" ref={pane}>
           {note && <p className="bo-footnote" role="status" style={{ textAlign: "center", marginBottom: 12 }}>{note}</p>}
           {audioNote && <p className="bo-footnote" style={{ textAlign: "center", marginBottom: 12 }}>{audioNote}</p>}
           {chatMissing && <p className="bo-footnote" role="status" style={{ textAlign: "center", marginBottom: 12 }}>The chat isn&apos;t available for this talk.</p>}

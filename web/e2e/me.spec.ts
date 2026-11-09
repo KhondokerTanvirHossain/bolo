@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page } from "./fixtures";
 
 const consent = { keepRecordings: true, policyVersion: "2026-11-v1" };
 const profile = { goal: "job_interviews", fearedMoment: "phone_calls", talkMinutes: 5 };

@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 /** The privacy page Google's consent screen links to, in plain words (ACC-3/4, NFR-16). */
 test("the privacy page says what's kept, why, for how long, who processes it and how to delete it", async ({ page }) => {

@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page } from "./fixtures";
 
 const T = "55555555-5555-5555-5555-555555555555";
 const iso = (daysAgo: number) => new Date(Date.now() - daysAgo * 86_400_000).toISOString();
@@ -193,4 +193,33 @@ test("on a phone, the full chat fits with no sideways scroll", async ({ page }) 
   await page.getByRole("button", { name: "See full chat" }).click();
   await expect(page.getByText("The logs showed it.")).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+});
+
+test("on a phone, a mark far down a long chat opens its card at the top", async ({ page }) => {
+  // A short screen (landscape, or the keyboard up): the fix card is taller than the pane, so an old scroll would stick.
+  await page.setViewportSize({ width: 390, height: 420 });
+  await stub(page);
+  const turns = Array.from({ length: 60 }, (_, i) => i % 2 === 0
+    ? { speaker: "bolo", text: `Question number ${i / 2 + 1}, tell me a bit more about that, please?` }
+    : { speaker: "learner", text: `This is my answer ${i}, and it was a very long day at work.` });
+  await page.route(`**/api/talk/${T}/chat`, (r) => r.fulfill({ json: { topic: "A long talk", turns,
+    marks: [{ turn: 59, start: 35, end: 39, fix: 1, title: "The v sound" }] } }));
+  await openPastTalk(page);
+  await page.getByRole("button", { name: "See full chat" }).click();
+  const mark = page.getByRole("button", { name: '"very": The v sound' });
+  await mark.scrollIntoViewIfNeeded();
+  await mark.click();
+  await expect(page.getByText("Top teeth on lip.")).toBeVisible();
+  expect(await page.locator(".dk-deb__pane").evaluate((e) => e.scrollTop)).toBe(0);
+});
+
+test("arrow keys don't move the hidden cards while the chat is open", async ({ page }) => {
+  await stub(page);
+  await openPastTalk(page);
+  await page.getByRole("button", { name: "See full chat" }).click();
+  await expect(page.getByText("The logs showed it.")).toBeVisible();
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("ArrowDown");
+  await page.getByRole("button", { name: "Back to feedback" }).click();
+  await expect(page.getByText("You explained the bug clearly.")).toBeVisible();
 });

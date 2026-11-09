@@ -235,6 +235,25 @@ class CoachAcceptanceTest extends PostgresTestBase {
         assertThat((String) JsonPath.read(c, "$.marks[0].title")).isNotBlank();
     }
 
+    /** Review: the Coach's quote is accepted by words (commas ignored); the mark must be found the same way. */
+    @Test
+    void anUpgradeWithACommaInItIsStillMarked() throws Exception {
+        stt.nextText("Yesterday, I go to market with my brother.");
+        llm.structuredReply("""
+                {"strength":{"turn":1,"quote":"my brother","text":"You talked about family."},
+                 "upgrades":[{"turn":3,"said":"Yesterday I go to market","better":"Yesterday I went to the market."}],
+                 "sentenceLevel":"GOOD","vocabularyLevel":"BUILDING","topic":"Market day"}""");
+        talk(3);
+        List<String> kinds = JsonPath.read(debriefWhenSettled(), "$.fixes[*].kind");
+        int upgrade = kinds.indexOf("upgrade") + 1;
+        String c = chat();
+        List<Integer> fixes = JsonPath.read(c, "$.marks[*].fix");
+        int i = fixes.indexOf(upgrade);
+        assertThat(i).as("the upgrade (fix %d) is marked", upgrade).isGreaterThanOrEqualTo(0);
+        assertThat(slice(c, i)).isEqualTo("Yesterday, I go to market");
+        assertThat((Integer) JsonPath.read(c, "$.marks[" + i + "].turn")).isEqualTo(3);
+    }
+
     @Test
     void aRepeatedWordIsMarkedOnceInItsTurn() throws Exception {
         stt.nextText("I am very happy");
