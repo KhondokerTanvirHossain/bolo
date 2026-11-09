@@ -17,6 +17,15 @@ public interface DebriefUseCase {
      */
     Optional<String> chat(LearnerId learner, TalkSessionId talk);
 
+    /** DRL-1: {drills: [...]} made from the talk's fixes (DrillPlan); empty unless it's the learner's ready talk. */
+    Optional<String> drills(LearnerId learner, TalkSessionId talk);
+
+    /**
+     * The Coach saying one of this talk's drill texts (24 kHz WAV). Empty when the text isn't part of the talk's drills or
+     * the talk isn't the learner's. Throws TooManyRequestsException past 30 a minute.
+     */
+    Optional<byte[]> say(LearnerId learner, TalkSessionId talk, String text);
+
     /** DBF-4: removes the fix card (by its stable id) and logs it; false if there is no such card for this learner. */
     boolean dispute(LearnerId learner, TalkSessionId talk, String fixId);
 

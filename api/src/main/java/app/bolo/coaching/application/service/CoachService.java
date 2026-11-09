@@ -77,13 +77,16 @@ public class CoachService implements DebriefUseCase, LatestDebriefUseCase, app.b
     private final int maxTokens;
     private final long minSpeechMs;
     private final long backoffMs;
+    private final app.bolo.assessment.application.port.in.MinimalPairsUseCase minimalPairs;
 
     public CoachService(TalkQueryUseCase talks, AssessTalkUseCase assessment, DebriefPort debriefs, LlmClient llm, SynthesizeUseCase voice,
                         AudioStoreUseCase audio, BoloClock clock,
                         @Value("${bolo.coaching.model}") String model,
                         @Value("${bolo.coaching.max-tokens}") int maxTokens,
                         @Value("${bolo.coaching.min-speech-ms}") long minSpeechMs,
-                        @Value("${bolo.coaching.retry-backoff-ms}") long backoffMs) {
+                        @Value("${bolo.coaching.retry-backoff-ms}") long backoffMs,
+                        app.bolo.assessment.application.port.in.MinimalPairsUseCase minimalPairs) {
+        this.minimalPairs = minimalPairs;
         this.talks = talks;
         this.assessment = assessment;
         this.debriefs = debriefs;
@@ -489,6 +492,58 @@ public class CoachService implements DebriefUseCase, LatestDebriefUseCase, app.b
             }
         }
         return Optional.of(JSON.writeValueAsString(out));
+    }
+
+    @Override
+    public Optional<String> drills(LearnerId learner, TalkSessionId talk) {
+        return readyBody(learner, talk).map(body -> "{\"drills\":" + drillsOf(body) + "}");
+    }
+
+    private String drillsOf(JsonNode body) {
+        return app.bolo.coaching.domain.DrillPlan.drills(body, pattern -> minimalPairs.pairs(pattern)
+                .map(p -> new app.bolo.coaching.domain.DrillPlan.Pairs(p.listen(), p.say())));
+    }
+
+    private Optional<JsonNode> readyBody(LearnerId learner, TalkSessionId talk) {
+        return debriefs.find(talk).filter(d -> d.learner().equals(learner) && "ready".equals(d.status()) && d.body() != null)
+                .map(d -> JSON.readTree(d.body()));
+    }
+
+    /** At most this many Coach phrases a minute per learner (drill audio). */
+    static final int SAY_PER_MINUTE = 30;
+    private final java.util.Map<LearnerId, java.util.Deque<java.time.Instant>> recentSays = new java.util.concurrent.ConcurrentHashMap<>();
+
+    @Override
+    public Optional<byte[]> say(LearnerId learner, TalkSessionId talk, String text) {
+        var body = readyBody(learner, talk);
+        if (body.isEmpty() || text == null) return Optional.empty();
+        String wanted = text.trim();
+        var allowed = app.bolo.coaching.domain.DrillPlan.texts(JSON.readTree(drillsOf(body.get())));
+        if (!allowed.contains(wanted)) return Optional.empty();
+        var now = clock.now();
+        var times = recentSays.computeIfAbsent(learner, k -> new java.util.ArrayDeque<>());
+        synchronized (times) {
+            while (!times.isEmpty() && times.peekFirst().isBefore(now.minusSeconds(60))) times.pollFirst();
+            if (times.size() >= SAY_PER_MINUTE) throw new app.bolo.common.error.TooManyRequestsException();
+            times.addLast(now);
+        }
+        // Shared cache: the Coach saying a deck word or a sentence is not personal audio.
+        String key = "tts/coach/" + sha256(wanted) + ".wav";
+        return audio.get(key).or(() -> {
+            ByteArrayOutputStream pcm = new ByteArrayOutputStream();
+            voice.synthesize(new TalkContext(learner, talk), Voice.COACH, wanted, pcm::writeBytes);
+            byte[] wav = Wav.wrap(pcm.toByteArray(), 24000);
+            audio.put(key, wav);
+            return Optional.of(wav);
+        });
+    }
+
+    private static String sha256(String s) {
+        try {
+            return java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(s.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     @Override

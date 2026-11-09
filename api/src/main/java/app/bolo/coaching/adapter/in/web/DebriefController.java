@@ -42,6 +42,25 @@ class DebriefController {
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
+    /** DRL-1: drills made from this talk's fixes. */
+    @GetMapping("/api/talk/{id}/drills")
+    ResponseEntity<String> drills(@RequestAttribute(name = CurrentLearner.ATTRIBUTE, required = false) LearnerId learner,
+                                  @PathVariable String id) {
+        return talk(id).flatMap(t -> debriefs.drills(signedIn(learner), t))
+                .map(json -> ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).cacheControl(CacheControl.noStore()).body(json))
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    /** The Coach saying a word or sentence from this talk's drills (and nothing else). */
+    @GetMapping("/api/talk/{id}/drills/say")
+    ResponseEntity<byte[]> say(@RequestAttribute(name = CurrentLearner.ATTRIBUTE, required = false) LearnerId learner,
+                               @PathVariable String id, @org.springframework.web.bind.annotation.RequestParam("text") String text) {
+        return talk(id).flatMap(t -> debriefs.say(signedIn(learner), t, text))
+                .map(wav -> ResponseEntity.ok().contentType(MediaType.parseMediaType("audio/wav"))
+                        .cacheControl(CacheControl.maxAge(java.time.Duration.ofDays(1)).cachePrivate()).body(wav))
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
     @PostMapping("/api/talk/{id}/debrief/fixes/{fixId}/dispute")
     ResponseEntity<Void> dispute(@RequestAttribute(name = CurrentLearner.ATTRIBUTE, required = false) LearnerId learner,
                                  @PathVariable String id, @PathVariable String fixId) {

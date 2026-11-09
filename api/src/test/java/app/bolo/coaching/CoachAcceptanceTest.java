@@ -290,6 +290,59 @@ class CoachAcceptanceTest extends PostgresTestBase {
         assertThat(get("/api/talk/" + id + "/chat", cookie).statusCode()).isEqualTo(404);
     }
 
+    // ---- P1i: drills -------------------------------------------------------------------------------------------------
+
+    @Test
+    void myTalksDrills() throws Exception {
+        talk(3);
+        debriefWhenSettled();
+        HttpResponse<String> r = get("/api/talk/" + id + "/drills", cookie);
+        assertThat(r.statusCode()).isEqualTo(200);
+        List<String> kinds = JsonPath.read(r.body(), "$.drills[*].kind");
+        assertThat(kinds).containsExactly("pairs", "sayBetter", "shadow");
+        assertThat((String) JsonPath.read(r.body(), "$.drills[0].listen[0].target")).isEqualTo("very");
+    }
+
+    @Test
+    void anotherLearnerCannotGetMyDrills() throws Exception {
+        talk(3);
+        debriefWhenSettled();
+        String other = client.consentedGuest(5);
+        assertThat(get("/api/talk/" + id + "/drills", other).statusCode()).isEqualTo(404);
+        assertThat(get("/api/talk/" + id + "/drills/say?text=very", other).statusCode()).isEqualTo(404);
+    }
+
+    /** Review focus: the say endpoint is not a free text-to-speech service. */
+    @Test
+    void sayOnlySpeaksThisTalksTexts() throws Exception {
+        talk(3);
+        debriefWhenSettled();
+        HttpResponse<String> ok = get("/api/talk/" + id + "/drills/say?text=very", cookie);
+        assertThat(ok.statusCode()).isEqualTo(200);
+        assertThat(ok.headers().firstValue("content-type").orElse("")).contains("audio/wav");
+        assertThat(get("/api/talk/" + id + "/drills/say?text=" + java.net.URLEncoder.encode("Buy cheap watches now", java.nio.charset.StandardCharsets.UTF_8), cookie)
+                .statusCode()).isEqualTo(404);
+    }
+
+    @Test
+    void shadowUsesTheSayEndpointEvenAfterTheRecordingIsDeleted() throws Exception {
+        talk(3);
+        debriefWhenSettled();
+        client.send("POST", "/api/talk/" + id + "/recording/delete", cookie, "{}");
+        String sentence = JsonPath.read(get("/api/talk/" + id + "/drills", cookie).body(), "$.drills[2].sentence");
+        assertThat(get("/api/talk/" + id + "/drills/say?text=" + java.net.URLEncoder.encode(sentence, java.nio.charset.StandardCharsets.UTF_8), cookie)
+                .statusCode()).isEqualTo(200);
+    }
+
+    @Test
+    void sayIsRateLimited() throws Exception {
+        talk(3);
+        debriefWhenSettled();
+        int last = 0;
+        for (int i = 0; i < 31; i++) last = get("/api/talk/" + id + "/drills/say?text=very", cookie).statusCode();
+        assertThat(last).isEqualTo(429);
+    }
+
     @Autowired app.bolo.talk.application.port.in.AudioRetentionUseCase retention;
 
     /** Ends the talk long ago under the given keep choice, then runs the real retention sweep. */

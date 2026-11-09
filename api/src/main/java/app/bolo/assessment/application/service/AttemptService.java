@@ -39,7 +39,14 @@ import java.util.concurrent.ConcurrentHashMap;
  * N attempts a minute), assessed against the reference by the speech vendor, scored for clarity, stored (scores only).
  */
 @Service
-public class AttemptService implements AttemptUseCase, app.bolo.assessment.application.port.in.PracticeDaysUseCase {
+public class AttemptService implements AttemptUseCase, app.bolo.assessment.application.port.in.PracticeDaysUseCase,
+        app.bolo.assessment.application.port.in.MinimalPairsUseCase {
+
+    @Override
+    public java.util.Optional<Pairs> pairs(String pattern) {
+        return java.util.Arrays.stream(app.bolo.assessment.domain.SoundPattern.values()).filter(p -> p.name().equals(pattern)).findFirst()
+                .map(app.bolo.assessment.domain.MinimalPairs::of).map(d -> new Pairs(d.listen(), d.say()));
+    }
 
     @Override
     public java.util.List<Instant> practiceDays(LearnerId learner) {
