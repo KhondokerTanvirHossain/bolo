@@ -10,7 +10,8 @@ public interface HomeUseCase {
                     String lastTopic, app.bolo.home.domain.Streak.Week week) {
     }
 
-    record Card(String kind, String talkId, String pattern, String title) {
+    /** kind: feedback (talkId), intro (day) or practice (pattern, title). */
+    record Card(String kind, String talkId, String pattern, String title, Integer day) {
     }
 
     HomeView home(LearnerId learner);

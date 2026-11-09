@@ -12,18 +12,25 @@ public final class HomePlan {
     public record LastDebrief(String talkId, String status, boolean viewed, String soundPattern, String soundTitle) {
     }
 
-    /** kind "feedback" (talkId) or "practice" (pattern, title). */
-    public record Card(String kind, String talkId, String pattern, String title) {
+    /** kind "feedback" (talkId), "intro" (day: record the intro again, PRG-2) or "practice" (pattern, title). */
+    public record Card(String kind, String talkId, String pattern, String title, Integer day) {
     }
 
     private HomePlan() {
     }
 
     public static Optional<Card> card(Optional<LastDebrief> last) {
-        if (last.isEmpty() || !"ready".equals(last.get().status())) return Optional.empty();
-        LastDebrief d = last.get();
-        if (!d.viewed()) return Optional.of(new Card("feedback", d.talkId(), null, null));
-        if (d.soundPattern() != null) return Optional.of(new Card("practice", null, d.soundPattern(), d.soundTitle()));
+        return card(last, null);
+    }
+
+    /** US-6.9 priority: Finish your feedback → Re-record your intro ({@code introDue}) → practise the last sound. */
+    public static Optional<Card> card(Optional<LastDebrief> last, Integer introDue) {
+        boolean ready = last.isPresent() && "ready".equals(last.get().status());
+        if (ready && !last.get().viewed()) return Optional.of(new Card("feedback", last.get().talkId(), null, null, null));
+        if (introDue != null) return Optional.of(new Card("intro", null, null, null, introDue));
+        if (ready && last.get().soundPattern() != null) {
+            return Optional.of(new Card("practice", null, last.get().soundPattern(), last.get().soundTitle(), null));
+        }
         return Optional.empty();
     }
 }

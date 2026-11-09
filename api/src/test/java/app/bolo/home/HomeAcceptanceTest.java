@@ -180,6 +180,17 @@ class HomeAcceptanceTest extends PostgresTestBase {
         assertThat(home).contains("\"lastTopic\":null");
     }
 
+    /** P1g: on Day 7 Home offers the intro again. */
+    @Test
+    void homeOffersTheDueIntro() throws Exception {
+        String other = client.consentedGuest(5);
+        java.util.UUID learner = java.util.UUID.fromString(JsonPath.read(client.send("GET", "/api/me", other, "").body(), "$.learnerId"));
+        jdbc.sql("update learner set created_at = now() - interval '6 days' where id = ?").param(learner).update();
+        String home = get("/api/home", other).body();
+        assertThat((String) JsonPath.read(home, "$.card.kind")).isEqualTo("intro");
+        assertThat((Integer) JsonPath.read(home, "$.card.day")).isEqualTo(7);
+    }
+
     @Test
     void signedOutIs401() throws Exception {
         assertThat(HttpClient.newHttpClient().send(HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/api/home")).GET().build(),
