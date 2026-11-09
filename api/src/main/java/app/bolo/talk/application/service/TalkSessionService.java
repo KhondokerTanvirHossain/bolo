@@ -57,7 +57,9 @@ public class TalkSessionService implements StartTalkUseCase, app.bolo.talk.appli
             throw new RefusedException("free-limit");
         }
         int chosen = view.profile() == null ? FreePlan.FREE_MINUTES : view.profile().talkMinutes();
-        int minutes = view.unlimited() ? chosen : FreePlan.FREE_MINUTES;
+        // A free-plan talk is 5 minutes (ACC-5). Guests only talk with sign-in off or when unlimited: no plan applies.
+        boolean onFreePlan = !view.unlimited() && "account".equals(view.kind());
+        int minutes = onFreePlan ? FreePlan.FREE_MINUTES : chosen;
         var now = clock.now();
         sessions.endOpenFor(learner, EndReason.DISCONNECTED, now);
         TalkSession session = new TalkSession(TalkSessionId.newId(), learner, minutes, now, null);
