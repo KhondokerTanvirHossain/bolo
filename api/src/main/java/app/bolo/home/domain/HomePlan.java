@@ -29,7 +29,8 @@ public final class HomePlan {
         if (ready && !last.get().viewed()) return Optional.of(new Card("feedback", last.get().talkId(), null, null, null));
         if (introDue != null) return Optional.of(new Card("intro", null, null, null, introDue));
         if (ready && last.get().soundPattern() != null) {
-            return Optional.of(new Card("practice", null, last.get().soundPattern(), last.get().soundTitle(), null));
+            // US-5.1: "3-minute practice" with that talk's drills.
+            return Optional.of(new Card("practice", last.get().talkId(), last.get().soundPattern(), last.get().soundTitle(), null));
         }
         return Optional.empty();
     }

@@ -810,3 +810,17 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #0b0816; }
 
 /* Text for screen readers only. */
 .bo-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* Drills (P1i, DesktopDrill): a quiet page; Close, dots and Skip above one card. */
+.dk-drillpage { background: var(--canvas); overflow-y: auto; padding: 28px 24px 48px; }
+.dk-drill__head { max-width: 640px; margin: 0 auto 16px; display: flex; align-items: center; justify-content: space-between; }
+.dk-drill__dots { display: flex; gap: 8px; }
+.dk-drill__dots i { width: 8px; height: 8px; border-radius: var(--radius-full); background: var(--line-strong); }
+.dk-drill__dots i.on { width: 22px; background: var(--hills); }
+.dk-drill__dots i.done { background: var(--hills-soft); }
+.dk-drill { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
+.dk-drill__listen { width: 96px; height: 96px; background: var(--hills); color: var(--on-hills); }
+.dk-drill__word { font: 750 48px/56px var(--font-sans); letter-spacing: -.02em; margin: 8px 0 0; }
+.dk-pairs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; margin-top: 16px; }
+.dk-drill__summary { list-style: none; padding: 0; margin: 8px 0 16px; display: flex; flex-direction: column; gap: 6px; font: 500 17px/24px var(--font-sans); }
+@media (max-width: 720px) { .dk-drillpage { padding: 16px 16px 32px; } .dk-stagecard { padding: 24px 16px; } .dk-drill__word { font-size: 40px; line-height: 48px; } }

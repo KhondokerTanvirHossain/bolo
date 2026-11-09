@@ -85,8 +85,10 @@ test("History groups by week, and a past talk can delete its recording", async (
   await expect(page.getByText("Recording deleted. Feedback and words are still here.")).toBeVisible();
 });
 
-test("Practise these opens practice on the talk's sound", async ({ page }) => {
+test("Practise these opens the drills from that talk", async ({ page }) => {
   await stub(page);
+  await page.route(`**/api/talk/${T}/drills`, (r) => r.fulfill({ json: { drills: [
+    { key: "shadow:x", kind: "shadow", title: "Shadow it", sentence: "Very few vans visit." }] } }));
   await page.goto("/");
   await page.getByRole("button", { name: "Me" }).click();
   await page.getByRole("button", { name: "Progress" }).click();

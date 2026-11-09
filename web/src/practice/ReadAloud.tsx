@@ -15,8 +15,13 @@ const MAX_MS = 15_000;
  * more", with the words to work on highlighted and their tips. One request per attempt, however fast the taps.
  * A new sentence (or leaving) drops whatever the last one still had in flight: its recording and its result.
  */
-export function ReadAloud({ reference, deviceId, showSentence = true, mode, onOutcome }: {
+/**
+ * Drills (P1i): {@code onClip} hands over the learner's take (shadowing plays it back); a changed {@code startSignal} opens
+ * the mic by itself (after the model plays); {@code label} names the button.
+ */
+export function ReadAloud({ reference, deviceId, showSentence = true, mode, onOutcome, onClip, startSignal = 0, label }: {
   reference: string; deviceId: string | null; showSentence?: boolean; mode?: "upgrade"; onOutcome?: (o: Outcome) => void;
+  onClip?: (wav: Blob) => void; startSignal?: number; label?: string;
 }) {
   const [phase, setPhase] = useState<Phase>("idle");
   const [outcome, setOutcome] = useState<Outcome | null>(null);
@@ -35,6 +40,7 @@ export function ReadAloud({ reference, deviceId, showSentence = true, mode, onOu
   useEffect(() => { drop(); setPhase("idle"); setOutcome(null); setError(null); }, [reference]);
 
   const check = async (wav: Blob, g: number) => {
+    onClip?.(wav);
     setPhase("checking");
     const reply = await postAttempt(wav, reference, mode);
     if (g !== gen.current) return;
@@ -79,6 +85,11 @@ export function ReadAloud({ reference, deviceId, showSentence = true, mode, onOu
     await check(await r.stop(), g);
   };
 
+  // The mic opens by itself when asked (shadowing: straight after the model).
+  const startRef = useRef(start);
+  startRef.current = start;
+  useEffect(() => { if (startSignal > 0) void startRef.current(); }, [startSignal]);
+
   const focusWords = outcome?.focus.map((f) => f.word) ?? [];
   const result = outcome ? RESULT[outcome.level] : null;
   return (
@@ -87,7 +98,7 @@ export function ReadAloud({ reference, deviceId, showSentence = true, mode, onOu
       {phase === "recording"
         ? <button className="bo-btn bo-btn--primary" style={{ minWidth: 220 }} onClick={() => void stop()}><Icon name="stop" fill />Stop recording</button>
         : <button className="bo-btn bo-btn--primary" style={{ minWidth: 220 }} disabled={phase === "checking"} onClick={() => void start()}>
-            <Icon name="mic" fill />{showSentence ? "Start recording" : "Try it"}</button>}
+            <Icon name="mic" fill />{label ?? (showSentence ? "Start recording" : "Try it")}</button>}
       {phase === "checking" && <p className="bo-footnote" role="status">Listening back…</p>}
       {result && outcome && (
         <div role="status" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>

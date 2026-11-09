@@ -22,6 +22,8 @@ type Props = {
   onPractice: (pattern?: string) => void;
   onProgress: () => void;
   onIntro: (day: number) => void;
+  /** The practice card opens drills from that talk (DRL-1); without a talk, practice on its sound. */
+  onDrills?: (talkId: string) => void;
   onPlayDay1: () => void;
 };
 
@@ -29,7 +31,7 @@ type Props = {
  * The dashboard Home (DesktopHome, HOM-1, US-6.9): a greeting, Bolo's line in the scene with the Talk disc (the one
  * primary, R1, one tap away, R2), Next up (at most one card by the priority table), and This week (PRG-4).
  */
-export function HomeDashboard({ home, name, minutes, freeLine, note, hasDay1, keysOn, onTalk, onFeedback, onPractice, onProgress, onIntro, onPlayDay1 }: Props) {
+export function HomeDashboard({ home, name, minutes, freeLine, note, hasDay1, keysOn, onTalk, onFeedback, onPractice, onProgress, onIntro, onDrills, onPlayDay1 }: Props) {
   useEffect(() => {
     if (!keysOn) return;
     const onKey = (e: KeyboardEvent) => {
@@ -83,10 +85,11 @@ export function HomeDashboard({ home, name, minutes, freeLine, note, hasDay1, ke
               <Icon name="chevron_right" />
             </button>
           ) : card?.kind === "practice" ? (
-            <button className="bo-homecard" data-home-card="practice" onClick={() => onPractice(card.pattern)}>
+            <button className="bo-homecard" data-home-card="practice"
+              onClick={() => (card.talkId && onDrills ? onDrills(card.talkId) : onPractice(card.pattern))}>
               <span className="bo-homecard__icon bo-homecard__icon--sun"><Icon name="record_voice_over" /></span>
               <span className="bo-homecard__body"><span className="bo-homecard__title">Practise {card.title.charAt(0).toLowerCase() + card.title.slice(1)}</span>
-                <span className="bo-homecard__sub">From your last talk</span></span>
+                <span className="bo-homecard__sub">3-minute practice from your last talk</span></span>
               <Icon name="chevron_right" />
             </button>
           ) : (

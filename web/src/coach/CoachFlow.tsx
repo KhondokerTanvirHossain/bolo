@@ -17,7 +17,7 @@ type Props = {
   /** A ready debrief was shown (the talk counts as finished for the first loop and the guest save prompts). */
   onReady?: () => void;
   /** US-6.8: the first debrief's last card offers "Practise (3 min)" on its first sound (or the sounds list). */
-  onPractise?: (pattern?: string) => void;
+  onPractise?: (pattern?: string, talkId?: string) => void;
   /** ScreenHistorySession: a past talk — Practise these (3 min) / Back, and a quiet Delete recording (US-8.6). */
   history?: boolean;
 };
@@ -68,7 +68,7 @@ export function CoachFlow({ talkId, deviceId = null, onTalkAgain, onDone, onNoDe
       primary="Talk again" onPrimary={onTalkAgain} onDone={onDone} />;
   }
   return <DebriefScreen key={String(debrief.recordingDeleted ?? false)} talkId={talkId} deviceId={deviceId} debrief={debrief}
-    onTalkAgain={onTalkAgain} onDone={onDone} onPractise={onPractise} history={history}
+    onTalkAgain={onTalkAgain} onDone={onDone} onPractise={onPractise ? (p) => onPractise(p, talkId) : undefined} history={history}
     onRecordingDeleted={() => void fetchDebrief(talkId).then((d) => { if (d) setDebrief(d); })} />;
 }
 

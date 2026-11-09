@@ -2,7 +2,7 @@ import { api } from "@/api/browser";
 
 export type HomeCard =
   | { kind: "feedback"; talkId: string }
-  | { kind: "practice"; pattern: string; title: string }
+  | { kind: "practice"; pattern: string; title: string; talkId?: string }
   | { kind: "intro"; day: number };
 import type { FreeTalks } from "@/plan/freeTalks";
 

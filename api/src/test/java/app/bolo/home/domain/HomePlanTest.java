@@ -19,7 +19,7 @@ class HomePlanTest {
 
     @Test
     void aViewedDebriefWithASoundFixOffersThatSound() {
-        assertThat(HomePlan.card(last("ready", true, "V_BH"))).contains(new HomePlan.Card("practice", null, "V_BH", "The v sound", null));
+        assertThat(HomePlan.card(last("ready", true, "V_BH"))).contains(new HomePlan.Card("practice", "t1", "V_BH", "The v sound", null));
         assertThat(HomePlan.card(last("ready", true, null))).isEmpty();
     }
 

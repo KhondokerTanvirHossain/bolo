@@ -21,7 +21,7 @@ type Props = {
   captionsDefault?: boolean;
   /** Passed to the Coach after the talk (first-loop actions, finished-talk counting). */
   onCoachReady?: () => void;
-  onPractise?: (pattern?: string) => void;
+  onPractise?: (pattern?: string, talkId?: string) => void;
 };
 
 const LIVE = ["connecting", "buddy_speaking", "your_turn", "thinking"];

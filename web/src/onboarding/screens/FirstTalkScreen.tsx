@@ -6,6 +6,7 @@ import { fetchHome, type Home } from "@/home/home";
 import { HomeDashboard } from "@/home/HomeDashboard";
 import { SideCards, useFreeLine } from "@/home/SideCards";
 import { RecordIntro } from "@/voice/RecordIntro";
+import { DrillSession } from "@/drills/DrillSession";
 import { PracticeScreen } from "@/practice/PracticeScreen";
 import type { LearnerView } from "@/api/browser";
 import { afterDebrief, loadLoop, saveAnswered, saveLoop, seenSeeYou, type Loop } from "@/account/loop";
@@ -24,7 +25,7 @@ import { useTalk } from "@/talk/useTalk";
 
 type View = { kind: "home" } | { kind: "practice"; pattern?: string } | { kind: "feedback"; talkId: string } | { kind: "me" } | { kind: "privacy" }
   | { kind: "progress" } | { kind: "history" } | { kind: "session"; talkId: string; from: "progress" | "history" }
-  | { kind: "intro"; day: number };
+  | { kind: "intro"; day: number } | { kind: "drills"; talkId: string };
 
 /**
  * After onboarding: Home (US-6.9) with its one next step, and from there a talk, the Coach's feedback, practice or
@@ -107,6 +108,7 @@ export function FirstTalkScreen({ deviceId }: { deviceId: string | null }) {
         <HomeDashboard home={home} name={me?.account?.name} minutes={minutes} freeLine={freeLine} note={seeYou ? "See you tomorrow. Bolo will be here." : undefined}
           hasDay1={url !== null} keysOn={!sheet} onTalk={talk}
           onPractice={(pattern) => setView({ kind: "practice", pattern })}
+          onDrills={(talkId) => setView({ kind: "drills", talkId })}
           onFeedback={(talkId) => setView({ kind: "feedback", talkId })}
           onProgress={() => toTab("progress")}
           onIntro={(day) => setView({ kind: "intro", day })}
@@ -131,7 +133,11 @@ export function FirstTalkScreen({ deviceId }: { deviceId: string | null }) {
       onTalkAgain={() => void conversation.start()} onLeave={conversation.reset} onPause={conversation.pause}
       onResume={conversation.resume} onRepeat={conversation.repeat} onKeepSlower={conversation.answerKeepSlower}
       captionsDefault={captions} onCoachReady={coachReady}
-      onPractise={(pattern) => { conversation.reset(); setView({ kind: "practice", pattern }); }} />;
+      onPractise={(pattern, talkId) => { conversation.reset(); setView(talkId ? { kind: "drills", talkId } : { kind: "practice", pattern }); }} />;
+  }
+  // Practise (3 min) (DRL-1): drills from that talk's fixes; Done and Close go Home.
+  if (view.kind === "drills") {
+    return <DrillSession talkId={view.talkId} deviceId={deviceId} onDone={toHome} onPractiseSounds={() => setView({ kind: "practice" })} />;
   }
   if (view.kind === "intro") {
     return <RecordIntro day={view.day} learnerId={me?.learnerId ?? "guest"} deviceId={deviceId}
@@ -140,11 +146,11 @@ export function FirstTalkScreen({ deviceId }: { deviceId: string | null }) {
   if (view.kind === "practice") return <PracticeScreen deviceId={deviceId} onBack={toHome} initialPattern={view.pattern} />;
   if (view.kind === "feedback") {
     return <CoachFlow talkId={view.talkId} deviceId={deviceId} onTalkAgain={talk} onDone={toHome} onNoDebrief={toHome}
-      onPractise={(pattern) => setView({ kind: "practice", pattern })} />;
+      onPractise={(pattern, talkId) => setView(talkId ? { kind: "drills", talkId } : { kind: "practice", pattern })} />;
   }
   if (view.kind === "session") {
     return <CoachFlow talkId={view.talkId} deviceId={deviceId} history onTalkAgain={talk} onDone={() => setView({ kind: view.from })}
-      onNoDebrief={() => setView({ kind: view.from })} onPractise={(pattern) => setView({ kind: "practice", pattern })} />;
+      onNoDebrief={() => setView({ kind: view.from })} onPractise={(pattern, talkId) => setView(talkId ? { kind: "drills", talkId } : { kind: "practice", pattern })} />;
   }
   if (view.kind === "progress" || view.kind === "history") {
     const open = (talkId: string) => setView({ kind: "session", talkId, from: view.kind as "progress" | "history" });

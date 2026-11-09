@@ -280,3 +280,28 @@ The goal: someone who has never seen Bolo gets from opening it to talk to feedba
   - A second miss in a week ends the run, quietly: "Welcome back. Let's start a new run."
 - **Sidebar cards:** "Free plan" (the counter; the free-week note once) and "Bolo on your phone". On phones they're hidden, and the counter shows under Talk.
 - **Close feedback** and **Esc** return to Home. Esc also closes practice, the full chat and the delete sheet.
+
+## Your voice, then and now
+
+- **Day 1** is the learner's sign-up date (Asia/Dhaka). The intro comes back on **Day 7, 14 and 21, then every 30 days** (`learner/domain/IntroSchedule.java`).
+- **When it's due:** Home's Next up offers it, after unseen feedback, for 7 days.
+- **Endpoints:** `GET /api/me/voice`, `POST /api/me/intro/{day}` (multipart; `audio` only for accounts that keep recordings), `GET /api/me/intro/{day}`.
+- **Where clips live:**
+  - The audio stays in the browser (`intro-<learnerId>-<day>`) and goes to the server only for accounts that keep recordings.
+  - Server copies go after 90 days (the retention sweep); the dates stay.
+  - Sign-out and Delete everything clear this browser's intros.
+- **On Progress:** Day 1 and the latest intro side by side, with one line: a skill that rose, or the effort since Day 1.
+
+## Drills
+
+- **Practise (3 min)** (debrief), **Practise these (3 min)** (History) and Home's practice card open up to 3 drills from that talk's fixes (`GET /api/talk/{id}/drills`, `coaching/domain/DrillPlan.java`):
+  - a sound fix → minimal pairs: 3 listen rounds, then 5 words to say;
+  - the first upgrade → say it better (3 rounds: read, key words hidden, from memory);
+  - a second upgrade, or short answers → shadowing (hear, the mic opens, both back; Slower is 0.75×).
+- **Pair decks:** `assessment/domain/MinimalPairs.java`, pending the teacher's review.
+- **Coach audio:** `GET /api/talk/{id}/drills/say?text=` speaks only that talk's drill texts, at most 30 a minute. It's cached at `tts/coach/<sha256>.wav`.
+- **Rules:**
+  - 3 tries per item, then "Good effort. We'll come back to this one."
+  - Skip and Close (Esc) queue drills in this browser (`bolo.drillQueue`); 3 skips retire one.
+  - The end lists what moved, with one **Done**.
+  - Attempts count toward the week's run.
