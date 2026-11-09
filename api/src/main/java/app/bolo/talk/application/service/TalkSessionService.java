@@ -1,5 +1,7 @@
 package app.bolo.talk.application.service;
 
+import app.bolo.talk.domain.FreePlan;
+import app.bolo.talk.application.port.in.FreeTalksUseCase.FreeTalks;
 import app.bolo.learner.application.port.in.SignInConfig;
 import app.bolo.common.error.RefusedException;
 import app.bolo.common.id.LearnerId;
@@ -19,7 +21,7 @@ import java.time.Duration;
 import java.util.Optional;
 
 @Service
-public class TalkSessionService implements StartTalkUseCase {
+public class TalkSessionService implements StartTalkUseCase, app.bolo.talk.application.port.in.FreeTalksUseCase {
 
     /** A talk older than this no longer holds a live slot, so a crashed relay can't block talking forever. */
     static final Duration SLOT_HOLD = Duration.ofMinutes(30);
@@ -32,8 +34,6 @@ public class TalkSessionService implements StartTalkUseCase {
     private final Duration attachWithin;
     private final SignInConfig signIn;
 
-    /** ACC-2: a guest may start this many talks; then they sign in to keep talking (only while sign-in is on). */
-    static final int GUEST_TALKS = 3;
 
     public TalkSessionService(TalkSessionPort sessions, CurrentLearnerUseCase learners, BoloClock clock,
                               @Value("${bolo.policy-version}") String policyVersion,
@@ -51,10 +51,13 @@ public class TalkSessionService implements StartTalkUseCase {
     @Override
     public TalkView start(LearnerId learner) {
         LearnerView view = consented(learner).orElseThrow(() -> new RefusedException("no-consent"));
-        if (signIn.enabled() && "guest".equals(view.kind()) && sessions.countStarted(learner) >= GUEST_TALKS) {
-            throw new RefusedException("sign-in");
+        // P1d: a guest signs in before the first talk (only while sign-in is on); an account talks on the free plan.
+        if (!view.unlimited() && signIn.enabled() && "guest".equals(view.kind())) throw new RefusedException("sign-in");
+        if (!view.unlimited() && "account".equals(view.kind()) && allowanceOf(learner).left() == 0) {
+            throw new RefusedException("free-limit");
         }
-        int minutes = view.profile() == null ? 5 : view.profile().talkMinutes();
+        int chosen = view.profile() == null ? FreePlan.FREE_MINUTES : view.profile().talkMinutes();
+        int minutes = view.unlimited() ? chosen : FreePlan.FREE_MINUTES;
         var now = clock.now();
         sessions.endOpenFor(learner, EndReason.DISCONNECTED, now);
         TalkSession session = new TalkSession(TalkSessionId.newId(), learner, minutes, now, null);
@@ -63,6 +66,18 @@ public class TalkSessionService implements StartTalkUseCase {
         }
         sessions.recordKeepChoice(session.id(), view.consent() != null && view.consent().keepRecordings());
         return toView(session, view);
+    }
+
+    @Override
+    public Optional<FreeTalks> allowance(LearnerId learner) {
+        LearnerView view = learners.view(learner);
+        if (view.unlimited() || !"account".equals(view.kind())) return Optional.empty();
+        var a = allowanceOf(learner);
+        return Optional.of(new FreeTalks(a.window(), a.left(), a.total(), a.resetsOn()));
+    }
+
+    private FreePlan.Allowance allowanceOf(LearnerId learner) {
+        return FreePlan.allowance(sessions.countedStarts(learner), clock.now());
     }
 
     @Override

@@ -38,8 +38,11 @@ public interface TalkSessionPort {
     /** A guest joined an account (LearnerMerged): its rows become the account's. */
     void moveLearner(LearnerId from, LearnerId to);
 
-    /** Talks the learner actually started (the socket attached). */
-    int countStarted(LearnerId learner);
+    /**
+     * When each of the learner's free-plan talks started: attached (the socket opened), unless its debrief ended
+     * too_short or failed (not the learner's fault).
+     */
+    java.util.List<java.time.Instant> countedStarts(LearnerId learner);
 
     /** The keep-recordings choice this talk is made under (US-8.5); the retention sweep follows it. */
     void recordKeepChoice(app.bolo.common.id.TalkSessionId talk, boolean keep);

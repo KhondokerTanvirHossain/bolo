@@ -124,9 +124,13 @@ class JdbcTalkSessionAdapter implements TalkSessionPort {
     }
 
     @Override
-    public int countStarted(LearnerId learner) {
-        return jdbc.sql("select count(*) from talk_session where learner_id = ? and attached_at is not null")
-                .param(learner.value()).query(Integer.class).single();
+    public java.util.List<Instant> countedStarts(LearnerId learner) {
+        return jdbc.sql("""
+                select s.started_at from talk_session s left join debrief d on d.session_id = s.id
+                where s.learner_id = ? and s.attached_at is not null
+                  and coalesce(d.status, '') not in ('too_short', 'failed')""")
+                .param(learner.value())
+                .query((rs, n) -> rs.getTimestamp("started_at").toInstant()).list();
     }
 
     @Override
