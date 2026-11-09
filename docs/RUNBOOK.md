@@ -233,3 +233,23 @@ The goal: someone who has never seen Bolo gets from opening it to talk to feedba
   - **Steady:** otherwise.
   New debriefs store every pattern found (`patterns`) and the Coach's 2–5 word `topic`. Older debriefs fall back to their fixes and "Free talk".
 - **History** (`GET /api/history`): every talk with a debrief, newest first, grouped by week. Opening one shows its feedback with **Practise these (3 min)** and **Delete recording** (`POST /api/talk/{id}/recording/delete`). That deletes the talk's clips and model lines at once; the feedback text stays.
+
+## Open sign-up and the free plan
+
+- **Open to everyone** (`BOLO_INVITES_REQUIRED=false` in `~/bolo/bolo.env`).
+  - Anyone can do welcome, consent, setup, the mic check and the Day 1 clip as a guest.
+  - **Starting a talk needs Google sign-in** (422 `sign-in`). Guests are only a browser cookie, so free talks belong to a Google account.
+  - To close sign-up again, set `BOLO_INVITES_REQUIRED=true` and redeploy. Invite links (`scripts/invite.sh`) then work as before.
+- **Free plan** (ACC-5, US-8.7; `talk/domain/FreePlan.java`):
+  - **7 talks in the first 7 days**, counted from the first talk; then **2 a month**.
+  - The month resets on the 1st at 00:00 Asia/Dhaka.
+  - Free talks are 5 minutes.
+  - A talk counts once its socket opened, unless its debrief was `too_short` or `failed`.
+  - The limit is checked only at talk start (422 `free-limit`). A running talk and its feedback always finish.
+  - Practice stays free.
+  - Home shows "4 of 7 free talks left in your first week" or "1 of 2 free talks left this month", and Me shows the plan.
+- **Unlimited learners** (no counter, no limit):
+  - the founder and staff: `scripts/unlimited.sh <email>`. Sign in once first; the script prints how many accounts changed.
+  - the smoke test and live probes, which use the probes invite (`scripts/probe-invite.sh`, `invite.unlimited = true`).
+  - The live-talk cap (`BOLO_TALK_MAX_LIVE`) still applies to everyone.
+- **Known gap:** deleting everything and signing in again starts a new free week. Preventing that would mean keeping a one-way code of the Google account after deletion, which is a founder decision.

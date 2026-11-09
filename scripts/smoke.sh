@@ -13,9 +13,14 @@ echo "Bolo ($BOLO_URL)"
 check "home page" 200 "$(code "$BOLO_URL/")"
 check "title is just Bolo" yes "$(curl -s --max-time 15 "$BOLO_URL/" | grep -q '<title>Bolo</title>' && echo yes || echo no)"
 check "api health" '{"status":"UP"}' "$(curl -s --max-time 15 "$BOLO_URL/api/actuator/health")"
-# Closed beta: a newcomer needs an invite. The checks use their own probes invite (scripts/probe-invite.sh).
-check "a newcomer without an invite is turned away" '{"code":"invite"}' "$(curl -s --max-time 15 -X POST "$BOLO_URL/api/session" \
-  -H 'Content-Type: application/json' -H 'X-Bolo: 1' -H "Origin: $BOLO_URL" -d '{}')"
+# Open sign-up (P1d): anyone gets in without an invite, but a guest signs in with Google before the first talk.
+# The live probes use their own unlimited probes invite (scripts/probe-invite.sh).
+jar="$(mktemp)"; trap 'rm -f "$jar"' EXIT
+post() { curl -s --max-time 15 -b "$jar" -c "$jar" -X POST "$BOLO_URL$1" -H 'Content-Type: application/json' -H 'X-Bolo: 1' \
+  -H "Origin: $BOLO_URL" -d "$2"; }
+check "a newcomer gets in without an invite" guest "$(post /api/session '{}' | grep -o '"kind":"guest"' | cut -d'"' -f4)"
+post /api/consent '{"keepRecordings":false,"over13":true,"policyVersion":"2026-11-v1"}' >/dev/null
+check "a guest signs in before the first talk" '{"code":"sign-in"}' "$(post /api/talk '{}')"
 INVITE="$(scripts/probe-invite.sh 2>/dev/null || true)"
 headers=$(curl -s -D - -o /dev/null --max-time 15 -X POST "$BOLO_URL/api/session" \
   -H 'Content-Type: application/json' -H 'X-Bolo: 1' -H "Origin: $BOLO_URL" -d "{\"invite\":\"$INVITE\"}")
