@@ -12,12 +12,13 @@ import org.springframework.stereotype.Service;
 public class HomeService implements HomeUseCase {
 
     private final LatestDebriefUseCase debriefs;
+    private final app.bolo.talk.application.port.in.FreeTalksUseCase freeTalks;
 
     @Override
     public HomeView home(LearnerId learner) {
         var last = debriefs.latestFor(learner)
                 .map(l -> new HomePlan.LastDebrief(l.talkId(), l.status(), l.viewed(), l.soundPattern(), l.soundTitle()));
         Card card = HomePlan.card(last).map(c -> new Card(c.kind(), c.talkId(), c.pattern(), c.title())).orElse(null);
-        return new HomeView("talk", card);
+        return new HomeView("talk", card, freeTalks.allowance(learner).orElse(null));
     }
 }

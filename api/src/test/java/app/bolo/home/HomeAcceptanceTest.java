@@ -132,6 +132,30 @@ class HomeAcceptanceTest extends PostgresTestBase {
         assertThat(home).contains("\"card\":null");
     }
 
+    /** US-8.7: Home counts what's left of the free plan (an account with 3 counted talks in its first week). */
+    @Test
+    void homeCountsFreeTalksLeft() throws Exception {
+        String account = client.send("POST", "/api/auth/google", client.consentedGuest(5),
+                "{\"idToken\":\"fake:home" + java.util.UUID.randomUUID() + ":a@x.com\"}").cookie();
+        java.util.UUID learner = java.util.UUID.fromString(JsonPath.read(client.send("GET", "/api/me", account, "").body(), "$.learnerId"));
+        for (int i = 0; i < 3; i++) {
+            jdbc.sql("""
+                    insert into talk_session (id, learner_id, minutes, started_at, attached_at, ended_at, end_reason)
+                    values (?, ?, 5, now() - interval '1 hour', now() - interval '1 hour', now(), 'learner_ended')""")
+                    .params(java.util.UUID.randomUUID(), learner).update();
+        }
+        String home = get("/api/home", account).body();
+        assertThat((String) JsonPath.read(home, "$.freeTalks.window")).isEqualTo("first_week");
+        assertThat((Integer) JsonPath.read(home, "$.freeTalks.left")).isEqualTo(4);
+        assertThat((Integer) JsonPath.read(home, "$.freeTalks.total")).isEqualTo(7);
+        assertThat((String) JsonPath.read(home, "$.freeTalks.resetsOn")).matches("\\d{4}-\\d{2}-\\d{2}");
+    }
+
+    @Test
+    void aGuestHomeHasNoCounter() throws Exception {
+        assertThat(get("/api/home", client.consentedGuest(5)).body()).contains("\"freeTalks\":null");
+    }
+
     @Test
     void signedOutIs401() throws Exception {
         assertThat(HttpClient.newHttpClient().send(HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/api/home")).GET().build(),
