@@ -15,7 +15,8 @@ echo "==> Building $SHA (clean copy of the commit)"
 BUILD="$(mktemp -d)/bolo-$SHA"
 git worktree add --detach -q "$BUILD" "$SHA"
 trap 'git worktree remove --force "$BUILD" >/dev/null 2>&1 || true' EXIT
-ln -s "$PWD/web/node_modules" "$BUILD/web/node_modules"
+# Its own node_modules from pnpm's local store (a symlink would make Next trace files outside the copy).
+(cd "$BUILD/web" && pnpm install --frozen-lockfile --prefer-offline --silent)
 (cd "$BUILD/api" && ./gradlew bootJar -q --console=plain)
 (cd "$BUILD/web" && pnpm build > /dev/null)
 docker buildx build --platform linux/amd64 -t "bolo-api:$SHA" --load "$BUILD/api"
