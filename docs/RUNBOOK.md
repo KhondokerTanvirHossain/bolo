@@ -265,3 +265,18 @@ The goal: someone who has never seen Bolo gets from opening it to talk to feedba
   - New debriefs store each fix's learner `turn`. Older ones find their spot by searching the learner's turns for the words.
 - **No audio in the chat:** the whole talk's audio is deleted once feedback is ready (privacy and disk).
 - The text stays after "Delete recording" ("Feedback and words are still here").
+
+## Home
+
+- **Home is the prototype's dashboard** (DesktopHome) inside the app shell's Talk tab:
+  - a greeting by the clock ("Good evening, Rafi") and "Ready when you are.";
+  - **Bolo's line:** "Last time: <topic>. Tell me what happened next.", from the last ready talk. A fixed line when there's none. Bolo's real memory is still to be discussed;
+  - the **Talk** disc (Space starts a talk) and "Free talk · 5 min";
+  - **Next up**: Finish your feedback, Practise <sound> or Practise sounds;
+  - **This week.**
+- **This week** (`GET /api/home` → `week`, `home/domain/Streak.java`):
+  - **Active day:** a completed loop (ready feedback seen) or a practice attempt, on Dhaka dates.
+  - **Rest:** one missed day per Saturday-to-Friday week is forgiven. Today without activity is still open.
+  - A second miss in a week ends the run, quietly: "Welcome back. Let's start a new run."
+- **Sidebar cards:** "Free plan" (the counter; the free-week note once) and "Bolo on your phone". On phones they're hidden, and the counter shows under Talk.
+- **Close feedback** and **Esc** return to Home. Esc also closes practice, the full chat and the delete sheet.

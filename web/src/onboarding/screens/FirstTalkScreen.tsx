@@ -1,9 +1,10 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { loadClip } from "@/audio/clipStore";
 import { CoachFlow } from "@/coach/CoachFlow";
 import { fetchHome, type Home } from "@/home/home";
-import { HomeScreen } from "@/home/HomeScreen";
+import { HomeDashboard } from "@/home/HomeDashboard";
+import { SideCards, useFreeLine } from "@/home/SideCards";
 import { PracticeScreen } from "@/practice/PracticeScreen";
 import type { LearnerView } from "@/api/browser";
 import { afterDebrief, loadLoop, saveAnswered, saveLoop, seenSeeYou, type Loop } from "@/account/loop";
@@ -40,6 +41,7 @@ export function FirstTalkScreen({ deviceId }: { deviceId: string | null }) {
   const [seeYou, setSeeYou] = useState(false);
   const setLoop = useCallback((next: (l: Loop) => Loop) => setLoopState((l) => { const n = next(l); saveLoop(n); return n; }), []);
   const audio = useRef<HTMLAudioElement>(null);
+  const freeLine = useFreeLine(home?.freeTalks);
 
   useEffect(() => {
     let objectUrl: string | null = null;
@@ -91,23 +93,32 @@ export function FirstTalkScreen({ deviceId }: { deviceId: string | null }) {
   const toHome = useCallback(() => setView({ kind: "home" }), []);
   const talk = useCallback(() => { setSeeYou(false); setView({ kind: "home" }); void conversation.start(); }, [conversation]);
 
+  const toTab = (t: Tab) => { setSeeYou(false); setView({ kind: t === "talk" ? "home" : t }); };
+  const foot = <SideCards freeLine={freeLine} />;
+  const minutes = home?.freeTalks ? 5 : (me?.profile?.talkMinutes ?? 5);
+  /** The dashboard Home (P1f) inside the shell; {@code sheet} sits over it and turns its Space key off. */
+  const homePage = (sheet?: ReactNode) => (
+    <>
+      <AppShell tab="talk" onTab={toTab} foot={foot}>
+        <HomeDashboard home={home} name={me?.account?.name} minutes={minutes} freeLine={freeLine} note={seeYou ? "See you tomorrow. Bolo will be here." : undefined}
+          hasDay1={url !== null} keysOn={!sheet} onTalk={talk}
+          onPractice={(pattern) => setView({ kind: "practice", pattern })}
+          onFeedback={(talkId) => setView({ kind: "feedback", talkId })}
+          onProgress={() => toTab("progress")}
+          onPlayDay1={() => void audio.current?.play()} />
+      </AppShell>
+      {url && <audio ref={audio} src={url} preload="auto" data-testid="day1-audio" />}
+      {sheet}
+    </>
+  );
+
   // ACC-2: the 4th guest talk was refused; Home with the sign-in sheet. Not now leaves Home as it was.
   if (conversation.state.phase === "needs_sign_in") {
-    return (
-      <>
-        <HomeScreen home={home} hasDay1={url !== null} onTalk={talk} onPractice={() => {}} onFeedback={() => {}} onSettings={() => {}} onPlayDay1={() => {}} />
-        <GuestLimit me={me} onClose={conversation.reset} onSignedIn={(l) => { signedIn(l); conversation.reset(); }} />
-      </>
-    );
+    return homePage(<GuestLimit me={me} onClose={conversation.reset} onSignedIn={(l) => { signedIn(l); conversation.reset(); }} />);
   }
   // US-8.7: no free talks left; Home with the sheet saying when they come back. Practice stays free.
   if (conversation.state.phase === "out_of_talks") {
-    return (
-      <>
-        <HomeScreen home={home} hasDay1={url !== null} onTalk={talk} onPractice={() => {}} onFeedback={() => {}} onSettings={() => {}} onPlayDay1={() => {}} />
-        <FreeLimit freeTalks={home?.freeTalks ?? null} onClose={conversation.reset} />
-      </>
-    );
+    return homePage(<FreeLimit freeTalks={home?.freeTalks ?? null} onClose={conversation.reset} />);
   }
   if (!idle) {
     return <TalkScreen state={conversation.state} deviceId={deviceId} onDone={conversation.done} onEnd={conversation.end}
@@ -121,7 +132,6 @@ export function FirstTalkScreen({ deviceId }: { deviceId: string | null }) {
     return <CoachFlow talkId={view.talkId} deviceId={deviceId} onTalkAgain={talk} onDone={toHome} onNoDebrief={toHome}
       onPractise={(pattern) => setView({ kind: "practice", pattern })} />;
   }
-  const toTab = (t: Tab) => { setSeeYou(false); setView({ kind: t === "talk" ? "home" : t }); };
   if (view.kind === "session") {
     return <CoachFlow talkId={view.talkId} deviceId={deviceId} history onTalkAgain={talk} onDone={() => setView({ kind: view.from })}
       onNoDebrief={() => setView({ kind: view.from })} onPractise={(pattern) => setView({ kind: "practice", pattern })} />;
@@ -129,7 +139,7 @@ export function FirstTalkScreen({ deviceId }: { deviceId: string | null }) {
   if (view.kind === "progress" || view.kind === "history") {
     const open = (talkId: string) => setView({ kind: "session", talkId, from: view.kind as "progress" | "history" });
     return (
-      <AppShell tab="progress" onTab={toTab}>
+      <AppShell tab="progress" onTab={toTab} foot={foot}>
         {view.kind === "progress"
           ? <ProgressScreen onOpen={open} onSeeAll={() => setView({ kind: "history" })} onTalk={talk}
               onPractise={(pattern) => setView({ kind: "practice", pattern })} />
@@ -139,7 +149,7 @@ export function FirstTalkScreen({ deviceId }: { deviceId: string | null }) {
   }
   if (view.kind === "me" || view.kind === "privacy") {
     return (
-      <AppShell tab="me" onTab={toTab}>
+      <AppShell tab="me" onTab={toTab} foot={foot}>
         {view.kind === "me"
           ? <MeScreen me={me} onPrivacy={() => setView({ kind: "privacy" })} onSignedIn={signedIn} />
           : <PrivacyScreen keep={me?.consent?.keepRecordings === true}
@@ -153,14 +163,5 @@ export function FirstTalkScreen({ deviceId }: { deviceId: string | null }) {
       return <SaveProgress me={me} hasDay1={url !== null} onSignedIn={signedIn} onStayGuest={() => setLoop(saveAnswered)} />;
     }
   }
-  return (
-    <>
-      <HomeScreen home={home} note={seeYou ? "See you tomorrow. Bolo will be here." : undefined} hasDay1={url !== null} onTalk={talk}
-        onPractice={(pattern) => setView({ kind: "practice", pattern })}
-        onFeedback={(talkId) => setView({ kind: "feedback", talkId })}
-        onSettings={() => setView({ kind: "me" })}
-        onPlayDay1={() => void audio.current?.play()} />
-      {url && <audio ref={audio} src={url} preload="auto" data-testid="day1-audio" />}
-    </>
-  );
+  return homePage();
 }

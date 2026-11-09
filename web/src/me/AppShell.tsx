@@ -9,7 +9,8 @@ const DAY_WORDMARK = WORDMARK_SMALL_SVG.replaceAll("#FBF5FF", "#1D1236");
 export type Tab = "talk" | "progress" | "me";
 
 /** The desktop app shell (prototype dk-app): a sidebar with Talk, Progress and Me (NAV), then the page. */
-export function AppShell({ tab, onTab, children }: { tab: Tab; onTab: (t: Tab) => void; children: ReactNode }) {
+/** {@code foot}: the sidebar's cards (free plan, Bolo on your phone); hidden on phones. */
+export function AppShell({ tab, onTab, children, foot }: { tab: Tab; onTab: (t: Tab) => void; children: ReactNode; foot?: ReactNode }) {
   const nav = (t: Tab, icon: string, label: string) => (
     <button className="dk-nav" aria-current={tab === t ? "page" : undefined} onClick={() => onTab(t)}>
       <Icon name={icon} />{label}
@@ -23,6 +24,7 @@ export function AppShell({ tab, onTab, children }: { tab: Tab; onTab: (t: Tab) =
           {nav("talk", "graphic_eq", "Talk")}
           {nav("progress", "insights", "Progress")}
           {nav("me", "person", "Me")}
+          {foot && <div className="dk-side__foot">{foot}</div>}
         </aside>
         <main className="dk-main"><div className="dk-page">{children}</div></main>
       </div>

@@ -119,3 +119,16 @@ test("the public privacy page scrolls to its last section", async ({ page }) => 
   // P1d task 6: what stays after "delete everything" is disclosed.
   await expect(page.getByText(/one-way code made from your Google account/)).toBeVisible();
 });
+
+test("typing a space into Delete everything's box never starts a talk", async ({ page }) => {
+  await stub(page, true);
+  let talks = 0;
+  await page.route("**/api/talk", (r) => { talks++; return r.fulfill({ status: 201, json: { id: "x", minutes: 5 } }); });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Me", exact: true }).click();
+  await page.getByRole("button", { name: /Privacy/ }).click();
+  await page.getByRole("button", { name: "Delete everything" }).click();
+  await page.getByRole("textbox").pressSequentially("DE LETE");
+  await page.waitForTimeout(300);
+  expect(talks).toBe(0);
+});

@@ -126,14 +126,14 @@ test("the closed-beta card offers 'I already have an account'", async ({ page })
 test("Home counts the free talks left", async ({ page }) => {
   await stub(page, { account: true, freeTalks: { window: "first_week", left: 4, total: 7, resetsOn: "2026-11-16" } });
   await page.goto("/");
-  await expect(page.getByText("4 of 7 free talks left in your first week")).toBeVisible();
+  await expect(page.getByRole("complementary").getByText("4 of 7 free talks left in your first week")).toBeVisible();
 });
 
 test("out of free talks: the sheet says when they come back, and Wait closes it", async ({ page }) => {
   await stub(page, { account: true, talkRefusal: "free-limit", freeTalks: { window: "month", left: 0, total: 2, resetsOn: "2026-12-01" } });
   await page.addInitScript(() => window.localStorage.setItem("bolo.freeWeekOverSeen", "1"));
   await page.goto("/");
-  await expect(page.getByText("Free talks come back on 1 December")).toBeVisible();
+  await expect(page.getByRole("complementary").getByText("Free talks come back on 1 December")).toBeVisible();
   await page.getByRole("button", { name: "Start talking" }).click();
   await expect(page.getByRole("heading", { name: "You've had this month's 2 free talks" })).toBeVisible();
   await expect(page.getByText("They come back on 1 December.")).toBeVisible();
@@ -147,16 +147,16 @@ test("Me shows the free plan and no closed-beta copy", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Me" }).click();
   await expect(page.getByText("rahim@example.com · Free plan")).toBeVisible();
-  await expect(page.getByText("1 of 2 free talks left this month")).toBeVisible();
+  await expect(page.locator("main").getByText("1 of 2 free talks left this month")).toBeVisible();
   await expect(page.getByText(/closed beta/i)).toHaveCount(0);
 });
 
 test("the day the free week ends, Home says so once", async ({ page }) => {
   await stub(page, { account: true, freeTalks: { window: "month", left: 2, total: 2, resetsOn: "2026-12-01" } });
   await page.goto("/");
-  await expect(page.getByText("Your free week is over. From now on you get 2 free talks a month.")).toBeVisible();
+  await expect(page.getByRole("complementary").getByText("Your free week is over. From now on you get 2 free talks a month.")).toBeVisible();
   await page.reload();
-  await expect(page.getByText("2 of 2 free talks left this month")).toBeVisible();
+  await expect(page.getByRole("complementary").getByText("2 of 2 free talks left this month")).toBeVisible();
 });
 
 test("an unlimited account's Me says nothing about a free plan", async ({ page }) => {
@@ -167,13 +167,16 @@ test("an unlimited account's Me says nothing about a free plan", async ({ page }
   await expect(page.getByText(/Free plan/)).toHaveCount(0);
 });
 
-test("on a phone, the free-week note stays clear of the dock", async ({ page }) => {
+test("on a phone, Home shows the free-talk line under Talk, inside the screen", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await stub(page, { account: true, freeTalks: { window: "month", left: 2, total: 2, resetsOn: "2026-12-01" } });
+  await stub(page, { account: true, freeTalks: { window: "first_week", left: 4, total: 7, resetsOn: "2026-11-16" } });
   await page.goto("/");
-  const note = page.getByText("Your free week is over. From now on you get 2 free talks a month.");
-  await expect(note).toBeVisible();
-  const n = (await note.boundingBox())!;
-  const d = (await page.locator(".dk-dock").boundingBox())!;
-  expect(n.y >= d.y + d.height || n.y + n.height <= d.y).toBe(true);
+  const line = page.locator("[data-free-talks]");
+  await expect(line).toHaveText("4 of 7 free talks left in your first week");
+  const b = (await line.boundingBox())!;
+  expect(b.x).toBeGreaterThanOrEqual(0);
+  expect(b.x + b.width).toBeLessThanOrEqual(390);
+  await expect(page.getByRole("button", { name: "Start talking" })).toBeInViewport();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 });
+
