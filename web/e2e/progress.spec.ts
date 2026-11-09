@@ -36,6 +36,11 @@ async function stub(page: Page, sessions = 3, opts: Opts = {}) {
       better: "very good", betterHighlight: "very", tip: "Top teeth on lip.", count: 2, clip: noAudio() ? null : `/api/media/talk/${T}/clip-1.wav`,
       model: noAudio() ? null : `/api/media/talk/${T}/model-1.wav` }],
     skills: { pronunciation: "GOOD", fluency: "GOOD", sentenceBuilding: "GOOD", vocabulary: "GOOD" }, firstSession: false } }));
+  await page.route(`**/api/talk/${T}/chat`, (r) => r.fulfill({ json: {
+    topic: "The payment bug demo",
+    turns: [{ speaker: "bolo", text: "Hi! What did you work on today?" }, { speaker: "learner", text: "I fixed a very old payment bug." },
+      { speaker: "bolo", text: "Nice. How did you find it?" }, { speaker: "learner", text: "The logs showed it." }],
+    marks: [{ turn: 1, start: 10, end: 14, fix: 1, title: "The v sound" }] } }));
   await page.route("**/api/media/**", (r) => r.fulfill({ status: 200, contentType: "audio/wav", body: Buffer.alloc(44) }));
   await page.route("**/api/practice", (r) => r.fulfill({ json: { patterns: [
     { key: "V_BH", title: "The v sound", example: "v as in van", tip: "Top teeth touch your lower lip for v.", sentences: ["Very few vans visit."] }] } }));
@@ -168,4 +173,24 @@ test("on a phone, a past talk's Back and Delete recording are on screen", async 
   await openPastTalk(page);
   await expect(page.getByRole("button", { name: "Back", exact: true })).toBeInViewport();
   await expect(page.getByRole("button", { name: "Delete recording" })).toBeInViewport();
+});
+
+test("a past talk shows its full chat, and a marked spot opens its fix", async ({ page }) => {
+  await stub(page);
+  await openPastTalk(page);
+  await page.getByRole("button", { name: "See full chat" }).click();
+  await expect(page.getByRole("heading", { name: "Your talk" })).toBeVisible();
+  await expect(page.getByText("Hi! What did you work on today?")).toBeVisible();
+  await expect(page.getByText("The logs showed it.")).toBeVisible();
+  await page.getByRole("button", { name: '"very": The v sound' }).click();
+  await expect(page.getByText("Top teeth on lip.")).toBeVisible();
+});
+
+test("on a phone, the full chat fits with no sideways scroll", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await stub(page);
+  await openPastTalk(page);
+  await page.getByRole("button", { name: "See full chat" }).click();
+  await expect(page.getByText("The logs showed it.")).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 });

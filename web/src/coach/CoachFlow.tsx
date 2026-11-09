@@ -8,6 +8,8 @@ import { highlight } from "./highlight";
 import { deleteRecording } from "@/progress/progress";
 import { api } from "@/api/browser";
 import { track } from "@/analytics/track";
+import { fetchChat, type Chat } from "./chat";
+import { ChatScreen } from "./ChatScreen";
 
 type Props = {
   talkId: string; deviceId?: string | null; onTalkAgain: () => void; onDone: () => void; onNoDebrief?: () => void;
@@ -122,6 +124,15 @@ function DebriefScreen({ talkId, deviceId, debrief, onTalkAgain, onDone, onPract
     : debrief.recordingExpired ? "Recordings are kept for 90 days. Feedback and words are still here." : null;
   const [fixes, setFixes] = useState<Fix[]>(debrief.fixes ?? []);
   const [at, setAt] = useState(0);
+  // DBF-6: the full chat replaces the card pane; a marked spot goes back to its fix card.
+  const [chat, setChat] = useState<Chat | null>(null);
+  const [chatMissing, setChatMissing] = useState(false);
+  const go = (i: number) => { setChat(null); setChatMissing(false); setAt(i); };
+  const openChat = async () => {
+    setChatMissing(false);
+    const c = await fetchChat(talkId);
+    if (c) setChat(c); else setChatMissing(true);
+  };
   const [note, setNote] = useState<string | null>(null);
   const [disputing, setDisputing] = useState(false);
   // The current card's "play my clip" (Space). A ref, not state: registering it must not re-render the screen.
@@ -155,14 +166,16 @@ function DebriefScreen({ talkId, deviceId, debrief, onTalkAgain, onDone, onPract
       <div className="dk-deb">
         <div className="dk-deb__list">
           <div className="bo-eyebrow bo-eyebrow--coach" style={{ padding: "0 14px 12px" }}><span className="bo-coach-mark">C</span>Your coach · {history ? "this talk" : "today\u2019s talk"}</div>
-          <Item n={<Icon name="star" fill size="sm" />} title="Something you did well" sub="Strength" on={at === 0} onClick={() => setAt(0)} />
+          <Item n={<Icon name="star" fill size="sm" />} title="Something you did well" sub="Strength" on={at === 0} onClick={() => go(0)} />
           {fixes.map((f, i) => (
-            <Item key={`${f.kind}-${i}-${f.title}`} n={String(i + 1)} title={f.title} sub={subtitle(f)} on={at === i + 1} onClick={() => setAt(i + 1)} />
+            <Item key={`${f.kind}-${i}-${f.title}`} n={String(i + 1)} title={f.title} sub={subtitle(f)} on={at === i + 1} onClick={() => go(i + 1)} />
           ))}
           <Item n={<Icon name="insights" size="sm" />} title={debrief.firstSession ? "Your starting point" : "Your skills today"}
-            sub="Skills and what's next" on={at === cards - 1} onClick={() => setAt(cards - 1)} />
+            sub="Skills and what's next" on={at === cards - 1} onClick={() => go(cards - 1)} />
           <div className="dk-deb__foot">
             <button className="bo-btn bo-btn--quiet-neutral" style={{ padding: 0 }} onClick={onDone}><Icon name="close" size="sm" />{history ? "Back" : "Close feedback"}</button>
+            <button className="bo-btn bo-btn--quiet-neutral" style={{ padding: 0, display: "flex" }} onClick={() => void openChat()}>
+              <Icon name="forum" size="sm" />See full chat</button>
             {history && hasAnyClip && (
               <button className="bo-btn bo-btn--quiet-neutral" style={{ padding: 0, display: "flex" }} onClick={() => setAskDelete(true)}>
                 <Icon name="delete" size="sm" />Delete recording</button>
@@ -172,6 +185,8 @@ function DebriefScreen({ talkId, deviceId, debrief, onTalkAgain, onDone, onPract
         <div className="dk-deb__pane">
           {note && <p className="bo-footnote" role="status" style={{ textAlign: "center", marginBottom: 12 }}>{note}</p>}
           {audioNote && <p className="bo-footnote" style={{ textAlign: "center", marginBottom: 12 }}>{audioNote}</p>}
+          {chatMissing && <p className="bo-footnote" role="status" style={{ textAlign: "center", marginBottom: 12 }}>The chat isn&apos;t available for this talk.</p>}
+          {chat ? <ChatScreen chat={chat} onBack={() => setChat(null)} onOpenFix={(n) => go(n)} /> : (<>
           {at === 0 && (
             <div className="dk-detail on">
               <div className="bo-card" style={{ background: "var(--hills-soft)", boxShadow: "none", display: "flex", flexDirection: "column", gap: 16, padding: 28 }}>
@@ -187,6 +202,7 @@ function DebriefScreen({ talkId, deviceId, debrief, onTalkAgain, onDone, onPract
           )}
           {at === cards - 1 && <Skills debrief={debrief} onTalkAgain={onTalkAgain} onDone={onDone} onPractise={onPractise} history={history} />}
           <div className="dk-deb__nav"><span><span className="dk-kbd">↑</span> <span className="dk-kbd">↓</span> move between cards</span><span><span className="dk-kbd">Space</span> plays your clip</span></div>
+          </>)}
         </div>
       </div>
       {askDelete && (

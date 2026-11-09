@@ -776,3 +776,13 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #0b0816; }
 .prow { display: flex; gap: 8px; margin-bottom: 10px; } .prow button { flex: 1; height: 36px; border: 0; border-radius: 999px; background: #f3eff8; font: 650 13px/1 'Anek Bangla', sans-serif; cursor: pointer; }
 .pg { margin-top: 12px; } .pg__t { font-size: 12px; font-weight: 650; color: #5b3f8c; margin-bottom: 6px; }
 .pg a { display: inline-block; margin: 0 4px 6px 0; padding: 5px 11px; border-radius: 999px; background: #f3eff8; color: #3a3048; font-size: 13px; font-weight: 600; text-decoration: none; } .pg a.cur { background: #f4b942; color: #2a1a00; }
+
+/* See full chat (DBF-6): bubbles, Bolo left, you right; the coach's marks are underlined in its violet. */
+.dk-chat { width: 100%; max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+.dk-chat__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.dk-bubble { align-self: flex-start; max-width: 85%; background: var(--surface); border-radius: var(--radius-lg); box-shadow: var(--shadow-card); padding: 10px 14px; }
+.dk-bubble--you { align-self: flex-end; background: var(--hills-soft); box-shadow: none; }
+.dk-bubble__who { display: block; font: 600 13px/18px var(--font-sans); color: var(--ink-secondary); }
+.dk-bubble__text { margin: 2px 0 0; font: 500 17px/25px var(--font-sans); color: var(--ink); overflow-wrap: anywhere; }
+.dk-mark { appearance: none; border: 0; background: transparent; padding: 0; font: inherit; color: inherit; cursor: pointer; text-decoration: underline; text-decoration-color: var(--coach); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+.dk-mark:hover { background: var(--surface-sunken); border-radius: 4px; }
