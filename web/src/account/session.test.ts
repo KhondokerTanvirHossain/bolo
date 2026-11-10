@@ -58,11 +58,13 @@ describe("sign-out", () => {
     window.localStorage.setItem("bolo.loop.v1", "{}");
     window.localStorage.setItem("bolo.captions", "off");
     clips.set("intro-a1-7", new Blob(["x"]));
+    window.localStorage.setItem("bolo.drillQueue", "[]");
     await signOut();
     expect(window.localStorage.getItem("bolo.onboarding.v1")).toBeNull();
     expect(window.localStorage.getItem("bolo.loop.v1")).toBeNull();
     expect(window.localStorage.getItem("bolo.captions")).toBeNull();
     expect(clips.has("day1")).toBe(false);
     expect(clips.has("intro-a1-7")).toBe(false);
+    expect(window.localStorage.getItem("bolo.drillQueue")).toBeNull();
   });
 });

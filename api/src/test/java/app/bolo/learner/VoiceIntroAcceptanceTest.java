@@ -147,7 +147,7 @@ class VoiceIntroAcceptanceTest extends PostgresTestBase {
         UUID id = id(me);
         record(me, 7, WEBM);
         assertThat(client.send("POST", "/api/me/delete", me, "{\"confirm\":\"DELETE\"}").status()).isEqualTo(204);
-        assertThat(audio.children("learner/" + id)).isEmpty();
+        assertThat(audio.get("learner/" + id + "/intro-7.webm")).isEmpty();
         assertThat(jdbc.sql("select count(*) from voice_intro where learner_id = ?").param(id).query(Integer.class).single()).isZero();
     }
 

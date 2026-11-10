@@ -29,7 +29,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
         "bolo.talk.max-live-sessions=1", "bolo.speech.vendor=fake", "bolo.llm.vendor=fake",
         "bolo.talk.speculate-after-ms=100", "bolo.talk.end-after-ms=300", "bolo.talk.unfinished-end-after-ms=500",
-        "bolo.coaching.min-speech-ms=500", "bolo.coaching.retry-backoff-ms=100"})
+        "bolo.coaching.min-speech-ms=500", "bolo.coaching.retry-backoff-ms=100", "bolo.coaching.say-per-minute=1"})
 class CoachAcceptanceTest extends PostgresTestBase {
 
     @LocalServerPort int port;
@@ -334,13 +334,33 @@ class CoachAcceptanceTest extends PostgresTestBase {
                 .statusCode()).isEqualTo(200);
     }
 
+    /** Review: only new speech counts toward the limit (bolo.coaching.say-per-minute, 1 in these tests); repeats are free. */
     @Test
-    void sayIsRateLimited() throws Exception {
+    void sayIsRateLimitedOnNewSpeechOnly() throws Exception {
         talk(3);
         debriefWhenSettled();
+        for (int i = 0; i < 10; i++) assertThat(get("/api/talk/" + id + "/drills/say?text=very", cookie).statusCode()).isEqualTo(200);
+        String drills = get("/api/talk/" + id + "/drills", cookie).body();
         int last = 0;
-        for (int i = 0; i < 31; i++) last = get("/api/talk/" + id + "/drills/say?text=very", cookie).statusCode();
+        for (String t : List.<String>of(JsonPath.read(drills, "$.drills[1].better"), JsonPath.read(drills, "$.drills[2].sentence"))) {
+            last = get("/api/talk/" + id + "/drills/say?text=" + java.net.URLEncoder.encode(t, java.nio.charset.StandardCharsets.UTF_8), cookie).statusCode();
+        }
         assertThat(last).isEqualTo(429);
+    }
+
+    /** Review: the learner's own upgraded sentence is kept with the talk (swept and deleted with it), never in the shared cache. */
+    @Test
+    void aDrillSentenceIsKeptWithTheTalkAndGoesWithIt() throws Exception {
+        talk(3);
+        debriefWhenSettled();
+        String sentence = JsonPath.read(get("/api/talk/" + id + "/drills", cookie).body(), "$.drills[1].better");
+        assertThat(get("/api/talk/" + id + "/drills/say?text=" + java.net.URLEncoder.encode(sentence, java.nio.charset.StandardCharsets.UTF_8), cookie)
+                .statusCode()).isEqualTo(200);
+        String key = "talk/" + id + "/drill-" + java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")
+                .digest(sentence.getBytes(java.nio.charset.StandardCharsets.UTF_8))) + ".wav";
+        assertThat(audio.get(key)).isPresent();
+        client.send("POST", "/api/talk/" + id + "/recording/delete", cookie, "{}");
+        assertThat(audio.get(key)).isEmpty();
     }
 
     @Autowired app.bolo.talk.application.port.in.AudioRetentionUseCase retention;

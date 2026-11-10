@@ -40,10 +40,11 @@ export function ReadAloud({ reference, deviceId, showSentence = true, mode, onOu
   useEffect(() => { drop(); setPhase("idle"); setOutcome(null); setError(null); }, [reference]);
 
   const check = async (wav: Blob, g: number) => {
-    onClip?.(wav);
     setPhase("checking");
     const reply = await postAttempt(wav, reference, mode);
     if (g !== gen.current) return;
+    // Only the current attempt's take is handed over (a skipped drill never receives a late one).
+    onClip?.(wav);
     busy.current = false;
     if (reply.kind === "ok") {
       setOutcome(reply.outcome);

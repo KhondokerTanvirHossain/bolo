@@ -14,6 +14,7 @@ export function PairsDrill({ drill, talkId, deviceId, onFinish }: { drill: Pairs
   const [round, setRound] = useState(0);
   const [tries, setTries] = useState(0);
   const [answer, setAnswer] = useState<"right" | "again" | "giveup" | null>(null);
+  const [silent, setSilent] = useState(false);
   const [word, setWord] = useState(0);
   const [first, setFirst] = useState<Level | undefined>();
   const [best, setBest] = useState<Level | undefined>();
@@ -22,7 +23,9 @@ export function PairsDrill({ drill, talkId, deviceId, onFinish }: { drill: Pairs
   // The word played this round: either of the pair, so the learner really listens.
   const played = useMemo(() => (r ? (Math.random() < 0.5 ? r.a : r.b) : ""), [r]);
 
-  const listen = useCallback(() => { if (played) void play(sayUrl(talkId, played)); }, [played, talkId]);
+  const listen = useCallback(() => {
+    if (played) void play(sayUrl(talkId, played)).then((ok) => setSilent(!ok));
+  }, [played, talkId]);
   useEffect(() => { if (listening) listen(); }, [listening, listen]);
 
   const next = () => { setAnswer(null); setTries(0); setRound((n) => n + 1); };
@@ -39,6 +42,7 @@ export function PairsDrill({ drill, talkId, deviceId, onFinish }: { drill: Pairs
   useEffect(() => {
     if (!listening) return;
     const onKey = (e: KeyboardEvent) => {
+      if (e.repeat) return;
       if (e.key === "1" && r) pick(r.a);
       else if (e.key === "2" && r) pick(r.b);
       else if (e.key === "l" || e.key === "L") listen();
@@ -56,12 +60,12 @@ export function PairsDrill({ drill, talkId, deviceId, onFinish }: { drill: Pairs
         <div className="dk-pairs">
           {[r.a, r.b].map((w, i) => (
             <button key={w} className={`bo-pair${answer === "right" && w === played ? " bo-pair--right" : ""}`} onClick={() => pick(w)}>
-              <span className="bo-pair__word">{w}</span><span className="dk-kbd">{i + 1}</span>
+              <span className="bo-pair__word">{w}</span><span className="dk-kbd" aria-hidden="true">{i + 1}</span>
             </button>
           ))}
         </div>
         <p className="bo-footnote" role="status" style={{ minHeight: 20 }}>
-          {answer === "right" ? "That's it." : answer === "again" ? `Listen again: ${r.a}, ${r.b}.` : answer === "giveup" ? "Good effort. We'll come back to this one." : ""}
+          {answer === null && silent ? "Couldn't play that. Check your connection, then press L." : answer === "right" ? "That's it." : answer === "again" ? `Listen again: ${r.a}, ${r.b}.` : answer === "giveup" ? "Good effort. We'll come back to this one." : ""}
         </p>
         <p className="bo-footnote">Listening round {round + 1} of {drill.listen.length}, then you say {drill.say.length} {drill.say.length === 1 ? "word" : "words"}. Press <span className="dk-kbd">L</span> to listen again.</p>
       </div>
@@ -75,7 +79,8 @@ export function PairsDrill({ drill, talkId, deviceId, onFinish }: { drill: Pairs
       <p className="dk-drill__word">{w}</p>
       <button className="bo-btn bo-btn--quiet-neutral" onClick={() => void play(sayUrl(talkId, w))}><Icon name="volume_up" />Hear it</button>
       <p className="bo-tip__text" style={{ margin: "4px 0 12px" }}>{drill.tip}</p>
-      <Attempts key={w} reference={w} deviceId={deviceId} label="Try it" onDone={(f, b) => {
+      <Attempts key={w} reference={w} deviceId={deviceId} label="Try it"
+        onTry={(level) => { if (level !== "NAILED") void play(sayUrl(talkId, w)); }} onDone={(f, b) => {
         const nf = first ?? f;
         const nb = better(best, b);
         setFirst(nf);

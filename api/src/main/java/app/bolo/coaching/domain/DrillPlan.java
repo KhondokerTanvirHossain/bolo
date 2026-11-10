@@ -70,6 +70,16 @@ public final class DrillPlan {
         return JSON.writeValueAsString(out);
     }
 
+    /** The pair-deck words (shared, not personal) among these drills. */
+    public static Set<String> deckWords(JsonNode drills) {
+        Set<String> out = new LinkedHashSet<>();
+        for (JsonNode d : drills) {
+            for (JsonNode r : d.path("listen")) { out.add(r.path("a").asString()); out.add(r.path("b").asString()); }
+            for (JsonNode w : d.path("say")) out.add(w.asString());
+        }
+        return out;
+    }
+
     /** Every word and sentence these drills may ask the Coach to say (the say endpoint speaks nothing else). */
     public static Set<String> texts(JsonNode drills) {
         Set<String> out = new LinkedHashSet<>();

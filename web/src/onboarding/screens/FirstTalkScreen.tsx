@@ -137,7 +137,7 @@ export function FirstTalkScreen({ deviceId }: { deviceId: string | null }) {
   }
   // Practise (3 min) (DRL-1): drills from that talk's fixes; Done and Close go Home.
   if (view.kind === "drills") {
-    return <DrillSession talkId={view.talkId} deviceId={deviceId} onDone={toHome} onPractiseSounds={() => setView({ kind: "practice" })} />;
+    return <DrillSession talkId={view.talkId} learnerId={me?.learnerId ?? "guest"} deviceId={deviceId} onDone={toHome} onPractiseSounds={() => setView({ kind: "practice" })} />;
   }
   if (view.kind === "intro") {
     return <RecordIntro day={view.day} learnerId={me?.learnerId ?? "guest"} deviceId={deviceId}

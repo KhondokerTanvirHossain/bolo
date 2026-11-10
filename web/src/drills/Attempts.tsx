@@ -1,15 +1,19 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { ReadAloud } from "@/practice/ReadAloud";
+import { RESULT } from "@/practice/attempts";
+import { Icon } from "@/scene/Scene";
 import { better, TRIES, type Level } from "./drills";
 
 /**
  * One spoken item with up to 3 tries (DRL-6). A pass (Nailed it; for say it better, Closer too: the same meaning counts)
  * offers Next; after the third try without one: "Good effort. We'll come back to this one." and it moves on by itself.
  */
-export function Attempts({ reference, mode, deviceId, label, startSignal, onClip, onDone }: {
+export function Attempts({ reference, mode, deviceId, label, startSignal, onClip, onDone, onTry }: {
   reference: string; mode?: "upgrade"; deviceId: string | null; label: string; startSignal?: number;
   onClip?: (wav: Blob) => void; onDone: (first: Level, best: Level) => void;
+  /** Each try's result (a pairs word plays its model again after a miss, US-5.2). */
+  onTry?: (level: Level) => void;
 }) {
   const [tries, setTries] = useState(0);
   const [first, setFirst] = useState<Level | undefined>();
@@ -25,6 +29,7 @@ export function Attempts({ reference, mode, deviceId, label, startSignal, onClip
   }, [gaveUp, first, best, onDone]);
 
   const outcome = (level: Level) => {
+    onTry?.(level);
     setTries((n) => n + 1);
     setFirst((f) => f ?? level);
     setBest((b) => better(b, level));
@@ -36,6 +41,9 @@ export function Attempts({ reference, mode, deviceId, label, startSignal, onClip
       {!passed && !gaveUp && (
         <ReadAloud reference={reference} mode={mode} deviceId={deviceId} showSentence={false} label={tries > 0 ? "Try again" : label}
           startSignal={startSignal} onClip={onClip} onOutcome={(o) => outcome(o.level)} />
+      )}
+      {passed && best && (
+        <span className={RESULT[best].className} role="status"><Icon name={RESULT[best].icon} />{RESULT[best].text}</span>
       )}
       {passed && first && best && (
         <button className="bo-btn bo-btn--primary" autoFocus onClick={() => { if (!done.current) { done.current = true; onDone(first, best); } }}>Next</button>

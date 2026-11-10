@@ -11,6 +11,15 @@ test.beforeEach(async ({ page, browserName }) => {
 });
 
 const T = "66666666-6666-6666-6666-666666666666";
+
+/** A short valid WAV (0.1 s of silence, 16 kHz mono 16-bit), so the browser really plays it. */
+function wav(): Buffer {
+  const samples = 1600, data = samples * 2, b = Buffer.alloc(44 + data);
+  b.write("RIFF", 0); b.writeUInt32LE(36 + data, 4); b.write("WAVE", 8); b.write("fmt ", 12); b.writeUInt32LE(16, 16);
+  b.writeUInt16LE(1, 20); b.writeUInt16LE(1, 22); b.writeUInt32LE(16000, 24); b.writeUInt32LE(32000, 28); b.writeUInt16LE(2, 32);
+  b.writeUInt16LE(16, 34); b.write("data", 36); b.writeUInt32LE(data, 40);
+  return b;
+}
 const PAIRS = { key: "pairs:V_BH", kind: "pairs", title: "The v sound", pattern: "V_BH", tip: "Top teeth touch your lower lip for v.",
   listen: [{ a: "very", b: "berry", target: "very" }], say: ["voice"] };
 const SAY_BETTER = { key: "sayBetter:i went", kind: "sayBetter", title: "Say it better", said: "I go market", better: "I went to the market.", keyWords: ["went"] };
@@ -25,7 +34,7 @@ async function stub(page: Page, drills: object[], level = "NAILED") {
   await page.route("**/api/events", (r) => r.fulfill({ status: 202 }));
   await page.route("**/api/home", (r) => r.fulfill({ json: { primary: "talk", card: { kind: "practice", pattern: "V_BH", title: "The v sound", talkId: T } } }));
   await page.route(`**/api/talk/${T}/drills`, (r) => r.fulfill({ json: { drills } }));
-  await page.route(`**/api/talk/${T}/drills/say**`, (r) => { said.push(new URL(r.request().url()).searchParams.get("text") ?? ""); return r.fulfill({ status: 200, contentType: "audio/wav", body: Buffer.alloc(44) }); });
+  await page.route(`**/api/talk/${T}/drills/say**`, (r) => { said.push(new URL(r.request().url()).searchParams.get("text") ?? ""); return r.fulfill({ status: 200, contentType: "audio/wav", body: wav() }); });
   await page.route("**/api/attempts", (r) => r.fulfill({ json: { level, heard: true, focus: [] } }));
   return { said };
 }
@@ -47,6 +56,7 @@ test("Home's practice card opens the drills: hear the difference, say the word, 
   await expect(page.getByText("That's it.")).toBeVisible();
   await expect(page.getByText("voice", { exact: true })).toBeVisible();
   await say(page, "Try it");
+  await expect(page.getByRole("status").filter({ hasText: "Nailed it" })).toBeVisible();
   await page.getByRole("button", { name: "Next" }).click();
   await expect(page.getByText("Nice work.")).toBeVisible();
   await expect(page.getByText("The v sound: Nailed it")).toBeVisible();
@@ -58,12 +68,15 @@ test("three tries without Nailed it: Good effort, and it moves on", async ({ pag
   await stub(page, [SHADOW], "ONCE_MORE");
   await page.goto("/");
   await page.getByRole("button", { name: /Practise the v sound/ }).click();
-  await say(page, "Say it");
+  // The model plays, then the mic opens by itself (US-5.3).
+  await expect(page.getByRole("button", { name: "Stop recording" })).toBeVisible();
+  await page.waitForTimeout(600);
+  await page.getByRole("button", { name: "Stop recording" }).click();
   await say(page, "Try again");
   await say(page, "Try again");
   await expect(page.getByText("Good effort. We'll come back to this one.")).toBeVisible();
   await expect(page.getByText("Nice work.")).toBeVisible({ timeout: 5000 });
-  await expect(page.getByText("Shadow it: Once more")).toBeVisible();
+  await expect(page.getByText("Shadow it: Good effort. It comes back next time.")).toBeVisible();
 });
 
 test("Skip queues a drill; the summary says it comes back", async ({ page }) => {

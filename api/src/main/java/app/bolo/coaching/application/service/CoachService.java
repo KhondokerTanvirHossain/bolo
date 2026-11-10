@@ -509,8 +509,9 @@ public class CoachService implements DebriefUseCase, LatestDebriefUseCase, app.b
                 .map(d -> JSON.readTree(d.body()));
     }
 
-    /** At most this many Coach phrases a minute per learner (drill audio). */
-    static final int SAY_PER_MINUTE = 30;
+    /** At most this many new Coach phrases (synthesised, not cached) a minute per learner: drill audio. */
+    @Value("${bolo.coaching.say-per-minute:30}")
+    private int sayPerMinute = 30;
     private final java.util.Map<LearnerId, java.util.Deque<java.time.Instant>> recentSays = new java.util.concurrent.ConcurrentHashMap<>();
 
     @Override
@@ -518,18 +519,23 @@ public class CoachService implements DebriefUseCase, LatestDebriefUseCase, app.b
         var body = readyBody(learner, talk);
         if (body.isEmpty() || text == null) return Optional.empty();
         String wanted = text.trim();
-        var allowed = app.bolo.coaching.domain.DrillPlan.texts(JSON.readTree(drillsOf(body.get())));
+        JsonNode drills = JSON.readTree(drillsOf(body.get()));
+        var allowed = app.bolo.coaching.domain.DrillPlan.texts(drills);
         if (!allowed.contains(wanted)) return Optional.empty();
+        // Deck words and Bolo's own model answer are shared (not personal); a sentence made from what the learner said
+        // is kept with their talk, so the retention sweep, Delete recording and Delete everything remove it.
+        boolean shared = app.bolo.coaching.domain.DrillPlan.deckWords(drills).contains(wanted) || SHORT_ANSWER_MODEL.equals(wanted);
+        String key = shared ? "tts/coach/" + sha256("coach:" + wanted) + ".wav" : "talk/" + talk + "/drill-" + sha256(wanted) + ".wav";
+        var cached = audio.get(key);
+        if (cached.isPresent()) return cached;
         var now = clock.now();
         var times = recentSays.computeIfAbsent(learner, k -> new java.util.ArrayDeque<>());
         synchronized (times) {
             while (!times.isEmpty() && times.peekFirst().isBefore(now.minusSeconds(60))) times.pollFirst();
-            if (times.size() >= SAY_PER_MINUTE) throw new app.bolo.common.error.TooManyRequestsException();
+            if (times.size() >= sayPerMinute) throw new app.bolo.common.error.TooManyRequestsException();
             times.addLast(now);
         }
-        // Shared cache: the Coach saying a deck word or a sentence is not personal audio.
-        String key = "tts/coach/" + sha256(wanted) + ".wav";
-        return audio.get(key).or(() -> {
+        return Optional.<byte[]>empty().or(() -> {
             ByteArrayOutputStream pcm = new ByteArrayOutputStream();
             voice.synthesize(new TalkContext(learner, talk), Voice.COACH, wanted, pcm::writeBytes);
             byte[] wav = Wav.wrap(pcm.toByteArray(), 24000);
