@@ -2,6 +2,13 @@ import { expect, test, type Page } from "./fixtures";
 
 test.beforeEach(async ({ page, browserName }) => {
   await page.addInitScript(() => window.localStorage.setItem("bolo.onboarding.v1", JSON.stringify({ step: "talk" })));
+  // Audio "plays" and ends at once in every browser (CI has no sound device): the drills' flow is what's tested.
+  await page.addInitScript(() => {
+    HTMLMediaElement.prototype.play = function play(this: HTMLMediaElement) {
+      setTimeout(() => this.dispatchEvent(new Event("ended")), 30);
+      return Promise.resolve();
+    };
+  });
   if (browserName !== "firefox") return;
   await page.addInitScript(() => {
     const md = navigator.mediaDevices;
@@ -122,4 +129,14 @@ test("on a phone, the drill fits and the pair stays side by side", async ({ page
   const b = (await page.locator(".bo-pair").nth(1).boundingBox())!;
   expect(Math.abs(a.y - b.y)).toBeLessThan(2);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+});
+
+test("if the model can't play, shadowing says so and waits for the learner", async ({ page }) => {
+  await page.addInitScript(() => { HTMLMediaElement.prototype.play = () => Promise.reject(new Error("no sound device")); });
+  await stub(page, [SHADOW]);
+  await page.goto("/");
+  await page.getByRole("button", { name: /Practise the v sound/ }).click();
+  await expect(page.getByText("Couldn't play the model. Check your connection, then try again.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Stop recording" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Say it", exact: true })).toBeVisible();
 });
