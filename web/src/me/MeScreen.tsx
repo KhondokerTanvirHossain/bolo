@@ -1,4 +1,5 @@
 "use client";
+import { myPayment, paymentLine, type MyPayment } from "@/plan/payments";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { fetchHome } from "@/home/home";
@@ -22,6 +23,10 @@ export function MeScreen({ me, onPrivacy, onSignedIn, onInvite }: { me: LearnerV
   const [help, setHelp] = useState(false);
   const [free, setFree] = useState<FreeTalks | null>(null);
   useEffect(() => { if (account) void fetchHome().then((h) => setFree(h?.freeTalks ?? null)); }, [account]);
+  /** P2e: a bKash payment being checked, or why it wasn't confirmed. */
+  const [payment, setPayment] = useState<MyPayment | null>(null);
+  useEffect(() => { if (account) void myPayment().then(setPayment); }, [account]);
+  const paymentStatus = paymentLine(payment);
   const google = async () => {
     setBusy(true);
     setProblem(null);
@@ -46,7 +51,8 @@ export function MeScreen({ me, onPrivacy, onSignedIn, onInvite }: { me: LearnerV
           <h2 className="dk-h2" style={{ marginTop: 28 }}>Plan</h2>
           <div className="bo-group">
             <div className="bo-row"><div className="bo-row__body"><div className="bo-row__title">{planName(free) ?? "Free"} plan</div>
-              <div className="bo-row__sub">{counterLine(free)}</div></div>
+              <div className="bo-row__sub">{counterLine(free)}</div>
+              {paymentStatus && <div className="bo-row__sub" role="status">{paymentStatus}</div>}</div>
               <Link className="dk-link" href="/pricing">See plans</Link></div>
           </div>
         </>

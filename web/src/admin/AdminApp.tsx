@@ -1,9 +1,10 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
+import { approvePayment, fetchPayments, rejectPayment, type AdminPayment } from "./admin";
 import { fetchHelp, fetchSettings, fetchUsage, fetchUsers, fetchWaitlist, type Waitlist, grant, helpDone, saveSettings, setUnlimited, type AdminUser, type HelpRequest, type Settings, type Usage } from "./admin";
 
-type Tab = "users" | "help" | "waitlist" | "usage" | "settings";
-const TAB_NAMES: Record<Tab, string> = { users: "Users", help: "Help", waitlist: "Waitlist", usage: "Usage", settings: "Settings" };
+type Tab = "users" | "payments" | "help" | "waitlist" | "usage" | "settings";
+const TAB_NAMES: Record<Tab, string> = { users: "Users", payments: "Payments", help: "Help", waitlist: "Waitlist", usage: "Usage", settings: "Settings" };
 const day = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "Asia/Dhaka" }) : "–");
 
 /** The founder's admin portal (P2a): users (unlock, give a plan), usage and cost, settings (daily cap, plans). */
@@ -25,6 +26,7 @@ export function AdminApp() {
       </div>
       {tab === "users" && <Users />}
       {tab === "help" && <HelpTab />}
+      {tab === "payments" && <PaymentsTab />}
       {tab === "waitlist" && <WaitlistTab />}
       {tab === "usage" && <UsageTab />}
       {tab === "settings" && <SettingsTab />}
@@ -99,6 +101,46 @@ function HelpTab() {
   );
 }
 
+const REASONS = ["TrxID not found", "Amount doesn't match", "Other"];
+
+/** P2e: check each TrxID in the bKash app's statement, then Approve (30 days of the plan) or Reject with a reason. */
+function PaymentsTab() {
+  const [list, setList] = useState<AdminPayment[] | null | undefined>(undefined);
+  const [reason, setReason] = useState(REASONS[0]);
+  const [note, setNote] = useState<string | null>(null);
+  const load = useCallback(() => { void fetchPayments().then(setList); }, []);
+  useEffect(load, [load]);
+  if (list === undefined) return null;
+  if (list === null) return <p className="bo-footnote" role="alert">Payments didn&apos;t load. Reload to try again.</p>;
+  const when = (iso: string) => new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Dhaka" });
+  const act = async (ok: Promise<boolean>, what: string) => { setNote((await ok) ? what : "That didn't go through (maybe already decided). Reloaded."); load(); };
+  const pending = list.filter((p) => p.status === "pending").length;
+  return (
+    <section>
+      <div className="ad-bar">
+        <p className="dk-sub">{pending === 0 ? "Nothing to check." : `${pending} to check. Find each TrxID in your bKash statement first.`}</p>
+        <label className="ad-label">Reject reason <select className="ad-input" aria-label="Reject reason" value={reason} onChange={(e) => setReason(e.target.value)}>
+          {REASONS.map((r) => <option key={r}>{r}</option>)}</select></label>
+      </div>
+      {note && <p className="bo-footnote" role="status">{note}</p>}
+      <div className="ad-scroll">
+        <table className="ad-table">
+          <thead><tr><th>When</th><th>Who</th><th>Plan</th><th>Amount</th><th>TrxID</th><th>Paid from</th><th>Status</th><th /></tr></thead>
+          <tbody>{list.map((p) => (
+            <tr key={p.id}><td>{when(p.at)}</td><td>{p.email ?? "–"}</td><td>{p.plan}</td><td>৳{p.amountBdt}</td><td>{p.trxId}</td>
+              <td>{p.payerNumber}</td><td>{p.status}{p.reason ? <small>{p.reason}</small> : null}</td>
+              <td>{p.status === "pending" && (
+                <span style={{ display: "inline-flex", gap: 6 }}>
+                  <button className="bo-btn bo-btn--primary ad-small" onClick={() => void act(approvePayment(p.id), `Approved ${p.trxId}: ${p.plan} for 30 days.`)}>Approve</button>
+                  <button className="bo-btn bo-btn--secondary ad-small" onClick={() => void act(rejectPayment(p.id, reason), `Rejected ${p.trxId}.`)}>Reject</button>
+                </span>)}</td></tr>
+          ))}</tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
 function WaitlistTab() {
   const [w, setW] = useState<Waitlist | null | undefined>(undefined);
   useEffect(() => { void fetchWaitlist().then(setW); }, []);
@@ -166,6 +208,9 @@ function SettingsTab() {
       <label className="ad-label">Daily talk cap (everyone, except unlimited)
         <input className="ad-input ad-num" type="number" min={0} aria-label="Daily talk cap" value={capText}
           onChange={(e) => setCapText(e.target.value)} /></label>
+      <label className="ad-label">bKash number for payments
+        <input className="ad-input" aria-label="bKash number for payments" inputMode="numeric" placeholder="01XXXXXXXXX (empty: bKash off)"
+          value={s.bkashNumber ?? ""} onChange={(e) => setS({ ...s, bkashNumber: e.target.value.trim() })} /></label>
       <div className="ad-scroll">
         <table className="ad-table">
           <thead><tr><th>Plan</th><th>Talks a month</th><th>Price (৳)</th><th>Price ($)</th></tr></thead>

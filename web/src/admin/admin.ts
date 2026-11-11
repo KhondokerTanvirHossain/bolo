@@ -6,7 +6,7 @@ export type AdminUser = { id: string; email: string; name: string | null; kind: 
 export type Day = { date: string; talks: number; minutes: number; newAccounts: number; costUsd: number };
 export type Usage = { days: Day[]; now: { live: number; today: number; cap: number } };
 export type Plan = { plan: string; monthlyTalks: number; priceBdt: number; priceUsd: number };
-export type Settings = { dailyTalkCap: number; plans: Plan[] };
+export type Settings = { dailyTalkCap: number; plans: Plan[]; bkashNumber?: string };
 
 export async function fetchSettings(): Promise<Settings | null> {
   const r = await api.get<Settings>("/api/admin/settings");
@@ -44,4 +44,18 @@ export type Waitlist = { counts: { plan: string; bd: number; intl: number }[];
 export async function fetchWaitlist(): Promise<Waitlist | null> {
   const r = await api.get<Waitlist>("/api/admin/waitlist");
   return r.kind === "ok" ? r.value : null;
+}
+
+/** P2e: bKash payments to check by hand. Null when the list didn't load. */
+export type AdminPayment = { id: number; at: string; email: string | null; plan: string; amountBdt: number; trxId: string;
+  payerNumber: string; status: "pending" | "approved" | "rejected"; reason: string | null };
+export async function fetchPayments(): Promise<AdminPayment[] | null> {
+  const r = await api.get<{ payments: AdminPayment[] }>("/api/admin/payments");
+  return r.kind === "ok" ? r.value.payments : null;
+}
+export async function approvePayment(id: number): Promise<boolean> {
+  return (await api.post<void>(`/api/admin/payments/${id}/approve`)).kind === "ok";
+}
+export async function rejectPayment(id: number, reason: string): Promise<boolean> {
+  return (await api.post<void>(`/api/admin/payments/${id}/reject`, { reason })).kind === "ok";
 }

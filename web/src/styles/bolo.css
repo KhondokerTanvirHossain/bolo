@@ -562,6 +562,12 @@ button { font: inherit; color: inherit; -webkit-tap-highlight-color: transparent
 .bo-pricing__switch { display: block; margin: var(--space-2) auto 0; }
 .bo-pricing__act { display: grid; gap: var(--space-3); margin-top: var(--space-5); }
 .bo-plan .bo-tag { background: var(--surface-sunken); color: var(--ink-secondary); }
+/* P2e: Pay with bKash. */
+.bo-bkash__steps { margin: var(--space-3) 0 0; padding-left: 1.2em; display: grid; gap: var(--space-2); font: 500 15px/22px var(--font-sans); color: var(--ink-secondary); }
+.bo-bkash__steps b { color: var(--ink); }
+.bo-bkash__copy { margin-left: var(--space-2); border: 0; background: transparent; padding: 0; cursor: pointer; }
+.bo-bkash__field { display: grid; gap: var(--space-1); margin-top: var(--space-3); }
+.bo-bkash__field .ad-input { width: 100%; min-width: 0; box-sizing: border-box; }
 /* P2d: Me → Invite friends. */
 .bo-invite { max-width: 560px; }
 .bo-invite__slots { list-style: none; padding: 0; margin: var(--space-4) 0 0; display: grid; gap: var(--space-2); }

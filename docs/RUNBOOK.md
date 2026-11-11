@@ -349,3 +349,21 @@ The goal: someone who has never seen Bolo gets from opening it to talk to feedba
   - A month earned while already on Premium starts when the current one ends (same-plan grants extend; admin grants too).
 - **The offer runs until `bolo.referral.until`** (default 2027-11-30, Dhaka date). After that no new friends are recorded and the sheet stops offering it; months already earned still arrive.
 - **Tables:** `referral_code`, `referral`, `referral_reward`. All go with the learner on delete everything.
+
+## bKash payments (manual, Option A)
+
+- **Turn it on:** go to /admin → Settings → "bKash number for payments", type your personal bKash number (01XXXXXXXXX) and Save.
+  - Empty means bKash is off, and ৳ pricing shows the waitlist instead.
+  - The number is shown publicly on /pricing (`GET /api/payments/bkash`).
+- **The learner's side:** /pricing in ৳ → "Pay with bKash · ৳300".
+  - The sheet says: Send Money ৳{price} to your number, then type the TrxID and the number they paid from.
+  - The payment becomes **pending**, and both /pricing and Me say "Payment being checked".
+  - Rules: one pending at a time; a TrxID once, ever; 5 tries a day.
+- **Your routine (daily, or when you get a bKash SMS):**
+  1. Open /admin → **Payments**.
+  2. For each pending row, find the TrxID in the bKash app (Statement) and check that the amount matches.
+  3. **Approve** gives the plan for 30 days from now. If they already hold that plan, the new 30 days start when it ends.
+  4. **Reject** (choose the reason first) shows the learner the reason.
+  - A payment is decided once. A second click says so.
+- **Refunds** (refund policy): send the money back by bKash to the "Paid from" number by hand. Nothing in Bolo changes automatically, so ask Claude to end the subscription early if needed.
+- **Later (P2f):** an SMS forwarder on your Android phone will auto-match TrxID and amount.

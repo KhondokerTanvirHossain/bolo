@@ -3,11 +3,14 @@ import Link from "next/link";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { api, type LearnerView } from "@/api/browser";
 import { fetchMe, signInWithGoogle } from "@/account/session";
+import { BkashSheet } from "./BkashSheet";
+import { fetchBkash, myPayment, paymentLine, type MyPayment } from "./payments";
 import { fetchPlans, joinWaitlist, myWaitlist, planTitle, priceLabel, regionGuess, saveRegion, type MyWaitlist, type PaidPlan, type Region } from "./pricing";
 
 /**
  * The pricing page (P2c; ScreenPlans, US-8.8): Free first and dashed, then the paid plans, each with its talks as a number.
- * Basic is preselected. ৳ in Bangladesh, $ elsewhere; payments aren't open yet, so the button joins a waitlist.
+ * Basic is preselected. ৳ in Bangladesh, $ elsewhere. In ৳ with a bKash number set, pay by bKash (P2e); otherwise
+ * (cards, or bKash off) the button joins a waitlist.
  */
 export function PricingScreen() {
   const [plans, setPlans] = useState<PaidPlan[] | null>(null);
@@ -20,6 +23,10 @@ export function PricingScreen() {
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const radios = useRef<Record<string, HTMLButtonElement | null>>({});
+  /** P2e: the founder's bKash number (null: bKash off, so ৳ keeps the list), this learner's latest payment, the sheet. */
+  const [bkash, setBkash] = useState<string | null>(null);
+  const [payment, setPayment] = useState<MyPayment | null>(null);
+  const [paying, setPaying] = useState(false);
 
   const loadMe = async (who: LearnerView | null) => {
     setMe(who);
@@ -28,11 +35,13 @@ export function PricingScreen() {
     const home = await api.get<{ freeTalks?: { plan?: string } | null }>("/api/home");
     setMyPlan(home.kind === "ok" ? (home.value.freeTalks?.plan ?? "free") : "free");
     setListed(await myWaitlist());
+    setPayment(await myPayment());
   };
 
   useEffect(() => {
     setRegion(regionGuess());
     void fetchPlans().then((p) => (p ? setPlans(p) : setFailed(true)));
+    void fetchBkash().then(setBkash);
     void fetchMe().then(loadMe);
   }, []);
 
@@ -55,7 +64,7 @@ export function PricingScreen() {
     setBusy(true);
     const r = await signInWithGoogle();
     setBusy(false);
-    if (r.kind === "ok") { await loadMe(r.learner); await join(r.learner); }
+    if (r.kind === "ok") { await loadMe(r.learner); if (payByBkash) setPaying(true); else await join(r.learner); }
     else if (r.kind !== "cancelled") setNote("Sign-in didn't work. Try again.");
   };
 
@@ -74,6 +83,8 @@ export function PricingScreen() {
   const name = planTitle(chosen);
   const onList = listed?.plan === chosen;
   const account = me?.kind === "account";
+  const payByBkash = region === "bd" && bkash !== null;
+  const status = paymentLine(payment);
 
   return (
     // The app root fills the screen and doesn't scroll (the talk scenes need that), so this page scrolls itself.
@@ -109,6 +120,18 @@ export function PricingScreen() {
               {region === "bd" ? "Not in Bangladesh? See prices in $" : "In Bangladesh? See prices in ৳"}
             </button>
 
+            {payByBkash ? (
+            <div className="bo-pricing__act">
+              {status && <p className="bo-flow__body" role="status">{status}</p>}
+              <p className="bo-flow__body">Pay by bKash Send Money. We check each payment by hand, usually within a few hours.</p>
+              <button type="button" className="bo-btn bo-btn--primary bo-btn--block" disabled={busy || payment?.status === "pending"}
+                onClick={() => (account ? setPaying(true) : void signIn())}>
+                {pick ? `Pay with bKash · ${priceLabel(pick, "bd").replace(" a month", "")}` : "Pay with bKash"}
+              </button>
+              {!account && <p className="bo-footnote">Sign in with Google first.</p>}
+              {note && <p className="bo-footnote" role="alert">{note}</p>}
+            </div>
+            ) : (
             <div className="bo-pricing__act">
               <p className="bo-flow__body">
                 {region === "bd"
@@ -128,7 +151,11 @@ export function PricingScreen() {
               )}
               {note && <p className="bo-footnote" role="alert">{note}</p>}
             </div>
+            )}
           </>
+        )}
+        {paying && pick && bkash && (
+          <BkashSheet plan={pick} number={bkash} onClose={() => setPaying(false)} onSent={() => void myPayment().then(setPayment)} />
         )}
       </main>
     </div>

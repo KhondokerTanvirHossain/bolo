@@ -19,6 +19,10 @@ async function stub(page: Page, admin: boolean) {
   let helpOpen = true;
   await page.route("**/api/admin/help", (r) => r.fulfill({ json: { requests: helpOpen ? [{ id: 7, email: "stuck@x.com", message: "The mic button does nothing",
     context: { view: "home", talkId: "talk-9" }, at: "2026-11-11T08:00:00Z" }] : [] } }));
+  let paid = false;
+  await page.route("**/api/admin/payments", (r) => r.fulfill({ json: { payments: [{ id: 5, at: "2026-11-12T08:00:00Z", email: "payer@x.com", plan: "premium",
+    amountBdt: 500, trxId: "9AB3CD7EF1", payerNumber: "01812345678", status: paid ? "approved" : "pending", reason: null }] } }));
+  await page.route("**/api/admin/payments/5/approve", (r) => { paid = true; (sent as { approvals?: number }).approvals = 1; return r.fulfill({ status: 204 }); });
   await page.route("**/api/admin/waitlist", (r) => r.fulfill({ json: { counts: [{ plan: "basic", bd: 3, intl: 1 }, { plan: "premium", bd: 0, intl: 2 }],
     entries: [{ email: "far@x.com", plan: "premium", region: "intl", timeZone: "Europe/London", at: "2026-11-11T09:30:00Z" }] } }));
   await page.route("**/api/admin/help/7/done", (r) => { helpOpen = false; return r.fulfill({ status: 204 }); });
@@ -102,4 +106,26 @@ test("the Waitlist tab shows counts by plan and region, and who is waiting", asy
   await expect(page.getByText("Premium: 2 (৳ 0, $ 2)")).toBeVisible();
   await expect(page.getByRole("cell", { name: "far@x.com" })).toBeVisible();
   await expect(page.getByRole("cell", { name: "Europe/London" })).toBeVisible();
+});
+
+/** P2e: the founder checks each TrxID in the bKash app, then approves. */
+test("the Payments tab lists a payment to check, and Approve moves it to decided", async ({ page }) => {
+  const s = await stub(page, true);
+  await page.goto("/admin");
+  await page.getByRole("tab", { name: "Payments" }).click();
+  await expect(page.getByRole("cell", { name: "9AB3CD7EF1" })).toBeVisible();
+  await expect(page.getByRole("cell", { name: "৳500" })).toBeVisible();
+  await page.getByRole("button", { name: "Approve" }).click();
+  await expect(page.getByRole("cell", { name: "approved" })).toBeVisible();
+  expect((s as { approvals?: number }).approvals).toBe(1);
+});
+
+test("Settings saves the bKash number", async ({ page }) => {
+  const s = await stub(page, true);
+  await page.goto("/admin");
+  await page.getByRole("tab", { name: "Settings" }).click();
+  await page.getByLabel("bKash number for payments").fill("01712345678");
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByText("Saved.")).toBeVisible();
+  expect(JSON.parse(s.settings[0]).bkashNumber).toBe("01712345678");
 });
