@@ -17,6 +17,8 @@ public interface LearnerPort {
     /** Outside the free plan (P1d). */
     void setUnlimited(LearnerId id);
 
+    void setUnlimited(LearnerId id, boolean on);
+
     boolean unlimited(LearnerId id);
 
     /** Deletes the learner; every row that references it goes too (cascade). */

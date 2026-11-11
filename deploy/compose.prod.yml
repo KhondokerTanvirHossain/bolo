@@ -43,6 +43,8 @@ services:
       BOLO_INVITES_REQUIRED: "false"
       # Azure Speech S0 (2026-11-09): several live talks at once. Raise with care: bolo-api has 512 MB.
       BOLO_TALK_MAX_LIVE: "4"
+      # The admin portal (P2a): only these signed-in Google accounts (comma-separated).
+      BOLO_ADMIN_EMAILS: "k.tanvir.hossain@gmail.com"
       BOLO_LLM_VENDOR: anthropic
       # Learner audio, AES-256-GCM encrypted with BOLO_MEDIA_KEY (bolo.env); deleted by the retention sweep (NFR-14).
       BOLO_MEDIA_DIR: /data/media

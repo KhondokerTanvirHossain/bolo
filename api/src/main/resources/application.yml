@@ -28,6 +28,9 @@ management:
   endpoint.health.probes.enabled: false
 
 bolo:
+  # The admin portal (P2a): signed-in Google accounts with these emails (comma-separated).
+  admin:
+    emails: ${BOLO_ADMIN_EMAILS:}
   # The browser origin allowed to write to /api (WriteGuardFilter). Production sets BOLO_PUBLIC_ORIGIN.
   public-origin: ${BOLO_PUBLIC_ORIGIN:http://localhost:3000}
   # Consent policy in force (NFR-16). A new version means every learner is asked again.

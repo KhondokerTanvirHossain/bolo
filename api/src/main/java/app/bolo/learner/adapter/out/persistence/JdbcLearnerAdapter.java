@@ -49,6 +49,11 @@ class JdbcLearnerAdapter implements LearnerPort, ConsentLedgerPort, SessionPort 
     }
 
     @Override
+    public void setUnlimited(LearnerId id, boolean on) {
+        jdbc.sql("update learner set unlimited = ? where id = ?").params(on, id.value()).update();
+    }
+
+    @Override
     public boolean unlimited(LearnerId id) {
         return jdbc.sql("select unlimited from learner where id = ?").param(id.value()).query(Boolean.class).optional().orElse(false);
     }
