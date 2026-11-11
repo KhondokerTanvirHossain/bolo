@@ -76,6 +76,18 @@ class AdminController {
         return admin.usage(days);
     }
 
+    @GetMapping("/api/admin/help")
+    Map<String, Object> help(@RequestAttribute(name = CurrentLearner.ATTRIBUTE, required = false) LearnerId learner) {
+        admin(learner);
+        return Map.of("requests", admin.help());
+    }
+
+    @PostMapping("/api/admin/help/{id}/done")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    void helpDone(@RequestAttribute(name = CurrentLearner.ATTRIBUTE, required = false) LearnerId learner, @PathVariable long id) {
+        admin.helpDone(admin(learner), id);
+    }
+
     @GetMapping("/api/admin/settings")
     AdminService.Settings settings(@RequestAttribute(name = CurrentLearner.ATTRIBUTE, required = false) LearnerId learner) {
         admin(learner);

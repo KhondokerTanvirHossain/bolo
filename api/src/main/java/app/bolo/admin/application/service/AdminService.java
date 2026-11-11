@@ -30,10 +30,12 @@ public class AdminService {
     private final LearnerAdminUseCase learnerAdmin;
     private final PlansUseCase plans;
     private final AdminReportsPort reports;
+    private final app.bolo.help.application.port.in.HelpUseCase help;
     private final BoloClock clock;
 
     public AdminService(@Value("${bolo.admin.emails:}") String emails, CurrentLearnerUseCase learners, LearnerAdminUseCase learnerAdmin,
-                        PlansUseCase plans, AdminReportsPort reports, BoloClock clock) {
+                        PlansUseCase plans, AdminReportsPort reports, BoloClock clock, app.bolo.help.application.port.in.HelpUseCase help) {
+        this.help = help;
         this.admins = Arrays.stream(emails.split(",")).map(s -> s.trim().toLowerCase(Locale.ROOT)).filter(s -> !s.isEmpty()).collect(Collectors.toSet());
         this.learners = learners;
         this.learnerAdmin = learnerAdmin;
@@ -62,6 +64,15 @@ public class AdminService {
     public void grant(LearnerId admin, LearnerId target, String plan, int days, String note) {
         plans.grant(target, plan, days, "admin", note);
         log.info("admin {} gave {} for {} days to {}", admin, plan, days, target);
+    }
+
+    public List<app.bolo.help.application.port.in.HelpUseCase.Request> help() {
+        return help.open();
+    }
+
+    public void helpDone(LearnerId admin, long id) {
+        help.done(id);
+        log.info("admin {} closed help request {}", admin, id);
     }
 
     public record Now(int live, int today, int cap) {
