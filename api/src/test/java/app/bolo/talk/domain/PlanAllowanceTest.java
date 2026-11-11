@@ -26,6 +26,16 @@ class PlanAllowanceTest {
         assertThat(a).isEqualTo(new PlanAllowance.Allowance("premium", "month", 18, 20, LocalDate.parse("2026-12-01")));
     }
 
+    /** Review (P2d): a second month joined end-to-start keeps counting this month's talks; it isn't a fresh 20. */
+    @Test
+    void aChainedMonthDoesntResetThisMonthsTalks() {
+        var now = Instant.parse("2026-12-21T06:00:00Z");
+        var used = List.of(Instant.parse("2026-12-05T06:00:00Z"), Instant.parse("2026-12-15T06:00:00Z"), Instant.parse("2026-12-21T05:00:00Z"));
+        var a = PlanAllowance.of(used, List.of(sub("premium", "2026-11-20T00:00:00Z", "2026-12-20T00:00:00Z"),
+                sub("premium", "2026-12-20T00:00:00Z", "2027-01-19T00:00:00Z")), MONTHLY, now);
+        assertThat(a.left()).isEqualTo(17);
+    }
+
     @Test
     void talksBeforeThePlanStartedDontCount() {
         var a = PlanAllowance.of(List.of(Instant.parse("2026-11-05T06:00:00Z"), Instant.parse("2026-11-19T06:00:00Z")),

@@ -77,7 +77,8 @@ public class ReferralService implements ReferralUseCase {
         List<String> names = new ArrayList<>();
         for (LearnerId friend : port.friends(learner)) {
             var h = talks.history(friend);
-            if (h.counted() > 0 && !h.returning()) names.add(firstName(learners.view(friend)));
+            // Review (P2d): a finished talk, not one just started (an open talk was enough to farm a month).
+            if (h.finished() > 0 && !h.returning()) names.add(firstName(learners.view(friend)));
         }
         int earned = Math.min(MAX_REWARDS, names.size() / FRIENDS_PER_REWARD);
         var now = clock.now();
@@ -89,9 +90,13 @@ public class ReferralService implements ReferralUseCase {
             }
         }
         var rewards = port.rewards(learner);
+        // Review (P2d): only the current set's names (friends already rewarded aren't sent again; none once all are had).
+        int progress = rewards.size() >= MAX_REWARDS ? 0
+                : Math.max(0, Math.min(FRIENDS_PER_REWARD, names.size() - FRIENDS_PER_REWARD * rewards.size()));
+        List<String> slots = List.copyOf(names.subList(names.size() - progress, names.size()));
         Instant until = rewards.stream().map(ReferralPort.Reward::endsAt).filter(Objects::nonNull).max(Comparator.naturalOrder()).orElse(null);
         boolean fresh = rewards.stream().anyMatch(r -> r.seenAt() == null);
-        return new Status(offerRuns(), code, names, names.size(), rewards.size(), MAX_REWARDS, until, fresh);
+        return new Status(offerRuns(), code, slots, names.size(), rewards.size(), MAX_REWARDS, until, fresh);
     }
 
     @Override

@@ -9,6 +9,7 @@ test("the privacy page says what's kept, why, for how long, who processes it and
     await expect(page.getByRole("heading", { level: 2, name: h })).toBeVisible();
   }
   // Review (P2b): what a help report carries is listed too.
+  await expect(page.getByText("If you joined through a friend's link: once you finish a talk, they see your first name.")).toBeVisible();
   await expect(page.getByText("If you report a problem: your note, the screen you were on, your last talk's id and your browser's name.")).toBeVisible();
 });
 

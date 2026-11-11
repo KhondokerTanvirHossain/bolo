@@ -13,7 +13,8 @@ public interface ReferralUseCase {
     int REWARD_DAYS = 30;
 
     /**
-     * offer: the invite offer still runs; friends: first names of friends who finished a talk; counted: how many;
+     * offer: the invite offer still runs; friends: first names for the current set of 3 (finished a talk, not yet
+     * rewarded); counted: all friends who finished a talk;
      * rewards: months earned; premiumUntil: when the latest earned month ends; newReward: a month not yet announced.
      */
     record Status(boolean offer, String code, List<String> friends, int counted, int rewards, int maxRewards,

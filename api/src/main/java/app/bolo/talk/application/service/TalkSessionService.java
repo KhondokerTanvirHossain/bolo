@@ -95,7 +95,7 @@ public class TalkSessionService implements StartTalkUseCase, app.bolo.talk.appli
     @Override
     public History history(LearnerId learner) {
         boolean returning = freePlanKeys.freePlanKey(learner).map(k -> !sessions.rememberedStarts(k).isEmpty()).orElse(false);
-        return new History(sessions.countedStarts(learner).size(), returning);
+        return new History(sessions.countedStarts(learner).size(), sessions.finishedTalks(learner), returning);
     }
 
     private app.bolo.talk.domain.PlanAllowance.Allowance allowanceOf(LearnerId learner) {

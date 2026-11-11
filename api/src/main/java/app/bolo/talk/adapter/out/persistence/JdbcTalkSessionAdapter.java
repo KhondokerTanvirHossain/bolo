@@ -32,6 +32,16 @@ class JdbcTalkSessionAdapter implements TalkSessionPort {
     }
 
     @Override
+    public int finishedTalks(LearnerId learner) {
+        return jdbc.sql("""
+                select count(*) from talk_session s left join debrief d on d.session_id = s.id
+                where s.learner_id = ? and s.attached_at is not null and s.ended_at is not null
+                  and coalesce(d.status, '') <> 'failed'
+                  and (d.status in ('scoring', 'ready') or s.ended_at - s.attached_at >= interval '90 seconds')""")
+                .param(learner.value()).query(Integer.class).single();
+    }
+
+    @Override
     public void lockStarts() {
         jdbc.sql("select pg_advisory_xact_lock(?)").param(START_LOCK).query().singleRow();
     }

@@ -29,6 +29,22 @@ public final class PlanAllowance {
                 .max(Comparator.comparingInt(s -> monthly.get(s.plan())));
     }
 
+    /** Review (P2d): same-plan months joined end-to-start are one stretch; its talks count from the first one's start. */
+    static Instant chainStart(Sub sub, List<Sub> subs) {
+        Instant start = sub.startsAt();
+        boolean moved = true;
+        while (moved) {
+            moved = false;
+            for (Sub s : subs) {
+                if (s.plan().equals(sub.plan()) && s.startsAt().isBefore(start) && !s.endsAt().isBefore(start)) {
+                    start = s.startsAt();
+                    moved = true;
+                }
+            }
+        }
+        return start;
+    }
+
     public static Allowance of(List<Instant> countedStarts, List<Sub> subs, Map<String, Integer> monthly, Instant now) {
         Optional<Sub> sub = active(subs, monthly, now);
         if (sub.isEmpty()) {
@@ -37,7 +53,8 @@ public final class PlanAllowance {
         }
         LocalDate monthStart = now.atZone(FreePlan.ZONE).toLocalDate().withDayOfMonth(1);
         Instant monthFrom = monthStart.atStartOfDay(FreePlan.ZONE).toInstant();
-        Instant from = sub.get().startsAt().isAfter(monthFrom) ? sub.get().startsAt() : monthFrom;
+        Instant start = chainStart(sub.get(), subs);
+        Instant from = start.isAfter(monthFrom) ? start : monthFrom;
         long used = countedStarts.stream().filter(s -> !s.isBefore(from)).count();
         int total = monthly.get(sub.get().plan());
         return new Allowance(sub.get().plan(), "month", (int) Math.max(0, total - used), total, monthStart.plusMonths(1));

@@ -55,6 +55,9 @@ public interface TalkSessionPort {
     /** Serialises talk starts until the caller's transaction ends (the free-plan check, ending old talks and the insert). */
     void lockStarts();
 
+    /** Talks that ended after at least 90 s, or with feedback scoring or ready (P2d: a friend "finished a talk"). */
+    int finishedTalks(LearnerId learner);
+
     /** Talk starts (any) by this learner since {@code since}. */
     int startsBy(LearnerId learner, java.time.Instant since);
 

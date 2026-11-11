@@ -24,10 +24,9 @@ export function InviteScreen({ onBack }: { onBack: () => void }) {
     );
   }
   const link = inviteLink(r.code, window.location.origin);
-  const set = r.counted % 3;
   const all = r.rewards >= r.maxRewards;
-  // The current set of 3: names already counted towards earlier months aren't shown again.
-  const shown = all ? r.friends.slice(-3) : r.friends.slice(r.friends.length - set);
+  // The server sends only the current set of 3 (friends already rewarded aren't sent again).
+  const shown = r.friends.slice(0, 3);
   const copy = async () => setNote((await copyText(link)) ? "Link copied" : "Copying didn't work. Select the link and copy it.");
   const share = async () => {
     const out = await shareLink(link);

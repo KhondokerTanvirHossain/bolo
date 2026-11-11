@@ -75,3 +75,20 @@ test("a month earned is announced on Home once", async ({ page }) => {
   await expect(page.getByText("A month of Premium is yours. Until 12 December.")).toBeVisible();
   await expect.poll(() => seen.length).toBe(1);
 });
+
+/** Review (P2d): "See you tomorrow" takes Home's note once; the month earned waits for the next visit, not lost. */
+test("a month earned isn't marked seen while 'See you tomorrow' takes the note", async ({ page }) => {
+  await page.addInitScript(() => {
+    if (window.sessionStorage.getItem("seeded")) return;
+    window.sessionStorage.setItem("seeded", "1");
+    window.localStorage.setItem("bolo.loop.v1", JSON.stringify({ talksFinished: 1, asked: [], pendingSave: false, seeYou: true }));
+  });
+  const seen = await stub(page, { ...STATUS, friends: [], counted: 3, rewards: 1, premiumUntil: "2026-12-12T06:00:00Z", newReward: true });
+  await page.goto("/");
+  await expect(page.getByText("See you tomorrow. Bolo will be here.")).toBeVisible();
+  await page.waitForTimeout(1000);
+  expect(seen).toHaveLength(0);
+  await page.reload();
+  await expect(page.getByText("A month of Premium is yours. Until 12 December.")).toBeVisible();
+  await expect.poll(() => seen.length).toBe(1);
+});

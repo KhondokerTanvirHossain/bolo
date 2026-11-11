@@ -52,11 +52,6 @@ export function FirstTalkScreen({ deviceId }: { deviceId: string | null }) {
   /** P2d: the invite offer and any month earned (accounts only). */
   const [referral, setReferral] = useState<Referral | null>(null);
   const rewardLine = referral ? rewardNote(referral) : null;
-  useEffect(() => {
-    if (!rewardLine) return;
-    // Shown once: Home tells the server it's been seen.
-    void markRewardSeen();
-  }, [rewardLine]);
 
   useEffect(() => {
     let objectUrl: string | null = null;
@@ -98,6 +93,12 @@ export function FirstTalkScreen({ deviceId }: { deviceId: string | null }) {
       setLoop(seenSeeYou);
     }
   }, [idle, view.kind, loop.seeYou, loop.pendingSave, setLoop]);
+
+  // P2d: the month earned is marked seen only when Home actually shows it ("See you tomorrow" takes the note first).
+  const rewardShown = view.kind === "home" && idle && !seeYou && !!rewardLine;
+  useEffect(() => {
+    if (rewardShown) void markRewardSeen();
+  }, [rewardShown]);
 
   const guest = me?.kind === "guest";
   // No save step for an account, or while sign-in is off: the pending prompt is simply answered.

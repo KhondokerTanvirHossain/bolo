@@ -70,7 +70,7 @@ class ReferralAcceptanceTest {
     }
 
     @Nested
-    @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+    @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = "bolo.talk.max-live-sessions=50")
     class Offer extends Base {
 
         @Test
@@ -87,6 +87,8 @@ class ReferralAcceptanceTest {
             assertThat((Integer) JsonPath.read(s, "$.counted")).isEqualTo(3);
             assertThat((Integer) JsonPath.read(s, "$.rewards")).isEqualTo(1);
             assertThat((Boolean) JsonPath.read(s, "$.newReward")).isTrue();
+            // Review (P2d): only the names the next month's slots need; friends already rewarded aren't sent again.
+            assertThat((List<String>) JsonPath.read(s, "$.friends")).isEmpty();
             assertThat((String) JsonPath.read(s, "$.premiumUntil")).isNotNull();
             assertThat(plan(me)).isEqualTo("premium");
             client.send("POST", "/api/referral/seen", me, "{}");
@@ -101,6 +103,18 @@ class ReferralAcceptanceTest {
             String s = status(me);
             assertThat((Integer) JsonPath.read(s, "$.counted")).isZero();
             assertThat((List<String>) JsonPath.read(s, "$.friends")).isEmpty();
+        }
+
+        /** Review (P2d): a talk still open (or a few seconds long and dropped) isn't a finished talk; the friend doesn't count yet. */
+        @Test
+        void aFriendWhoseTalkHasntFinishedDoesntCount() throws Exception {
+            String me = account("Rafi");
+            String code = code(me);
+            String f = friend(code, "Half Way", 0);
+            var started = client.startTalk(f);
+            jdbc.sql("update talk_session set attached_at = now() - interval '5 seconds' where id = ?")
+                    .param(UUID.fromString(TalkTestClient.id(started))).update();
+            assertThat((Integer) JsonPath.read(status(me), "$.counted")).isZero();
         }
 
         @Test
