@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { fetchHome } from "@/home/home";
-import { counterLine, type FreeTalks } from "@/plan/freeTalks";
+import { counterLine, planName, type FreeTalks } from "@/plan/freeTalks";
 import type { LearnerView } from "@/api/browser";
 import { GoogleButton } from "@/account/GoogleButton";
 import { signInWithGoogle, signOut } from "@/account/session";
@@ -30,7 +30,7 @@ export function MeScreen({ me, onPrivacy, onSignedIn }: { me: LearnerView | null
   return (
     <>
       <h1 className="dk-h1">Me</h1>
-      <p className="dk-sub">{account ? (free ? `${account.email} · Free plan` : account.email) : "Guest · your progress is in this browser only"}</p>
+      <p className="dk-sub">{account ? (free ? `${account.email} · ${planName(free) ?? "Free"} plan` : account.email) : "Guest · your progress is in this browser only"}</p>
       {!account && me && (
         <div className="bo-group" style={{ marginTop: 20, padding: 20, maxWidth: 420 }}>
           <p className="bo-row__title" style={{ margin: "0 0 12px" }}>Save your progress</p>
@@ -42,7 +42,7 @@ export function MeScreen({ me, onPrivacy, onSignedIn }: { me: LearnerView | null
         <>
           <h2 className="dk-h2" style={{ marginTop: 28 }}>Plan</h2>
           <div className="bo-group">
-            <div className="bo-row"><div className="bo-row__body"><div className="bo-row__title">Free plan</div>
+            <div className="bo-row"><div className="bo-row__body"><div className="bo-row__title">{planName(free) ?? "Free"} plan</div>
               <div className="bo-row__sub">{counterLine(free)}</div></div></div>
           </div>
         </>
@@ -53,7 +53,7 @@ export function MeScreen({ me, onPrivacy, onSignedIn }: { me: LearnerView | null
           <>
             <div className="bo-row"><div className="bo-row__body"><div className="bo-row__title">{LABEL[me.profile.goal] ?? me.profile.goal}</div><div className="bo-row__sub">What you need English for</div></div></div>
             <div className="bo-row"><div className="bo-row__body"><div className="bo-row__title">{LABEL[me.profile.fearedMoment] ?? me.profile.fearedMoment}</div><div className="bo-row__sub">The hardest moment</div></div></div>
-            <div className="bo-row"><div className="bo-row__body"><div className="bo-row__title">{free ? 5 : me.profile.talkMinutes} minutes</div><div className="bo-row__sub">{free ? "Each talk on the free plan" : "Each talk"}</div></div></div>
+            <div className="bo-row"><div className="bo-row__body"><div className="bo-row__title">{free ? 5 : me.profile.talkMinutes} minutes</div><div className="bo-row__sub">{free ? "Each talk on your plan" : "Each talk"}</div></div></div>
           </>
         ) : <div className="bo-row"><div className="bo-row__body"><div className="bo-row__sub">No goals yet.</div></div></div>}
       </div>

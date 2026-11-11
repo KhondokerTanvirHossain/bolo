@@ -5,6 +5,7 @@ import { CoachFlow } from "@/coach/CoachFlow";
 import { fetchHome, type Home } from "@/home/home";
 import { HomeDashboard } from "@/home/HomeDashboard";
 import { SideCards, useFreeLine } from "@/home/SideCards";
+import { planName } from "@/plan/freeTalks";
 import { RecordIntro } from "@/voice/RecordIntro";
 import { DrillSession } from "@/drills/DrillSession";
 import { PracticeScreen } from "@/practice/PracticeScreen";
@@ -12,6 +13,7 @@ import type { LearnerView } from "@/api/browser";
 import { afterDebrief, loadLoop, saveAnswered, saveLoop, seenSeeYou, type Loop } from "@/account/loop";
 import { GuestLimit } from "@/account/GuestLimit";
 import { FreeLimit } from "@/plan/FreeLimit";
+import { Resting } from "@/plan/Resting";
 import { SaveProgress } from "@/account/SaveProgress";
 import { fetchAuthConfig, fetchMe } from "@/account/session";
 import { AppShell, type Tab } from "@/me/AppShell";
@@ -97,7 +99,7 @@ export function FirstTalkScreen({ deviceId }: { deviceId: string | null }) {
   const talk = useCallback(() => { setSeeYou(false); setView({ kind: "home" }); void conversation.start(); }, [conversation]);
 
   const toTab = (t: Tab) => { setSeeYou(false); setView({ kind: t === "talk" ? "home" : t }); };
-  const foot = <SideCards freeLine={freeLine} />;
+  const foot = <SideCards freeLine={freeLine} plan={home?.freeTalks ? planName(home.freeTalks) : null} />;
   const minutes = home?.freeTalks ? 5 : (me?.profile?.talkMinutes ?? 5);
   /** The dashboard Home (P1f) inside the shell; {@code sheet} sits over it and turns its Space key off. */
   const homePage = (sheet?: ReactNode) => (
@@ -125,6 +127,7 @@ export function FirstTalkScreen({ deviceId }: { deviceId: string | null }) {
     return homePage(<GuestLimit me={me} onClose={conversation.reset} onSignedIn={(l) => { signedIn(l); conversation.reset(); }} />);
   }
   // US-8.7: no free talks left; Home with the sheet saying when they come back. Practice stays free.
+  if (conversation.state.phase === "resting") return homePage(<Resting onClose={conversation.reset} />);
   if (conversation.state.phase === "out_of_talks") {
     return homePage(<FreeLimit freeTalks={home?.freeTalks ?? null} onClose={conversation.reset} />);
   }

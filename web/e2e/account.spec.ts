@@ -223,3 +223,19 @@ test("Esc on the sign-in sheet is Not now", async ({ page }) => {
   await page.keyboard.press("Escape");
   await expect(page.getByRole("heading", { name: "Sign in to start talking" })).toHaveCount(0);
 });
+
+test("when the daily cap is reached, Bolo is resting", async ({ page }) => {
+  await stub(page, { account: true, talkRefusal: "daily-cap", freeTalks: { window: "first_week", left: 5, total: 7, resetsOn: "2026-11-16" } });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Start talking" }).click();
+  await expect(page.getByRole("heading", { name: "Bolo is resting" })).toBeVisible();
+  await page.getByRole("button", { name: "OK" }).click();
+  await expect(page.getByRole("heading", { name: "Bolo is resting" })).toHaveCount(0);
+});
+
+test("a Premium learner's sidebar names the plan", async ({ page }) => {
+  await stub(page, { account: true, freeTalks: { window: "month", left: 12, total: 20, resetsOn: "2026-12-01", plan: "premium" } as never });
+  await page.goto("/");
+  await expect(page.getByRole("complementary").getByText("Premium plan")).toBeVisible();
+  await expect(page.getByRole("complementary").getByText("12 of 20 Premium talks left this month")).toBeVisible();
+});

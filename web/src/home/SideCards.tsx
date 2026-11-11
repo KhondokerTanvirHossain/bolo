@@ -16,10 +16,10 @@ export function useFreeLine(freeTalks: FreeTalks | null | undefined): string | n
 }
 
 /** The sidebar's cards (DesktopHome): what's left of the free plan (not for unlimited learners) and Bolo on a phone. */
-export function SideCards({ freeLine }: { freeLine: string | null }) {
+export function SideCards({ freeLine, plan }: { freeLine: string | null; plan?: string | null }) {
   return (
     <>
-      {freeLine && <div className="dk-side__card" data-side-plan><b>Free plan</b><span>{freeLine}</span></div>}
+      {freeLine && <div className="dk-side__card" data-side-plan><b>{plan ?? "Free"} plan</b><span>{freeLine}</span></div>}
       <div className="dk-side__card"><b>Bolo on your phone</b>
         <span>Open bolo.eliooo.org in your phone&apos;s browser and sign in with the same Google account.</span></div>
     </>

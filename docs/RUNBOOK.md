@@ -305,3 +305,14 @@ The goal: someone who has never seen Bolo gets from opening it to talk to feedba
   - Skip and Close (Esc) queue drills in this browser (`bolo.drillQueue`); 3 skips retire one.
   - The end lists what moved, with one **Done**.
   - Attempts count toward the week's run.
+
+## Admin portal and plans
+
+- **https://bolo.eliooo.org/admin** is only for signed-in Google accounts listed in `BOLO_ADMIN_EMAILS` (`deploy/compose.prod.yml`); everyone else gets "Not found" (404 on `/api/admin/*`).
+  - **Users:** search by email or name; plan, talks this month, last talk; an **Unlimited** switch; **Give <plan> for N days**, for friends.
+  - **Usage:** per day, talks, minutes, new accounts and an **estimated** cost from the usage ledger (speech $1 per audio hour, voice $16 per million characters, Claude $3 / $15 per million tokens in / out). Also live talks now, and today against the daily cap.
+  - **Settings:** the **daily talk cap** (default 300), and each plan's talks a month and prices in ৳ and $. No deploy needed.
+- **Plans** (`plan_setting`, `subscription`; ACC-5):
+  - Basic 8, Premium 20, Ultimate 45 talks a month (placeholders, editable in Settings). A plan counts the Dhaka calendar month since it began; the biggest active plan wins; when it ends, the free plan applies again.
+  - Grants come from the admin now; referrals and bKash come next.
+- **Daily cap:** when today's talks (Asia/Dhaka, unlimited learners excluded) reach the cap, a start is refused (`422 daily-cap`) and the learner sees "Bolo is resting… Back tomorrow." A running talk always finishes.

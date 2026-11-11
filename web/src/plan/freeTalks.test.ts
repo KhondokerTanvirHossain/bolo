@@ -28,3 +28,13 @@ describe("free talks (US-8.7)", () => {
     expect(freeWeekOverNote(month)).toBeNull();
   });
 });
+
+describe("paid plans (P2a)", () => {
+  it("planCounterNamesThePlan", () => {
+    expect(counterLine({ window: "month", left: 12, total: 20, resetsOn: "2026-12-01", plan: "premium" })).toBe("12 of 20 Premium talks left this month");
+    expect(counterLine({ window: "month", left: 0, total: 8, resetsOn: "2026-12-01", plan: "basic" })).toBe("Talks come back on 1 December");
+    expect(limitTitle({ window: "month", left: 0, total: 20, resetsOn: "2026-12-01", plan: "premium" })).toBe("You've had this month's 20 Premium talks");
+    expect(counterLine({ window: "month", left: 1, total: 2, resetsOn: "2026-12-01", plan: "free" })).toBe("1 of 2 free talks left this month");
+    expect(freeWeekOverNote({ window: "month", left: 12, total: 20, resetsOn: "2026-12-01", plan: "premium" })).toBeNull();
+  });
+});

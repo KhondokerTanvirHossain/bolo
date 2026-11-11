@@ -824,3 +824,18 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #0b0816; }
 .dk-pairs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; margin-top: 16px; }
 .dk-drill__summary { list-style: none; padding: 0; margin: 8px 0 16px; display: flex; flex-direction: column; gap: 6px; font: 500 17px/24px var(--font-sans); }
 @media (max-width: 720px) { .dk-drillpage { padding: 16px 16px 32px; } .dk-stagecard { padding: 24px 16px; } .dk-drill__word { font-size: 40px; line-height: 48px; } }
+
+/* Admin portal (P2a): plain and dense; the founder's tool, not a learner screen. */
+.ad-page { max-width: 1100px; }
+.ad-tabs { display: flex; gap: 8px; margin: 16px 0 20px; }
+.ad-bar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 12px; }
+.ad-input { height: 40px; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); padding: 0 10px; font: 500 15px/20px var(--font-sans); background: var(--surface); color: var(--ink); }
+.ad-num { width: 90px; }
+.ad-label { display: flex; align-items: center; gap: 8px; font: 500 15px/20px var(--font-sans); margin-bottom: 12px; }
+.ad-scroll { overflow-x: auto; margin-bottom: 16px; }
+.ad-table { width: 100%; border-collapse: collapse; font: 500 14px/20px var(--font-sans); }
+.ad-table th, .ad-table td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--separator); vertical-align: middle; }
+.ad-table th { color: var(--ink-secondary); font-weight: 650; white-space: nowrap; }
+.ad-table small { display: block; color: var(--ink-secondary); }
+.ad-small { height: 34px; padding: 0 12px; font-size: 14px; }
+.bo-chip[aria-selected="true"] { background: var(--sun-soft); color: var(--ink); border-color: var(--sun-ink); }

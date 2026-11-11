@@ -95,7 +95,8 @@ export function useTalk(deviceId: string | null) {
       teardown();
       dispatch(created.kind === "refused" && created.code === "busy" ? { type: "busy" }
         : created.kind === "refused" && created.code === "sign-in" ? { type: "needs_sign_in" }
-        : created.kind === "refused" && created.code === "free-limit" ? { type: "free_limit" } : { type: "socket_closed" });
+        : created.kind === "refused" && created.code === "free-limit" ? { type: "free_limit" }
+        : created.kind === "refused" && created.code === "daily-cap" ? { type: "daily_cap" } : { type: "socket_closed" });
       return;
     }
     dispatch({ type: "started", minutes: created.value.minutes, talkId: created.value.id });

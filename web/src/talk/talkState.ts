@@ -7,7 +7,9 @@ export type TalkPhase =
   /** ACC-2: the 4th guest talk; Home shows the sign-in sheet. */
   | "needs_sign_in"
   /** US-8.7: no free talks left; Home shows when they come back. */
-  | "out_of_talks";
+  | "out_of_talks"
+  /** P2a: the daily cap is reached for everyone; back tomorrow. */
+  | "resting";
 
 export type Crisis = { title: string; lines: string[]; help: { name: string; number: string; hours: string }[] };
 
@@ -48,6 +50,7 @@ export type TalkAction =
   | { type: "busy" }
   | { type: "needs_sign_in" }
   | { type: "free_limit" }
+  | { type: "daily_cap" }
   | { type: "no_mic"; problem: MicProblem }
   | { type: "socket_closed" }
   | { type: "reset" }
@@ -55,7 +58,7 @@ export type TalkAction =
 
 export const initialTalk: TalkState = { phase: "idle", talkId: null, minutes: 5, caption: "", captionTurn: -1, hint: null, crisis: null, askKeepSlower: false };
 
-const FINAL: TalkPhase[] = ["ended", "busy", "no_voice", "no_mic", "idle", "crisis", "needs_sign_in", "out_of_talks"];
+const FINAL: TalkPhase[] = ["ended", "busy", "no_voice", "no_mic", "idle", "crisis", "needs_sign_in", "out_of_talks", "resting"];
 
 export function talk(state: TalkState, action: TalkAction): TalkState {
   switch (action.type) {
@@ -69,6 +72,8 @@ export function talk(state: TalkState, action: TalkAction): TalkState {
       return { ...state, phase: "needs_sign_in" };
     case "free_limit":
       return { ...state, phase: "out_of_talks" };
+    case "daily_cap":
+      return { ...state, phase: "resting" };
     case "no_mic":
       return { ...state, phase: "no_mic", micProblem: action.problem };
     case "reset":
