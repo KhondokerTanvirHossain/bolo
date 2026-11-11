@@ -76,6 +76,12 @@ class AdminController {
         return admin.usage(days);
     }
 
+    @GetMapping("/api/admin/waitlist")
+    Map<String, Object> waitlist(@RequestAttribute(name = CurrentLearner.ATTRIBUTE, required = false) LearnerId learner) {
+        admin(learner);
+        return admin.waitlist();
+    }
+
     @GetMapping("/api/admin/help")
     Map<String, Object> help(@RequestAttribute(name = CurrentLearner.ATTRIBUTE, required = false) LearnerId learner) {
         admin(learner);
