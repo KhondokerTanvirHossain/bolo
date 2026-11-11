@@ -33,6 +33,7 @@ public class TalkSessionService implements StartTalkUseCase, app.bolo.talk.appli
     private final Duration attachWithin;
     private final app.bolo.learner.application.port.in.VoiceAccessUseCase voiceAccess;
     private final app.bolo.learner.application.port.in.FreePlanKeyUseCase freePlanKeys;
+    private final PlansService plans;
 
 
     public TalkSessionService(TalkSessionPort sessions, CurrentLearnerUseCase learners, BoloClock clock,
@@ -40,7 +41,8 @@ public class TalkSessionService implements StartTalkUseCase, app.bolo.talk.appli
                               @Value("${bolo.talk.max-live-sessions}") int maxLive,
                               @Value("${bolo.talk.attach-within-ms}") long attachWithinMs,
                               app.bolo.learner.application.port.in.VoiceAccessUseCase voiceAccess,
-                              app.bolo.learner.application.port.in.FreePlanKeyUseCase freePlanKeys) {
+                              app.bolo.learner.application.port.in.FreePlanKeyUseCase freePlanKeys, PlansService plans) {
+        this.plans = plans;
         this.voiceAccess = voiceAccess;
         this.freePlanKeys = freePlanKeys;
         this.sessions = sessions;
@@ -62,6 +64,8 @@ public class TalkSessionService implements StartTalkUseCase, app.bolo.talk.appli
         if (!view.unlimited() && "account".equals(view.kind()) && allowanceOf(learner).left() == 0) {
             throw new RefusedException("free-limit");
         }
+        // P2a: the global daily cap protects the bill; unlimited learners (probes, founder) never meet it.
+        if (!view.unlimited() && plans.todayCount() >= plans.dailyCap()) throw new RefusedException("daily-cap");
         int chosen = view.profile() == null ? FreePlan.FREE_MINUTES : view.profile().talkMinutes();
         // A free-plan talk is 5 minutes (ACC-5). Guests only talk with sign-in off or when unlimited: no plan applies.
         boolean onFreePlan = !view.unlimited() && "account".equals(view.kind());
@@ -81,14 +85,15 @@ public class TalkSessionService implements StartTalkUseCase, app.bolo.talk.appli
         LearnerView view = learners.view(learner);
         if (view.unlimited() || !"account".equals(view.kind())) return Optional.empty();
         var a = allowanceOf(learner);
-        return Optional.of(new FreeTalks(a.window(), a.left(), a.total(), a.resetsOn()));
+        return Optional.of(new FreeTalks(a.window(), a.left(), a.total(), a.resetsOn(), a.plan()));
     }
 
-    private FreePlan.Allowance allowanceOf(LearnerId learner) {
+    private app.bolo.talk.domain.PlanAllowance.Allowance allowanceOf(LearnerId learner) {
         var starts = new java.util.ArrayList<>(sessions.countedStarts(learner));
         // P1d task 6: free talks used by an earlier, deleted account of the same Google user still count.
         freePlanKeys.freePlanKey(learner).ifPresent(key -> starts.addAll(sessions.rememberedStarts(key)));
-        return FreePlan.allowance(starts, clock.now());
+        // P2a: an active paid plan (granted, earned or paid) gives its monthly talks.
+        return plans.allowance(learner, starts);
     }
 
     /** Delete everything (ACC-4): the account's counted free talks are kept under its one-way key (P1d task 6). */

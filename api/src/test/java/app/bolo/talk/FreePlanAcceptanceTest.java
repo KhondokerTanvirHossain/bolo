@@ -176,6 +176,53 @@ class FreePlanAcceptanceTest {
             assertThat(jdbc.sql("select count(*) from free_talk_use where subject_hash = 'new-key'").query(Integer.class).single()).isOne();
         }
 
+        @Autowired app.bolo.talk.application.port.in.PlansUseCase plans;
+
+        app.bolo.common.id.LearnerId learnerOf(String cookie) throws Exception {
+            return new app.bolo.common.id.LearnerId(UUID.fromString(JsonPath.read(client.send("GET", "/api/me", cookie, "").body(), "$.learnerId")));
+        }
+
+        /** P2a: a plan given by the admin (or earned) is its monthly talk count. */
+        @Test
+        void aGrantedPremiumLearnerHas20ThisMonth() throws Exception {
+            String me = account(5);
+            plans.grant(learnerOf(me), "premium", 30, "admin", "a friend");
+            String home = client.send("GET", "/api/home", me, "").body();
+            assertThat((String) JsonPath.read(home, "$.freeTalks.plan")).isEqualTo("premium");
+            assertThat((Integer) JsonPath.read(home, "$.freeTalks.total")).isEqualTo(20);
+            assertThat((Integer) JsonPath.read(home, "$.freeTalks.left")).isEqualTo(20);
+        }
+
+        @Test
+        void theTwentyFirstPremiumTalkIsRefused() throws Exception {
+            String me = account(5);
+            plans.grant(learnerOf(me), "premium", 30, "admin", null);
+            talkTimes(client, jdbc, me, 20);
+            var r = client.startTalk(me);
+            assertThat(r.status()).isEqualTo(422);
+            assertThat(r.body()).contains("free-limit");
+        }
+
+        /** P2a: the daily cap protects the bill; unlimited learners (probes, founder) never meet it. */
+        @Test
+        void theDailyCapRestsEveryoneButUnlimited() throws Exception {
+            String me = account(5);
+            int before = plans.dailyCap();
+            try {
+                plans.setDailyCap(plans.todayCount());
+                var r = client.startTalk(me);
+                assertThat(r.status()).isEqualTo(422);
+                assertThat(r.body()).contains("daily-cap");
+                String code = "unl" + UUID.randomUUID().toString().substring(0, 8);
+                jdbc.sql("insert into invite (code, label, max_uses, created_at, unlimited) values (?, 'test', 10, now(), true)").param(code).update();
+                String probe = client.send("POST", "/api/session", null, "{\"invite\":\"" + code + "\"}").cookie();
+                client.send("POST", "/api/consent", probe, "{\"keepRecordings\":true,\"over13\":true,\"policyVersion\":\"2026-11-v1\"}");
+                assertThat(client.startTalk(probe).status()).isEqualTo(201);
+            } finally {
+                plans.setDailyCap(before);
+            }
+        }
+
         @Test
         void freeTalksAreFiveMinutes() throws Exception {
             var r = client.startTalk(account(10));
