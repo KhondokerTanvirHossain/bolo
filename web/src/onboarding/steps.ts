@@ -95,6 +95,9 @@ export function reconcile(state: OnboardingState, server: { consent: boolean; pr
   const at = ORDER.indexOf(state.step);
   if (!server.consent && at > ORDER.indexOf("consent")) return { ...state, step: "consent", keepRecordings: null };
   if (!server.profile && at > ORDER.indexOf("setup")) return { ...state, step: "setup" };
+  // Review (P2c): a browser that hasn't reached consent, for an account already set up (signed in elsewhere, e.g. /pricing):
+  // go to the app, never start over (that would redo consent and overwrite the saved answers).
+  if (server.consent && server.profile && at < ORDER.indexOf("consent")) return { ...state, step: "talk" };
   return state;
 }
 

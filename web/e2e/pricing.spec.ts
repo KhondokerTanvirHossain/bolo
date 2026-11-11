@@ -107,3 +107,13 @@ test("the sidebar's plan card and Me's plan row link to the plans", async ({ pag
   await page.getByRole("button", { name: "Me", exact: true }).click();
   await expect(page.locator("main").getByRole("link", { name: "See plans" })).toHaveAttribute("href", "/pricing");
 });
+
+/** Review (P2c): an existing learner signs in from /pricing on a new browser, then goes back to Bolo: no onboarding again. */
+test("signing in from the pricing page, then Back to Bolo, opens the app, not onboarding", async ({ page }) => {
+  await stub(page, "account");
+  await page.route("**/api/events", (r) => r.fulfill({ status: 202 }));
+  await page.route("**/api/me/day1", (r) => r.fulfill({ status: 404 }));
+  await page.goto("/pricing");
+  await page.getByRole("link", { name: "Back to Bolo" }).click();
+  await expect(page.getByRole("button", { name: "Start talking" })).toBeVisible();
+});

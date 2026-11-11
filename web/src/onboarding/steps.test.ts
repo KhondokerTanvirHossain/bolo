@@ -59,6 +59,14 @@ describe("resume (US-1.7)", () => {
     expect(s.keepRecordings).toBeNull();
   });
 
+  /** Review (P2c): signed in elsewhere (e.g. /pricing) on a new browser; the account is set up, so don't start over. */
+  it("moves a fresh browser straight to talk when the server already has consent and answers", () => {
+    expect(reconcile(initialState, { consent: true, profile: true }).step).toBe("talk");
+    expect(reconcile({ ...initialState, step: "welcome" }, { consent: true, profile: true }).step).toBe("talk");
+    expect(reconcile({ ...initialState, step: "day1" }, { consent: true, profile: true }).step).toBe("day1");
+    expect(reconcile(initialState, { consent: true, profile: false }).step).toBe("start");
+  });
+
   it("leaves the step alone when the server has the consent", () => {
     const s = reconcile({ ...initialState, step: "mic", over13: true, keepRecordings: true }, { consent: true, profile: false });
     expect(s.step).toBe("mic");

@@ -48,7 +48,10 @@ export default function Onboarding() {
         : { consent: false, profile: false };
       hasSession.current = me.kind === "ok";
       if (hasSession.current) void flushEvents();
-      dispatch({ type: "replace", state: reconcile(stored, server) });
+      const next = reconcile(stored, server);
+      // Jumped forward to the app (set up elsewhere): bring the Day 1 clip back first, as "I already have an account" does.
+      if (next.step === "talk" && stored.step !== "talk") await restoreDay1();
+      dispatch({ type: "replace", state: next });
       setBoot({ kind: "ready" });
     })();
   }, []);
