@@ -40,6 +40,7 @@ export function GuestLimit({ me, onSignedIn, onClose }: { me: LearnerView | null
           <button className="bo-btn bo-btn--quiet-neutral bo-btn--block" onClick={onClose} disabled={busy}>Not now</button>
         </div>
         {problem && <p className="bo-footnote" role="alert" style={{ marginTop: 12 }}>{problem}</p>}
+        <p className="bo-footnote" style={{ marginTop: 12 }}>By continuing you agree to the <a className="dk-link" href="/terms" target="_blank" rel="noreferrer">Terms</a> and the <a className="dk-link" href="/privacy" target="_blank" rel="noreferrer">Privacy page</a>.</p>
       </div>
     </>
   );

@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { counterLine, freeWeekOverNote, type FreeTalks } from "@/plan/freeTalks";
+import { HelpDialog } from "@/help/HelpDialog";
+import type { HelpContext } from "@/help/help";
 
 /** The free-plan line (ScreenHomeFree): "4 of 7 free talks left in your first week"; once, the day the week ends, the note. */
 export function useFreeLine(freeTalks: FreeTalks | null | undefined): string | null {
@@ -16,12 +18,18 @@ export function useFreeLine(freeTalks: FreeTalks | null | undefined): string | n
 }
 
 /** The sidebar's cards (DesktopHome): what's left of the free plan (not for unlimited learners) and Bolo on a phone. */
-export function SideCards({ freeLine, plan }: { freeLine: string | null; plan?: string | null }) {
+export function SideCards({ freeLine, plan, help }: { freeLine: string | null; plan?: string | null; help?: HelpContext }) {
+  const [asking, setAsking] = useState(false);
   return (
     <>
       {freeLine && <div className="dk-side__card" data-side-plan><b>{plan ?? "Free"} plan</b><span>{freeLine}</span></div>}
       <div className="dk-side__card"><b>Bolo on your phone</b>
         <span>Open bolo.eliooo.org in your phone&apos;s browser and sign in with the same Google account.</span></div>
+      {help && (
+        <div className="dk-side__card"><b>Need help?</b>
+          <button className="dk-link" style={{ border: 0, background: "transparent", padding: 0 }} onClick={() => setAsking(true)}>Report a problem</button></div>
+      )}
+      {asking && help && <HelpDialog ctx={help} onClose={() => setAsking(false)} />}
     </>
   );
 }

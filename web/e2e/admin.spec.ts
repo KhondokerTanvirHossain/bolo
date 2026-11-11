@@ -16,6 +16,10 @@ async function stub(page: Page, admin: boolean) {
   await page.route("**/api/admin/users/u1/grant", (r) => { sent.grants.push(r.request().postData() ?? ""); return r.fulfill({ status: 204 }); });
   await page.route("**/api/admin/usage?**", (r) => r.fulfill({ json: { now: { live: 1, today: 12, cap: 300 },
     days: [{ date: "2026-11-11", talks: 12, minutes: 50, newAccounts: 3, costUsd: 1.25 }] } }));
+  let helpOpen = true;
+  await page.route("**/api/admin/help", (r) => r.fulfill({ json: { requests: helpOpen ? [{ id: 7, email: "stuck@x.com", message: "The mic button does nothing",
+    context: { view: "home", talkId: "talk-9" }, at: "2026-11-11T08:00:00Z" }] : [] } }));
+  await page.route("**/api/admin/help/7/done", (r) => { helpOpen = false; return r.fulfill({ status: 204 }); });
   return sent;
 }
 
@@ -53,4 +57,14 @@ test("on a phone, the admin users list scrolls inside its box, not the page", as
   await page.goto("/admin");
   await expect(page.getByText("friend@x.com")).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+});
+
+test("the admin's Help tab lists a report, and Done clears it", async ({ page }) => {
+  await stub(page, true);
+  await page.goto("/admin");
+  await page.getByRole("tab", { name: "Help" }).click();
+  await expect(page.getByText("The mic button does nothing")).toBeVisible();
+  await expect(page.getByText("view: home · talkId: talk-9")).toBeVisible();
+  await page.getByRole("button", { name: "Done" }).click();
+  await expect(page.getByText("No open reports.")).toBeVisible();
 });

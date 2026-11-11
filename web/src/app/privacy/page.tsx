@@ -48,6 +48,7 @@ export default function PrivacyPage() {
       <p>One thing stays, so the free plan can&apos;t be reset by deleting and signing in again: a one-way code made from your Google account and the dates of your free talks, kept for 12 months. It can&apos;t be turned back into your email, and it holds none of your words or your voice.</p>
       <h2 className="title-2" style={section}>Questions</h2>
       <p>Write to <a href="mailto:k.tanvir.hossain@gmail.com">k.tanvir.hossain@gmail.com</a> about your data, and we will answer or delete it within 7 days.</p>
+      <p>See also the <a href="/terms">Terms of Use</a> and the <a href="/refund">Refund policy</a>.</p>
     </main>
     </div>
   );

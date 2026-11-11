@@ -99,7 +99,8 @@ export function FirstTalkScreen({ deviceId }: { deviceId: string | null }) {
   const talk = useCallback(() => { setSeeYou(false); setView({ kind: "home" }); void conversation.start(); }, [conversation]);
 
   const toTab = (t: Tab) => { setSeeYou(false); setView({ kind: t === "talk" ? "home" : t }); };
-  const foot = <SideCards freeLine={freeLine} plan={home?.freeTalks ? planName(home.freeTalks) : null} />;
+  const lastTalk = home?.card && "talkId" in home.card ? home.card.talkId : undefined;
+  const foot = <SideCards freeLine={freeLine} plan={home?.freeTalks ? planName(home.freeTalks) : null} help={{ view: view.kind, talkId: lastTalk }} />;
   const minutes = home?.freeTalks ? 5 : (me?.profile?.talkMinutes ?? 5);
   /** The dashboard Home (P1f) inside the shell; {@code sheet} sits over it and turns its Space key off. */
   const homePage = (sheet?: ReactNode) => (

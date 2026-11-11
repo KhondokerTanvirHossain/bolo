@@ -78,6 +78,7 @@ test("a guest signs in before the first talk, and Not now leaves Home as it was"
   await page.getByRole("button", { name: "Start talking" }).click();
   await expect(page.getByRole("heading", { name: "Sign in to start talking" })).toBeVisible();
   await expect(page.getByText(/7 talks in your first week, then 2 every month/)).toBeVisible();
+  await expect(page.getByRole("link", { name: "Terms" })).toHaveAttribute("href", "/terms");
   await page.getByRole("button", { name: "Not now" }).click();
   await expect(page.getByRole("heading", { name: "Sign in to start talking" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Start talking" })).toBeVisible();

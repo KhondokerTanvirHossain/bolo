@@ -26,6 +26,14 @@ export async function fetchUsage(days = 14): Promise<Usage | null> {
 export async function setUnlimited(id: string, on: boolean): Promise<boolean> {
   return (await api.post<void>(`/api/admin/users/${id}/unlimited`, { on })).kind === "ok";
 }
+export type HelpRequest = { id: number; email: string | null; message: string; context: Record<string, string>; at: string };
+export async function fetchHelp(): Promise<HelpRequest[]> {
+  const r = await api.get<{ requests: HelpRequest[] }>("/api/admin/help");
+  return r.kind === "ok" ? r.value.requests : [];
+}
+export async function helpDone(id: number): Promise<boolean> {
+  return (await api.post<void>(`/api/admin/help/${id}/done`)).kind === "ok";
+}
 export async function grant(id: string, plan: string, days: number, note: string): Promise<boolean> {
   return (await api.post<void>(`/api/admin/users/${id}/grant`, { plan, days, note })).kind === "ok";
 }

@@ -316,3 +316,11 @@ The goal: someone who has never seen Bolo gets from opening it to talk to feedba
   - Basic 8, Premium 20, Ultimate 45 talks a month (placeholders, editable in Settings). A plan counts the Dhaka calendar month since it began; the biggest active plan wins; when it ends, the free plan applies again.
   - Grants come from the admin now; referrals and bKash come next.
 - **Daily cap:** when today's talks (Asia/Dhaka, unlimited learners excluded) reach the cap, a start is refused (`422 daily-cap`) and the learner sees "Bolo is resting… Back tomorrow." A running talk always finishes.
+
+## Help, Terms and Refund policy
+
+- **Report a problem:** the sidebar's "Need help?" card, or Me → Help, opens a dialog.
+  - It sends `POST /api/help {message, context{view, talkId, browser}}`: no audio and no transcript, at most 5 an hour.
+  - Reports land in **/admin → Help**, with **Done**.
+- **/terms** (Terms of Use, 13+) and **/refund** (Refund policy: monthly, no automatic renewal while payments are manual; a full refund within 3 days if at most 1 talk used). Both are linked from the sign-in sheet, Me and /privacy.
+- **Contact everywhere:** k.tanvir.hossain@gmail.com.

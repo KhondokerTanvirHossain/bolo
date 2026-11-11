@@ -9,6 +9,7 @@ import { signInProblem } from "@/account/signInCopy";
 import { QUESTIONS } from "@/onboarding/questions";
 import { Icon } from "@/scene/Scene";
 import { SpeakingSettings } from "./SpeakingSettings";
+import { HelpDialog } from "@/help/HelpDialog";
 
 const LABEL: Record<string, string> = Object.fromEntries(QUESTIONS.flatMap((q) => q.chips.map((c) => [c.value, c.label] as const)));
 
@@ -17,6 +18,7 @@ export function MeScreen({ me, onPrivacy, onSignedIn }: { me: LearnerView | null
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const account = me?.account ?? null;
+  const [help, setHelp] = useState(false);
   const [free, setFree] = useState<FreeTalks | null>(null);
   useEffect(() => { if (account) void fetchHome().then((h) => setFree(h?.freeTalks ?? null)); }, [account]);
   const google = async () => {
@@ -67,7 +69,15 @@ export function MeScreen({ me, onPrivacy, onSignedIn }: { me: LearnerView | null
             <span className="bo-row__sub">What Bolo keeps, your recordings, delete everything</span></span>
           <Icon name="chevron_right" />
         </button>
+        <button className="bo-row" style={{ width: "100%", border: 0, background: "transparent", textAlign: "left", color: "inherit", font: "inherit" }} onClick={() => setHelp(true)}>
+          <Icon name="help" />
+          <span className="bo-row__body"><span className="bo-row__title" style={{ display: "block" }}>Help</span>
+            <span className="bo-row__sub">Stuck? Report a problem</span></span>
+          <Icon name="chevron_right" />
+        </button>
       </div>
+      <p className="bo-footnote" style={{ marginTop: 12 }}><a className="dk-link" href="/terms">Terms of Use</a> · <a className="dk-link" href="/refund">Refund policy</a> · <a className="dk-link" href="/privacy">Privacy</a></p>
+      {help && <HelpDialog ctx={{ view: "me" }} onClose={() => setHelp(false)} />}
       {account && (
         <div style={{ marginTop: 28 }}>
           <button className="bo-btn bo-btn--secondary" onClick={() => void signOut().then(() => window.location.assign("/"))}>Sign out</button>

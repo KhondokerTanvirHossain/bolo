@@ -1,8 +1,8 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import { fetchSettings, fetchUsage, fetchUsers, grant, saveSettings, setUnlimited, type AdminUser, type Settings, type Usage } from "./admin";
+import { fetchHelp, fetchSettings, fetchUsage, fetchUsers, grant, helpDone, saveSettings, setUnlimited, type AdminUser, type HelpRequest, type Settings, type Usage } from "./admin";
 
-type Tab = "users" | "usage" | "settings";
+type Tab = "users" | "help" | "usage" | "settings";
 const day = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "Asia/Dhaka" }) : "–");
 
 /** The founder's admin portal (P2a): users (unlock, give a plan), usage and cost, settings (daily cap, plans). */
@@ -16,13 +16,14 @@ export function AdminApp() {
     <main className="dk-page ad-page">
       <h1 className="dk-h1">Bolo admin</h1>
       <div className="ad-tabs" role="tablist">
-        {(["users", "usage", "settings"] as Tab[]).map((t) => (
+        {(["users", "help", "usage", "settings"] as Tab[]).map((t) => (
           <button key={t} role="tab" aria-selected={tab === t} className={`bo-chip${tab === t ? " on" : ""}`} onClick={() => setTab(t)}>
-            {t === "users" ? "Users" : t === "usage" ? "Usage" : "Settings"}
+            {t === "users" ? "Users" : t === "help" ? "Help" : t === "usage" ? "Usage" : "Settings"}
           </button>
         ))}
       </div>
       {tab === "users" && <Users />}
+      {tab === "help" && <HelpTab />}
       {tab === "usage" && <UsageTab />}
       {tab === "settings" && <SettingsTab />}
     </main>
@@ -69,6 +70,28 @@ function Users() {
           </tbody>
         </table>
         {users.length === 0 && <p className="bo-footnote">No accounts match.</p>}
+      </div>
+    </section>
+  );
+}
+
+function HelpTab() {
+  const [items, setItems] = useState<HelpRequest[] | null>(null);
+  const load = () => { void fetchHelp().then(setItems); };
+  useEffect(load, []);
+  if (!items) return null;
+  return (
+    <section>
+      {items.length === 0 && <p className="bo-footnote">No open reports.</p>}
+      <div className="ad-scroll">
+        <table className="ad-table">
+          <thead><tr><th>When</th><th>Who</th><th>What went wrong</th><th>Context</th><th /></tr></thead>
+          <tbody>{items.map((h) => (
+            <tr key={h.id}><td>{day(h.at)}</td><td>{h.email ?? "guest"}</td><td>{h.message}</td>
+              <td><small>{Object.entries(h.context).map(([k, v]) => `${k}: ${v}`).join(" · ")}</small></td>
+              <td><button className="bo-btn bo-btn--secondary ad-small" onClick={async () => { if (await helpDone(h.id)) load(); }}>Done</button></td></tr>
+          ))}</tbody>
+        </table>
       </div>
     </section>
   );
