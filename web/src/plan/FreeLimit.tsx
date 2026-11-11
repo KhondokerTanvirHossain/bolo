@@ -8,7 +8,7 @@ import { comeBackDay, limitTitle, type FreeTalks } from "./freeTalks";
  * ScreenFreeLimit (US-8.7): tapping Talk with no free talks left. The title states the fact; the body says when they come
  * back, and "See plans" (P2c) opens the pricing page. No invite offer yet (P2d). Practice stays free.
  */
-export function FreeLimit({ freeTalks, onClose }: { freeTalks: FreeTalks | null; onClose: () => void }) {
+export function FreeLimit({ freeTalks, onClose, onInvite }: { freeTalks: FreeTalks | null; onClose: () => void; onInvite?: () => void }) {
   const day = freeTalks ? comeBackDay(freeTalks) : "";
   const box = useRef<HTMLDivElement>(null);
   useDialog(box, onClose);
@@ -20,6 +20,7 @@ export function FreeLimit({ freeTalks, onClose }: { freeTalks: FreeTalks | null;
         <p className="bo-flow__body">{day ? `They come back on ${day}.` : "They come back soon."} Practising sounds from past feedback stays free.</p>
         <div style={{ display: "grid", gap: 10, marginTop: 20 }}>
           <Link className="bo-btn bo-btn--secondary bo-btn--block" href="/pricing">See plans</Link>
+          {onInvite && <button className="bo-btn bo-btn--secondary bo-btn--block" onClick={onInvite}>Invite 3 friends, get a free month</button>}
           <button className="bo-btn bo-btn--primary bo-btn--block" onClick={onClose} autoFocus>{day ? `Wait for ${day}` : "OK"}</button>
         </div>
       </div>

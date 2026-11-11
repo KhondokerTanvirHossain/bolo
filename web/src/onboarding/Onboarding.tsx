@@ -4,6 +4,7 @@ import { api, POLICY_VERSION, type ApiResult, type LearnerView } from "@/api/bro
 import { toSaveFailure, type SaveFailure } from "./saveFailure";
 import { firstWordSpoken, flushEvents, markFirstOpen, track } from "@/analytics/track";
 import { currentInvite, takeInviteFromUrl } from "@/account/invite";
+import { takeRefFromUrl } from "@/referral/referral";
 import { fetchAuthConfig, restoreDay1, signInWithGoogle } from "@/account/session";
 import { signInProblem } from "@/account/signInCopy";
 import { initialState, isLastQuestion, load, onboarding, reconcile, save, STORAGE_KEY, type OnboardingState } from "./steps";
@@ -36,6 +37,7 @@ export default function Onboarding() {
   // only when the learner actually gives consent, so page views alone never add rows.
   useEffect(() => {
     takeInviteFromUrl();
+    takeRefFromUrl();
     void fetchAuthConfig().then((c) => setSignInOn(c.enabled));
     // A browser with onboarding progress already stored used Bolo before tracking began.
     markFirstOpen(Date.now(), window.localStorage.getItem(STORAGE_KEY) !== null);

@@ -3,6 +3,7 @@ import { deleteClip, deleteClips, loadClip, saveClip } from "@/audio/clipStore";
 import { STORAGE_KEY } from "@/onboarding/steps";
 import { googleIdToken, type FirebaseWebConfig } from "./firebase";
 import { currentInvite } from "./invite";
+import { currentRef } from "@/referral/referral";
 
 export type AuthConfig = ({ enabled: true } & FirebaseWebConfig) | { enabled: false };
 export type SignInResult =
@@ -30,7 +31,7 @@ export async function signInWithGoogle(): Promise<SignInResult> {
   if (!config.enabled) return { kind: "off" };
   const token = await googleIdToken(config);
   if (token.kind !== "token") return token;
-  const res = await api.post<LearnerView>("/api/auth/google", { idToken: token.idToken, invite: currentInvite() });
+  const res = await api.post<LearnerView>("/api/auth/google", { idToken: token.idToken, invite: currentInvite(), ref: currentRef() });
   if (res.kind === "ok") {
     void uploadDay1(res.value);
     return { kind: "ok", learner: res.value };

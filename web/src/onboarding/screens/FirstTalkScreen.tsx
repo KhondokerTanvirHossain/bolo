@@ -20,12 +20,14 @@ import { AppShell, type Tab } from "@/me/AppShell";
 import { HistoryScreen } from "@/progress/HistoryScreen";
 import { ProgressScreen } from "@/progress/ProgressScreen";
 import { MeScreen } from "@/me/MeScreen";
+import { InviteScreen } from "@/referral/InviteScreen";
+import { fetchReferral, markRewardSeen, rewardNote, type Referral } from "@/referral/referral";
 import { PrivacyScreen } from "@/me/PrivacyScreen";
 import { clearThisBrowser } from "@/account/session";
 import { TalkScreen } from "@/talk/TalkScreen";
 import { useTalk } from "@/talk/useTalk";
 
-type View = { kind: "home" } | { kind: "practice"; pattern?: string } | { kind: "feedback"; talkId: string } | { kind: "me" } | { kind: "privacy" }
+type View = { kind: "home" } | { kind: "practice"; pattern?: string } | { kind: "feedback"; talkId: string } | { kind: "me" } | { kind: "privacy" } | { kind: "invite" }
   | { kind: "progress" } | { kind: "history" } | { kind: "session"; talkId: string; from: "progress" | "history" }
   | { kind: "intro"; day: number } | { kind: "drills"; talkId: string };
 
@@ -47,6 +49,14 @@ export function FirstTalkScreen({ deviceId }: { deviceId: string | null }) {
   const setLoop = useCallback((next: (l: Loop) => Loop) => setLoopState((l) => { const n = next(l); saveLoop(n); return n; }), []);
   const audio = useRef<HTMLAudioElement>(null);
   const freeLine = useFreeLine(home?.freeTalks);
+  /** P2d: the invite offer and any month earned (accounts only). */
+  const [referral, setReferral] = useState<Referral | null>(null);
+  const rewardLine = referral ? rewardNote(referral) : null;
+  useEffect(() => {
+    if (!rewardLine) return;
+    // Shown once: Home tells the server it's been seen.
+    void markRewardSeen();
+  }, [rewardLine]);
 
   useEffect(() => {
     let objectUrl: string | null = null;
@@ -66,6 +76,7 @@ export function FirstTalkScreen({ deviceId }: { deviceId: string | null }) {
     void fetchMe().then((m) => {
       if (cancelled || !m) return;
       setMe(m);
+      if (m.kind === "account") void fetchReferral().then((r) => { if (!cancelled) setReferral(r); });
       if (m.settings) setCaptions(m.settings.captions);
     });
     return () => { cancelled = true; };
@@ -108,7 +119,7 @@ export function FirstTalkScreen({ deviceId }: { deviceId: string | null }) {
       {/* Behind a sheet, Home can't be reached by keyboard or click (the sheet keeps focus; Esc closes it). */}
       <div inert={sheet ? true : undefined} style={{ display: "contents" }}>
       <AppShell tab="talk" onTab={toTab} foot={foot}>
-        <HomeDashboard home={home} name={me?.account?.name} minutes={minutes} freeLine={freeLine} note={seeYou ? "See you tomorrow. Bolo will be here." : undefined}
+        <HomeDashboard home={home} name={me?.account?.name} minutes={minutes} freeLine={freeLine} note={seeYou ? "See you tomorrow. Bolo will be here." : rewardLine ?? undefined}
           hasDay1={url !== null} keysOn={!sheet} onTalk={talk}
           onPractice={(pattern) => setView({ kind: "practice", pattern })}
           onDrills={(talkId) => setView({ kind: "drills", talkId })}
@@ -130,7 +141,8 @@ export function FirstTalkScreen({ deviceId }: { deviceId: string | null }) {
   // US-8.7: no free talks left; Home with the sheet saying when they come back. Practice stays free.
   if (conversation.state.phase === "resting") return homePage(<Resting onClose={conversation.reset} />);
   if (conversation.state.phase === "out_of_talks") {
-    return homePage(<FreeLimit freeTalks={home?.freeTalks ?? null} onClose={conversation.reset} />);
+    return homePage(<FreeLimit freeTalks={home?.freeTalks ?? null} onClose={conversation.reset}
+      onInvite={referral?.offer ? () => { conversation.reset(); setView({ kind: "invite" }); } : undefined} />);
   }
   if (!idle) {
     return <TalkScreen state={conversation.state} deviceId={deviceId} onDone={conversation.done} onEnd={conversation.end}
@@ -168,11 +180,13 @@ export function FirstTalkScreen({ deviceId }: { deviceId: string | null }) {
       </AppShell>
     );
   }
-  if (view.kind === "me" || view.kind === "privacy") {
+  if (view.kind === "me" || view.kind === "privacy" || view.kind === "invite") {
     return (
       <AppShell tab="me" onTab={toTab} foot={foot}>
-        {view.kind === "me"
-          ? <MeScreen me={me} onPrivacy={() => setView({ kind: "privacy" })} onSignedIn={signedIn} />
+        {view.kind === "invite" ? <InviteScreen onBack={() => setView({ kind: "me" })} />
+          : view.kind === "me"
+          ? <MeScreen me={me} onPrivacy={() => setView({ kind: "privacy" })} onSignedIn={signedIn}
+              onInvite={me?.kind === "account" ? () => setView({ kind: "invite" }) : undefined} />
           : <PrivacyScreen keep={me?.consent?.keepRecordings === true}
               onDeleted={() => void clearThisBrowser().then(() => window.location.assign("/"))} />}
       </AppShell>

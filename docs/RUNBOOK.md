@@ -338,3 +338,14 @@ The goal: someone who has never seen Bolo gets from opening it to talk to feedba
 - **/admin → Waitlist** shows counts per plan (৳ and $) and who is waiting, with their email and time zone. Email them when payments open.
 - **Links to /pricing:** "See plans" on the out-of-talks sheet, on the sidebar's plan card, on Me's plan row and in the Terms.
 - **Delete everything** removes the waitlist row.
+
+## Invite friends
+
+- **Me → Invite friends** (accounts only) shows "Invite 3 friends, get a month of Premium": 3 slots, the learner's link `/?ref=CODE`, **Copy** and **Share invite link**. The share sheet is used where there is one; otherwise the link is copied.
+- **A friend counts** when a sign-in carrying the code **creates a new Google account** and that account then has a counted talk.
+  - These never count: signing into an existing account, your own link, or a Google account that had talks before (deleted and made again).
+- **The reward:** every 3 counted friends gives 30 days of Premium (`subscription.source = referral`), at most 3 times. It is granted the next time the learner opens Home or Invite.
+  - Home says "A month of Premium is yours. Until …" once.
+  - A month earned while already on Premium starts when the current one ends (same-plan grants extend; admin grants too).
+- **The offer runs until `bolo.referral.until`** (default 2027-11-30, Dhaka date). After that no new friends are recorded and the sheet stops offering it; months already earned still arrive.
+- **Tables:** `referral_code`, `referral`, `referral_reward`. All go with the learner on delete everything.

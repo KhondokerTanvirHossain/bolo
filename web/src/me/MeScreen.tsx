@@ -15,7 +15,7 @@ import { HelpDialog } from "@/help/HelpDialog";
 const LABEL: Record<string, string> = Object.fromEntries(QUESTIONS.flatMap((q) => q.chips.map((c) => [c.value, c.label] as const)));
 
 /** ScreenMe: who you are, your goals, Speaking, Privacy, and sign in or out. Nothing nested more than 2 levels. */
-export function MeScreen({ me, onPrivacy, onSignedIn }: { me: LearnerView | null; onPrivacy: () => void; onSignedIn: (l: LearnerView) => void }) {
+export function MeScreen({ me, onPrivacy, onSignedIn, onInvite }: { me: LearnerView | null; onPrivacy: () => void; onSignedIn: (l: LearnerView) => void; onInvite?: () => void }) {
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const account = me?.account ?? null;
@@ -77,6 +77,14 @@ export function MeScreen({ me, onPrivacy, onSignedIn }: { me: LearnerView | null
             <span className="bo-row__sub">Stuck? Report a problem</span></span>
           <Icon name="chevron_right" />
         </button>
+        {onInvite && (
+          <button className="bo-row" style={{ width: "100%", border: 0, background: "transparent", textAlign: "left", color: "inherit", font: "inherit" }} onClick={onInvite}>
+            <Icon name="group_add" />
+            <span className="bo-row__body"><span className="bo-row__title" style={{ display: "block" }}>Invite friends</span>
+              <span className="bo-row__sub">3 friends who talk give you a month of Premium</span></span>
+            <Icon name="chevron_right" />
+          </button>
+        )}
       </div>
       <p className="bo-footnote" style={{ marginTop: 12 }}><a className="dk-link" href="/terms">Terms of Use</a> · <a className="dk-link" href="/refund">Refund policy</a> · <a className="dk-link" href="/privacy">Privacy</a></p>
       {help && <HelpDialog ctx={{ view: "me" }} onClose={() => setHelp(false)} />}

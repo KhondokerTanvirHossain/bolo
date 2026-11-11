@@ -562,6 +562,14 @@ button { font: inherit; color: inherit; -webkit-tap-highlight-color: transparent
 .bo-pricing__switch { display: block; margin: var(--space-2) auto 0; }
 .bo-pricing__act { display: grid; gap: var(--space-3); margin-top: var(--space-5); }
 .bo-plan .bo-tag { background: var(--surface-sunken); color: var(--ink-secondary); }
+/* P2d: Me → Invite friends. */
+.bo-invite { max-width: 560px; }
+.bo-invite__slots { list-style: none; padding: 0; margin: var(--space-4) 0 0; display: grid; gap: var(--space-2); }
+.bo-invite__slots li { display: flex; align-items: center; gap: var(--space-2); min-height: 48px; padding: 0 var(--space-4); border-radius: var(--radius-md); border: 1.5px dashed var(--line-strong); color: var(--ink-secondary); font: 500 15px/20px var(--font-sans); }
+.bo-invite__slots li.on { border-style: solid; border-color: var(--sun-ink); background: var(--sun-soft); color: var(--ink); font-weight: 650; }
+.bo-invite__link { display: grid; gap: var(--space-1); margin-top: var(--space-5); }
+.bo-invite__link .ad-input { width: 100%; min-width: 0; box-sizing: border-box; }
+.bo-invite__actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: var(--space-3); }
 .bo-radio { width: 22px; height: 22px; flex: none; border-radius: var(--radius-full); box-shadow: inset 0 0 0 1.5px var(--line-strong); background: var(--surface); }
 [aria-checked="true"] > .bo-radio { box-shadow: inset 0 0 0 6.5px var(--sun-ink); }
 .bo-usage { display: flex; flex-direction: column; gap: var(--space-2); }

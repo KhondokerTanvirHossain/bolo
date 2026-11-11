@@ -21,6 +21,7 @@ export default function PrivacyPage() {
         <li>Your voice recordings, only if you chose &quot;keep them&quot; at the start. You choose this before Bolo ever listens.</li>
         <li>Your Day 1 clip. It stays in your browser; it goes with your account only if you chose to keep recordings.</li>
         <li>When you sign in with Google: your email address and name.</li>
+        <li>If you invite friends: who joined through your link and finished a talk (their first name is shown to you). Bolo never reads your contacts or sends messages for you.</li>
         <li>If you join a plan waitlist: the plan you picked, whether you pay in taka or dollars, and your browser&apos;s time zone.</li>
         <li>If you report a problem: your note, the screen you were on, your last talk&apos;s id and your browser&apos;s name.</li>
         <li>Simple app events, such as &quot;finished the setup&quot; or how long the first word took. They never contain your words or your voice.</li>
