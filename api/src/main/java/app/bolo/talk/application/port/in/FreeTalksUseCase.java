@@ -16,4 +16,10 @@ public interface FreeTalksUseCase {
     }
 
     Optional<FreeTalks> allowance(LearnerId learner);
+
+    /** counted: this learner's counted talks; returning: the same Google account had talks before (deleted, made again). */
+    record History(int counted, boolean returning) {
+    }
+
+    History history(LearnerId learner);
 }

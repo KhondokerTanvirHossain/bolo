@@ -15,6 +15,8 @@ echo "ci $run: $s"
 if [[ "$s" != "completed success" ]]; then gh run view "$run" --log-failed 2>/dev/null | grep -E "✘|\) \[|Error:|error" | head -15; exit 1; fi
 scripts/deploy.sh "$sha" > /tmp/bolo-deploy.log 2>&1; d=$?; echo "deploy exit $d"
 grep -E "Deployed|FAIL|ok " /tmp/bolo-deploy.log | head -16
+# A failed deploy leaves the old build live: the probes would pass against it and say nothing true. Stop here.
+if [[ $d -ne 0 ]]; then tail -5 /tmp/bolo-deploy.log; echo "deploy failed: live is unchanged"; exit 1; fi
 export BOLO_LIVE_INVITE="$(scripts/probe-invite.sh 2>/dev/null)"
 # The probes run from their own copy of the commit, so they never clash with builds in this working tree.
 PROBES="$(mktemp -d)/probes"

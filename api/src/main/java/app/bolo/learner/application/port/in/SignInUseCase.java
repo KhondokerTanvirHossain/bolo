@@ -10,7 +10,7 @@ public interface SignInUseCase {
      * Continue with Google (ACC-1, US-8.1, US-8.4): signs into the Google user's account, turning the cookie's guest into
      * it or moving the guest's data into an existing one. Throws SignInFailedException for a token that doesn't verify.
      */
-    SignedIn signIn(String currentTokenOrNull, String idToken, String inviteOrNull);
+    SignedIn signIn(String currentTokenOrNull, String idToken, String inviteOrNull, String refOrNull);
 
     void signOut(String tokenOrNull);
 }

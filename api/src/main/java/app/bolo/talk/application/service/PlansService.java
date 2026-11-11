@@ -32,10 +32,15 @@ public class PlansService implements PlansUseCase {
     }
 
     @Override
-    public void grant(LearnerId learner, String plan, int days, String source, String note) {
+    public java.time.Instant grant(LearnerId learner, String plan, int days, String source, String note) {
         if (days < 1 || days > 366 || monthly().get(plan) == null) throw new RefusedException("bad-grant");
         var now = clock.now();
-        port.insert(learner, plan, now, now.plus(Duration.ofDays(days)), source, note, now);
+        // P2d: a month earned (or given) while on the same plan is a month more, not the same days twice.
+        var start = port.subscriptions(learner).stream().filter(s -> s.plan().equals(plan) && s.endsAt().isAfter(now))
+                .map(PlanAllowance.Sub::endsAt).max(java.util.Comparator.naturalOrder()).orElse(now);
+        var end = start.plus(Duration.ofDays(days));
+        port.insert(learner, plan, start, end, source, note, now);
+        return end;
     }
 
     @Override

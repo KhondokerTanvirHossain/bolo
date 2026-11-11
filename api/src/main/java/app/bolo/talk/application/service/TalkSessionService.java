@@ -92,6 +92,12 @@ public class TalkSessionService implements StartTalkUseCase, app.bolo.talk.appli
         return Optional.of(new FreeTalks(a.window(), a.left(), a.total(), a.resetsOn(), a.plan()));
     }
 
+    @Override
+    public History history(LearnerId learner) {
+        boolean returning = freePlanKeys.freePlanKey(learner).map(k -> !sessions.rememberedStarts(k).isEmpty()).orElse(false);
+        return new History(sessions.countedStarts(learner).size(), returning);
+    }
+
     private app.bolo.talk.domain.PlanAllowance.Allowance allowanceOf(LearnerId learner) {
         var starts = new java.util.ArrayList<>(sessions.countedStarts(learner));
         // P1d task 6: free talks used by an earlier, deleted account of the same Google user still count.

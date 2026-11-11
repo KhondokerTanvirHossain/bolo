@@ -27,12 +27,12 @@ class AuthController {
         this.secureCookie = secureCookie;
     }
 
-    record GoogleRequest(String idToken, String invite) {
+    record GoogleRequest(String idToken, String invite, String ref) {
     }
 
     @PostMapping("/api/auth/google")
     LearnerView google(@RequestBody GoogleRequest body, HttpServletRequest req, HttpServletResponse res) {
-        SignInUseCase.SignedIn done = signIn.signIn(SessionCookie.read(req, secureCookie), body.idToken(), body.invite());
+        SignInUseCase.SignedIn done = signIn.signIn(SessionCookie.read(req, secureCookie), body.idToken(), body.invite(), body.ref());
         res.addHeader(HttpHeaders.SET_COOKIE, SessionCookie.header(done.token(), secureCookie));
         return done.learner();
     }

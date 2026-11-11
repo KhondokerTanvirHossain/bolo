@@ -17,7 +17,8 @@ public interface PlansUseCase {
     }
 
     /** Gives {@code plan} from now for {@code days} days; source is admin, referral or bkash. */
-    void grant(LearnerId learner, String plan, int days, String source, String note);
+    /** Gives {@code plan} for {@code days}; a same-plan grant starts when that plan's latest one ends (P2d). Returns its end. */
+    java.time.Instant grant(LearnerId learner, String plan, int days, String source, String note);
 
     Optional<Active> active(LearnerId learner);
 

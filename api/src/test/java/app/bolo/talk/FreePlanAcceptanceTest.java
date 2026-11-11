@@ -17,10 +17,10 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /** P1d: sign in before the first talk (replaces ACC-2's 3 guest talks); the free plan, ACC-5 / US-8.7. */
-class FreePlanAcceptanceTest {
+public class FreePlanAcceptanceTest {
 
     /** Starts and finishes n talks (attached and ended); returns their ids. */
-    static List<UUID> talkTimes(TalkTestClient client, JdbcClient jdbc, String cookie, int n) throws Exception {
+    public static List<UUID> talkTimes(TalkTestClient client, JdbcClient jdbc, String cookie, int n) throws Exception {
         List<UUID> ids = new ArrayList<>();
         for (int i = 0; i < n; i++) {
             var r = client.startTalk(cookie);
@@ -191,6 +191,20 @@ class FreePlanAcceptanceTest {
             assertThat((String) JsonPath.read(home, "$.freeTalks.plan")).isEqualTo("premium");
             assertThat((Integer) JsonPath.read(home, "$.freeTalks.total")).isEqualTo(20);
             assertThat((Integer) JsonPath.read(home, "$.freeTalks.left")).isEqualTo(20);
+        }
+
+        /** P2d: a second grant of the same plan starts when the first ends (a month earned while on it is a month more). */
+        @Test
+        void aSecondPremiumGrantExtendsTheFirst() throws Exception {
+            String me = account(5);
+            var id = learnerOf(me);
+            plans.grant(id, "premium", 30, "admin", null);
+            plans.grant(id, "premium", 30, "referral", null);
+            List<java.sql.Timestamp[]> rows = jdbc.sql("select starts_at, ends_at from subscription where learner_id = ? order by starts_at")
+                    .param(id.value()).query((rs, n) -> new java.sql.Timestamp[] {rs.getTimestamp(1), rs.getTimestamp(2)}).list();
+            assertThat(rows).hasSize(2);
+            assertThat(rows.get(1)[0]).isEqualTo(rows.get(0)[1]);
+            assertThat(java.time.Duration.between(rows.get(0)[0].toInstant(), rows.get(1)[1].toInstant()).toDays()).isEqualTo(60);
         }
 
         @Test

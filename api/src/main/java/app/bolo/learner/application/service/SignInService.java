@@ -51,17 +51,17 @@ public class SignInService implements SignInUseCase {
     }
 
     @Override
-    public SignedIn signIn(String currentTokenOrNull, String idToken, String inviteOrNull) {
+    public SignedIn signIn(String currentTokenOrNull, String idToken, String inviteOrNull, String refOrNull) {
         IdentityPort.VerifiedIdentity who = identities.verify(idToken).orElseThrow(SignInFailedException::new);
         try {
-            return tx.execute(s -> once(currentTokenOrNull, who, inviteOrNull));
+            return tx.execute(s -> once(currentTokenOrNull, who, inviteOrNull, refOrNull));
         } catch (DataIntegrityViolationException raced) {
             // Another sign-in for the same Google user made the account first: sign into that one.
-            return tx.execute(s -> once(currentTokenOrNull, who, inviteOrNull));
+            return tx.execute(s -> once(currentTokenOrNull, who, inviteOrNull, refOrNull));
         }
     }
 
-    private SignedIn once(String currentToken, IdentityPort.VerifiedIdentity who, String invite) {
+    private SignedIn once(String currentToken, IdentityPort.VerifiedIdentity who, String invite, String ref) {
         Optional<LearnerId> now = currentToken == null ? Optional.empty() : current.byToken(currentToken);
         Optional<LearnerId> existing = accounts.learnerFor(who.uid());
         LearnerId target;
@@ -77,6 +77,7 @@ public class SignInService implements SignInUseCase {
             target = now.get();
             accounts.insert(target, who.uid(), who.email(), who.name(), clock.now());
             learners.setKind(target, LearnerKind.ACCOUNT);
+            events.publishEvent(new app.bolo.common.event.AccountCreated(target, ref));
         } else {
             boolean unlimited = inviteGate.admitNewcomer(invite);
             Learner fresh = Learner.newAccount(clock.now());
@@ -84,6 +85,7 @@ public class SignInService implements SignInUseCase {
             if (unlimited) learners.setUnlimited(fresh.id());
             accounts.insert(fresh.id(), who.uid(), who.email(), who.name(), clock.now());
             target = fresh.id();
+            events.publishEvent(new app.bolo.common.event.AccountCreated(target, ref));
         }
         if (currentToken != null) sessions.delete(GuestService.hash(currentToken));
         String token = GuestService.newToken();
