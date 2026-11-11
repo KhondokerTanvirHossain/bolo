@@ -556,6 +556,12 @@ button { font: inherit; color: inherit; -webkit-tap-highlight-color: transparent
 .bo-plan__price small { display: block; font: 500 12px/16px var(--font-sans); color: var(--ink-secondary); }
 .bo-plan[aria-checked="true"] { background: var(--sun-soft); border-color: var(--sun-ink); box-shadow: inset 0 0 0 1px var(--sun-ink); }
 .bo-plan--current { cursor: default; background: transparent; border: 1.5px dashed var(--line-strong); }
+/* P2c: the pricing page (ScreenPlans as a page; one column, phone first). */
+.bo-pricing { max-width: 560px; margin: 0 auto; padding: 24px 16px 64px; color: var(--ink); }
+.bo-pricing__back { display: inline-flex; align-items: center; margin-left: calc(var(--space-3) * -1); text-decoration: none; }
+.bo-pricing__switch { display: block; margin: var(--space-2) auto 0; }
+.bo-pricing__act { display: grid; gap: var(--space-3); margin-top: var(--space-5); }
+.bo-plan .bo-tag { background: var(--surface-sunken); color: var(--ink-secondary); }
 .bo-radio { width: 22px; height: 22px; flex: none; border-radius: var(--radius-full); box-shadow: inset 0 0 0 1.5px var(--line-strong); background: var(--surface); }
 [aria-checked="true"] > .bo-radio { box-shadow: inset 0 0 0 6.5px var(--sun-ink); }
 .bo-usage { display: flex; flex-direction: column; gap: var(--space-2); }

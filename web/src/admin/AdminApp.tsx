@@ -1,8 +1,9 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import { fetchHelp, fetchSettings, fetchUsage, fetchUsers, grant, helpDone, saveSettings, setUnlimited, type AdminUser, type HelpRequest, type Settings, type Usage } from "./admin";
+import { fetchHelp, fetchSettings, fetchUsage, fetchUsers, fetchWaitlist, type Waitlist, grant, helpDone, saveSettings, setUnlimited, type AdminUser, type HelpRequest, type Settings, type Usage } from "./admin";
 
-type Tab = "users" | "help" | "usage" | "settings";
+type Tab = "users" | "help" | "waitlist" | "usage" | "settings";
+const TAB_NAMES: Record<Tab, string> = { users: "Users", help: "Help", waitlist: "Waitlist", usage: "Usage", settings: "Settings" };
 const day = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "Asia/Dhaka" }) : "–");
 
 /** The founder's admin portal (P2a): users (unlock, give a plan), usage and cost, settings (daily cap, plans). */
@@ -16,14 +17,15 @@ export function AdminApp() {
     <main className="dk-page ad-page">
       <h1 className="dk-h1">Bolo admin</h1>
       <div className="ad-tabs" role="tablist">
-        {(["users", "help", "usage", "settings"] as Tab[]).map((t) => (
+        {(Object.keys(TAB_NAMES) as Tab[]).map((t) => (
           <button key={t} role="tab" aria-selected={tab === t} className={`bo-chip${tab === t ? " on" : ""}`} onClick={() => setTab(t)}>
-            {t === "users" ? "Users" : t === "help" ? "Help" : t === "usage" ? "Usage" : "Settings"}
+            {TAB_NAMES[t]}
           </button>
         ))}
       </div>
       {tab === "users" && <Users />}
       {tab === "help" && <HelpTab />}
+      {tab === "waitlist" && <WaitlistTab />}
       {tab === "usage" && <UsageTab />}
       {tab === "settings" && <SettingsTab />}
     </main>
@@ -90,6 +92,33 @@ function HelpTab() {
             <tr key={h.id}><td>{day(h.at)}</td><td>{h.email ?? "guest"}</td><td>{h.message}</td>
               <td><small>{Object.entries(h.context).map(([k, v]) => `${k}: ${v}`).join(" · ")}</small></td>
               <td><button className="bo-btn bo-btn--secondary ad-small" onClick={async () => { if (await helpDone(h.id)) load(); }}>Done</button></td></tr>
+          ))}</tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+function WaitlistTab() {
+  const [w, setW] = useState<Waitlist | null | undefined>(undefined);
+  useEffect(() => { void fetchWaitlist().then(setW); }, []);
+  if (w === undefined) return null;
+  if (w === null) return <p className="bo-footnote" role="alert">The waitlist didn&apos;t load. Reload to try again.</p>;
+  const title = (p: string) => p.charAt(0).toUpperCase() + p.slice(1);
+  const when = (iso: string) => new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Dhaka" });
+  return (
+    <section>
+      {w.counts.length === 0 ? <p className="bo-footnote">Nobody is waiting yet.</p> : (
+        <ul className="dk-sub" style={{ listStyle: "none", padding: 0 }}>
+          {w.counts.map((c) => <li key={c.plan}>{title(c.plan)}: {c.bd + c.intl} (৳ {c.bd}, $ {c.intl})</li>)}
+        </ul>
+      )}
+      <div className="ad-scroll">
+        <table className="ad-table">
+          <thead><tr><th>When</th><th>Who</th><th>Plan</th><th>Pays in</th><th>Time zone</th></tr></thead>
+          <tbody>{w.entries.map((e, i) => (
+            <tr key={`${e.email ?? "?"}-${i}`}><td>{when(e.at)}</td><td>{e.email ?? "–"}</td><td>{title(e.plan)}</td>
+              <td>{e.region === "bd" ? "৳" : "$"}</td><td>{e.timeZone ?? "–"}</td></tr>
           ))}</tbody>
         </table>
       </div>

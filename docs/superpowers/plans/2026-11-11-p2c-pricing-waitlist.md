@@ -41,7 +41,7 @@
   - `bd`: "Join the list for Basic · ৳300 a month", with the line "bKash payments open in a few days. Join the list and we'll email you first." (P2e replaces this with the bKash flow.)
 - **Joining:**
   - An account sends `{plan, region, timeZone}`. The page then says "You're on the list for Basic. We'll email you at {email}." and the button becomes "Change to Premium" if another plan is picked.
-  - A guest or signed-out visitor gets "Sign in with Google to join" (the existing sign-in), and joining continues after sign-in.
+  - A guest or signed-out visitor sees the same button with the footnote "Sign in with Google to join the list."; pressing it signs in with Google (the existing sign-in), then joins.
   - If sign-in is off or fails, the page says "Sign-in didn't work. Try again." and keeps the choice.
 - **API:**
   - `POST /api/waitlist`: plan ∈ basic|premium|ultimate, region ∈ bd|intl, timeZone ≤ 64 characters; otherwise 422 `bad-waitlist`.

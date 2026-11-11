@@ -19,6 +19,8 @@ async function stub(page: Page, admin: boolean) {
   let helpOpen = true;
   await page.route("**/api/admin/help", (r) => r.fulfill({ json: { requests: helpOpen ? [{ id: 7, email: "stuck@x.com", message: "The mic button does nothing",
     context: { view: "home", talkId: "talk-9" }, at: "2026-11-11T08:00:00Z" }] : [] } }));
+  await page.route("**/api/admin/waitlist", (r) => r.fulfill({ json: { counts: [{ plan: "basic", bd: 3, intl: 1 }, { plan: "premium", bd: 0, intl: 2 }],
+    entries: [{ email: "far@x.com", plan: "premium", region: "intl", timeZone: "Europe/London", at: "2026-11-11T09:30:00Z" }] } }));
   await page.route("**/api/admin/help/7/done", (r) => { helpOpen = false; return r.fulfill({ status: 204 }); });
   return sent;
 }
@@ -89,4 +91,15 @@ test("an empty cap isn't saved, and a cap of 0 asks first", async ({ page }) => 
   await page.getByRole("button", { name: "Save" }).click();
   await expect(page.getByText("Saved.")).toBeVisible();
   expect(JSON.parse(s.settings[0]).dailyTalkCap).toBe(0);
+});
+
+/** P2c: who is waiting for which plan. */
+test("the Waitlist tab shows counts by plan and region, and who is waiting", async ({ page }) => {
+  await stub(page, true);
+  await page.goto("/admin");
+  await page.getByRole("tab", { name: "Waitlist" }).click();
+  await expect(page.getByText("Basic: 4 (৳ 3, $ 1)")).toBeVisible();
+  await expect(page.getByText("Premium: 2 (৳ 0, $ 2)")).toBeVisible();
+  await expect(page.getByRole("cell", { name: "far@x.com" })).toBeVisible();
+  await expect(page.getByRole("cell", { name: "Europe/London" })).toBeVisible();
 });

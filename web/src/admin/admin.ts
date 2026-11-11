@@ -37,3 +37,11 @@ export async function helpDone(id: number): Promise<boolean> {
 export async function grant(id: string, plan: string, days: number, note: string): Promise<boolean> {
   return (await api.post<void>(`/api/admin/users/${id}/grant`, { plan, days, note })).kind === "ok";
 }
+
+/** P2c: the plan waitlist. Null when it didn't load (shown as an error, not as "nobody"). */
+export type Waitlist = { counts: { plan: string; bd: number; intl: number }[];
+  entries: { email: string | null; plan: string; region: "bd" | "intl"; timeZone: string | null; at: string }[] };
+export async function fetchWaitlist(): Promise<Waitlist | null> {
+  const r = await api.get<Waitlist>("/api/admin/waitlist");
+  return r.kind === "ok" ? r.value : null;
+}

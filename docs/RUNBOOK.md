@@ -324,3 +324,17 @@ The goal: someone who has never seen Bolo gets from opening it to talk to feedba
   - Reports land in **/admin → Help**, with **Done**.
 - **/terms** (Terms of Use, 13+) and **/refund** (Refund policy: monthly, no automatic renewal while payments are manual; a full refund within 3 days if at most 1 talk used). Both are linked from the sign-in sheet, Me and /privacy.
 - **Contact everywhere:** k.tanvir.hossain@gmail.com.
+- **Trouble? Report a problem** also appears on the mic trouble screens in onboarding and on a talk that can't start (review P2b), so phone learners are never stuck.
+
+## Pricing and waitlist
+
+- **/pricing** works for anyone, even signed out.
+  - It shows Free and then the plans from `GET /api/plans` (edit them in **/admin → Settings**). Basic is preselected.
+  - Prices are in ৳ when the browser's time zone is Asia/Dhaka, otherwise in $. "In Bangladesh? / Not in Bangladesh?" switches the currency, and the choice is kept in this browser (`bolo.region`).
+- **Payments aren't open yet,** so the main button joins a waitlist:
+  - in ৳: "bKash payments open in a few days";
+  - in $: "Card payments are coming soon".
+  - A visitor without an account signs in with Google first. One choice per account; the latest wins.
+- **/admin → Waitlist** shows counts per plan (৳ and $) and who is waiting, with their email and time zone. Email them when payments open.
+- **Links to /pricing:** "See plans" on the out-of-talks sheet, on the sidebar's plan card, on Me's plan row and in the Terms.
+- **Delete everything** removes the waitlist row.

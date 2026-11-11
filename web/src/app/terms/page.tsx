@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Bolo" };
@@ -29,7 +30,7 @@ export default function TermsPage() {
         <p>We may limit or close an account that breaks these rules.</p>
 
         <h2 className="title-2" style={section}>Free and paid plans</h2>
-        <p>The free plan gives 7 talks in your first week, then 2 a month. Paid plans give more talks each month; the prices and talk counts are on the pricing page. We may change plans and prices with notice; a month you have paid for keeps what it promised. On busy days Bolo may rest for everyone until the next day.</p>
+        <p>The free plan gives 7 talks in your first week, then 2 a month. Paid plans give more talks each month; the prices and talk counts are on the <Link href="/pricing">pricing page</Link>. We may change plans and prices with notice; a month you have paid for keeps what it promised. On busy days Bolo may rest for everyone until the next day.</p>
 
         <h2 className="title-2" style={section}>Your content and privacy</h2>
         <p>What Bolo keeps, why and for how long is on the <a href="/privacy">Privacy page</a>. You can delete a recording, or everything, at any time in Me → Privacy.</p>

@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { fetchHome } from "@/home/home";
 import { counterLine, planName, type FreeTalks } from "@/plan/freeTalks";
@@ -45,7 +46,8 @@ export function MeScreen({ me, onPrivacy, onSignedIn }: { me: LearnerView | null
           <h2 className="dk-h2" style={{ marginTop: 28 }}>Plan</h2>
           <div className="bo-group">
             <div className="bo-row"><div className="bo-row__body"><div className="bo-row__title">{planName(free) ?? "Free"} plan</div>
-              <div className="bo-row__sub">{counterLine(free)}</div></div></div>
+              <div className="bo-row__sub">{counterLine(free)}</div></div>
+              <Link className="dk-link" href="/pricing">See plans</Link></div>
           </div>
         </>
       )}

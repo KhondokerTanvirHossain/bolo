@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { counterLine, freeWeekOverNote, type FreeTalks } from "@/plan/freeTalks";
 import { HelpDialog } from "@/help/HelpDialog";
@@ -22,7 +23,8 @@ export function SideCards({ freeLine, plan, help }: { freeLine: string | null; p
   const [asking, setAsking] = useState(false);
   return (
     <>
-      {freeLine && <div className="dk-side__card" data-side-plan><b>{plan ?? "Free"} plan</b><span>{freeLine}</span></div>}
+      {freeLine && <div className="dk-side__card" data-side-plan><b>{plan ?? "Free"} plan</b><span>{freeLine}</span>
+        <Link className="dk-link" href="/pricing">See plans</Link></div>}
       <div className="dk-side__card"><b>Bolo on your phone</b>
         <span>Open bolo.eliooo.org in your phone&apos;s browser and sign in with the same Google account.</span></div>
       {help && (
