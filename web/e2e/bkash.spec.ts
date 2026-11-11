@@ -42,7 +42,7 @@ test("pay with bKash: the number and amount, Copy, then the TrxID is sent for ch
   const sheet = page.getByRole("dialog", { name: "Pay with bKash" });
   await expect(sheet.getByText("01712345678")).toBeVisible();
   await expect(sheet.getByText("৳300", { exact: true })).toBeVisible();
-  await expect(sheet.getByText("Basic for 30 days from approval. It doesn't renew by itself.", { exact: false })).toBeVisible();
+  await expect(sheet.getByText("Basic for 30 days. If you already have a plan, this one starts when it ends. It doesn't renew by itself.", { exact: false })).toBeVisible();
   await sheet.getByRole("button", { name: "Copy number" }).click();
   expect(await page.evaluate(() => (window as unknown as { copied: string }).copied)).toBe("01712345678");
   await sheet.getByLabel("TrxID").fill("9ab3cd7ef1");

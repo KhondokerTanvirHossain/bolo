@@ -58,7 +58,7 @@ public class PaymentService implements PaymentUseCase {
         if (port.trxUsed(trx)) throw new RefusedException("trx-used");
         if (port.hasPending(learner)) throw new RefusedException("payment-pending");
         try {
-            port.insert(learner, plan, price.get().priceBdt(), trx, payer, now);
+            if (!port.insert(learner, plan, price.get().priceBdt(), trx, payer, now)) throw new RefusedException("trx-used");
         } catch (DataIntegrityViolationException raced) {
             // The unique TrxID or the one-pending index caught a request at the same moment.
             throw new RefusedException(port.trxUsed(trx) ? "trx-used" : "payment-pending");

@@ -51,6 +51,9 @@ export const payProblem: Record<Exclude<PayResult, "ok">, string> = {
 export function paymentLine(p: MyPayment | null): string | null {
   if (!p) return null;
   if (p.status === "pending") return `Payment being checked (TrxID ${p.trxId}).`;
+  if (p.status === "rejected" && p.reason === "Amount doesn't match") {
+    return "The amount didn't match the plan's price, so we'll send it back to the number you paid from within 7 days. Then send the exact amount as a new payment.";
+  }
   if (p.status === "rejected") return `We couldn't confirm your payment (${p.reason ?? "no reason given"}). Check the TrxID and try again, or report a problem.`;
   return null;
 }

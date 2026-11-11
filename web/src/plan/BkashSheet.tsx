@@ -52,7 +52,7 @@ export function BkashSheet({ plan, number, onClose, onSent }: { plan: PaidPlan; 
               <input className="ad-input" value={payer} onChange={(e) => setPayer(e.target.value)} inputMode="numeric" autoComplete="tel" maxLength={14} placeholder="01XXXXXXXXX" />
             </label>
             <p className="bo-footnote" style={{ textAlign: "left", marginTop: 12 }}>
-              {name} for 30 days from approval. It doesn&apos;t renew by itself. Refunds: see the <Link className="dk-link" href="/refund">refund policy</Link>.
+              {name} for 30 days. If you already have a plan, this one starts when it ends. It doesn&apos;t renew by itself. Refunds: see the <Link className="dk-link" href="/refund">refund policy</Link>.
             </p>
             {note && <p className="bo-footnote" role="status" style={{ marginTop: 8 }}>{note}</p>}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 16 }}>

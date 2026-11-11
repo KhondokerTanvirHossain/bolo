@@ -192,6 +192,8 @@ function SettingsTab() {
   const [s, setS] = useState<Settings | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [capText, setCapText] = useState("");
+  // Review (P2e): only send the bKash number when it was edited here, so an old tab can't switch bKash off.
+  const [bkashEdited, setBkashEdited] = useState(false);
   useEffect(() => { void fetchSettings().then((x) => { setS(x); if (x) setCapText(String(x.dailyTalkCap)); }); }, []);
   if (!s) return null;
   // Review (P2a): an emptied field is not 0 (0 rests everyone), and 0 itself needs a yes.
@@ -199,7 +201,9 @@ function SettingsTab() {
     const cap = capText.trim() === "" ? NaN : Number(capText);
     if (!Number.isInteger(cap) || cap < 0) { setNote("Enter a daily cap (0 or more)."); return; }
     if (cap === 0 && !window.confirm("A cap of 0 means: No one can start a talk until you raise it. Save?")) { setNote("Not saved."); return; }
-    setNote((await saveSettings({ ...s, dailyTalkCap: cap })) ? "Saved." : "That didn't save.");
+    const { bkashNumber, ...rest } = s;
+    const body = bkashEdited ? { ...rest, dailyTalkCap: cap, bkashNumber: bkashNumber ?? "" } : { ...rest, dailyTalkCap: cap };
+    setNote((await saveSettings(body)) ? "Saved." : "That didn't save (check the bKash number: 11 digits, 01…).");
   };
   const setPlan = (i: number, k: "monthlyTalks" | "priceBdt" | "priceUsd", v: number) =>
     setS({ ...s, plans: s.plans.map((p, j) => (j === i ? { ...p, [k]: v } : p)) });
@@ -210,7 +214,7 @@ function SettingsTab() {
           onChange={(e) => setCapText(e.target.value)} /></label>
       <label className="ad-label">bKash number for payments
         <input className="ad-input" aria-label="bKash number for payments" inputMode="numeric" placeholder="01XXXXXXXXX (empty: bKash off)"
-          value={s.bkashNumber ?? ""} onChange={(e) => setS({ ...s, bkashNumber: e.target.value.trim() })} /></label>
+          value={s.bkashNumber ?? ""} onChange={(e) => { setBkashEdited(true); setS({ ...s, bkashNumber: e.target.value.trim() }); }} /></label>
       <div className="ad-scroll">
         <table className="ad-table">
           <thead><tr><th>Plan</th><th>Talks a month</th><th>Price (৳)</th><th>Price ($)</th></tr></thead>

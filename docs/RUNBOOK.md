@@ -361,9 +361,12 @@ The goal: someone who has never seen Bolo gets from opening it to talk to feedba
   - Rules: one pending at a time; a TrxID once, ever; 5 tries a day.
 - **Your routine (daily, or when you get a bKash SMS):**
   1. Open /admin → **Payments**.
-  2. For each pending row, find the TrxID in the bKash app (Statement) and check that the amount matches.
-  3. **Approve** gives the plan for 30 days from now. If they already hold that plan, the new 30 days start when it ends.
+  2. For each pending row, find the TrxID in the bKash app (Statement). Check that the amount matches, **and that the sender number is the row's "Paid from" number.** A TrxID shows in the payer's SMS, so on a shared phone someone else could claim it.
+  3. **Approve** gives the plan for 30 days from now. If they already have any plan, the new 30 days start when it ends (plans queue; they never run on top of each other).
   4. **Reject** (choose the reason first) shows the learner the reason.
   - A payment is decided once. A second click says so.
+- **A real payment you reject** (wrong amount, or the plan wasn't available) must be **sent back**. Use bKash Send Money to the "Paid from" number within 7 days. Its TrxID stays used.
+  - With "Amount doesn't match", the learner is told the money comes back within 7 days and asked to pay the exact amount again.
+- **TrxIDs stay used for good,** even after "delete everything" (the `used_trx` table holds only the TrxID and a time). A pending payment deleted with its learner disappears from the list, so refund it from the bKash statement.
 - **Refunds** (refund policy): send the money back by bKash to the "Paid from" number by hand. Nothing in Bolo changes automatically, so ask Claude to end the subscription early if needed.
 - **Later (P2f):** an SMS forwarder on your Android phone will auto-match TrxID and amount.

@@ -105,6 +105,34 @@ class PaymentAcceptanceTest extends PostgresTestBase {
         assertThat(again.body()).contains("trx-used");
     }
 
+    /** Review (P2e): delete everything must not free a used TrxID (one payment, two months). */
+    @Test
+    void aTrxIdStaysUsedAfterDeleteEverything() throws Exception {
+        String me = account();
+        String t = trx();
+        client.send("POST", "/api/payments", me, pay("basic", t));
+        client.send("POST", "/api/admin/payments/" + pendingId(t) + "/approve", boss, "{}");
+        assertThat(client.send("POST", "/api/me/delete", me, "{\"confirm\":\"DELETE\"}").status()).isEqualTo(204);
+        var again = client.send("POST", "/api/payments", account(), pay("basic", t));
+        assertThat(again.status()).isEqualTo(422);
+        assertThat(again.body()).contains("trx-used");
+    }
+
+    /** Review (P2e): a paid plan never runs underneath another one; it starts when the current plan ends. */
+    @Test
+    void payingForAnotherPlanStartsWhenTheCurrentOneEnds() throws Exception {
+        String me = account();
+        String t1 = trx();
+        client.send("POST", "/api/payments", me, pay("premium", t1));
+        client.send("POST", "/api/admin/payments/" + pendingId(t1) + "/approve", boss, "{}");
+        String t2 = trx();
+        client.send("POST", "/api/payments", me, pay("basic", t2));
+        client.send("POST", "/api/admin/payments/" + pendingId(t2) + "/approve", boss, "{}");
+        List<java.sql.Timestamp[]> rows = jdbc.sql("select starts_at, ends_at from subscription where note in (?, ?) order by starts_at")
+                .params(t1, t2).query((rs, n) -> new java.sql.Timestamp[] {rs.getTimestamp(1), rs.getTimestamp(2)}).list();
+        assertThat(rows.get(1)[0]).isEqualTo(rows.get(0)[1]);
+    }
+
     @Test
     void onePendingAtATime() throws Exception {
         String me = account();

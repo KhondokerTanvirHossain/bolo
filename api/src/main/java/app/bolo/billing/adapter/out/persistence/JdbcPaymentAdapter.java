@@ -36,7 +36,7 @@ class JdbcPaymentAdapter implements PaymentPort {
 
     @Override
     public boolean trxUsed(String trxId) {
-        return jdbc.sql("select count(*) from payment where trx_id = ?").param(trxId).query(Integer.class).single() > 0;
+        return jdbc.sql("select count(*) from used_trx where trx_id = ?").param(trxId).query(Integer.class).single() > 0;
     }
 
     @Override
@@ -52,11 +52,13 @@ class JdbcPaymentAdapter implements PaymentPort {
     }
 
     @Override
-    public void insert(LearnerId learner, String plan, int amountBdt, String trxId, String payerNumber, Instant at) {
-        jdbc.sql("""
+    public boolean insert(LearnerId learner, String plan, int amountBdt, String trxId, String payerNumber, Instant at) {
+        // One statement: the TrxID is marked used for good and the payment added together, or neither (review P2e).
+        return jdbc.sql("""
+                with used as (insert into used_trx (trx_id, created_at) values (?, ?) on conflict do nothing returning trx_id)
                 insert into payment (learner_id, plan, amount_bdt, trx_id, payer_number, status, created_at)
-                values (?, ?, ?, ?, ?, 'pending', ?)""")
-                .params(learner.value(), plan, amountBdt, trxId, payerNumber, Timestamp.from(at)).update();
+                select ?, ?, ?, trx_id, ?, 'pending', ? from used""")
+                .params(trxId, Timestamp.from(at), learner.value(), plan, amountBdt, payerNumber, Timestamp.from(at)).update() == 1;
     }
 
     @Override

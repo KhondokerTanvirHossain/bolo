@@ -129,3 +129,14 @@ test("Settings saves the bKash number", async ({ page }) => {
   await expect(page.getByText("Saved.")).toBeVisible();
   expect(JSON.parse(s.settings[0]).bkashNumber).toBe("01712345678");
 });
+
+/** Review (P2e): an admin tab opened before the bKash number was set must not switch bKash off when it saves the cap. */
+test("saving the cap leaves the bKash number alone unless it was edited", async ({ page }) => {
+  const s = await stub(page, true);
+  await page.goto("/admin");
+  await page.getByRole("tab", { name: "Settings" }).click();
+  await page.getByLabel("Daily talk cap").fill("200");
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByText("Saved.")).toBeVisible();
+  expect(JSON.parse(s.settings[0])).not.toHaveProperty("bkashNumber");
+});

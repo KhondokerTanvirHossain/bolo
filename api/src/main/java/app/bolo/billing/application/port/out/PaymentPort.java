@@ -23,7 +23,8 @@ public interface PaymentPort {
 
     int countSince(LearnerId learner, Instant since);
 
-    void insert(LearnerId learner, String plan, int amountBdt, String trxId, String payerNumber, Instant at);
+    /** False when the TrxID was used before (it stays used even after its payment is deleted). */
+    boolean insert(LearnerId learner, String plan, int amountBdt, String trxId, String payerNumber, Instant at);
 
     Optional<Mine> latest(LearnerId learner);
 

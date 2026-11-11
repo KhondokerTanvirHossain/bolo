@@ -35,8 +35,9 @@ public class PlansService implements PlansUseCase {
     public java.time.Instant grant(LearnerId learner, String plan, int days, String source, String note) {
         if (days < 1 || days > 366 || monthly().get(plan) == null) throw new RefusedException("bad-grant");
         var now = clock.now();
-        // P2d: a month earned (or given) while on the same plan is a month more, not the same days twice.
-        var start = port.subscriptions(learner).stream().filter(s -> s.plan().equals(plan) && s.endsAt().isAfter(now))
+        // P2d: a month earned (or given) while on a plan is a month more, not the same days twice. Review (P2e): whatever the
+        // plan, a new one starts when the current ones end, so a paid month never runs underneath another plan.
+        var start = port.subscriptions(learner).stream().filter(s -> s.endsAt().isAfter(now))
                 .map(PlanAllowance.Sub::endsAt).max(java.util.Comparator.naturalOrder()).orElse(now);
         var end = start.plus(Duration.ofDays(days));
         port.insert(learner, plan, start, end, source, note, now);
