@@ -8,6 +8,8 @@ test("the privacy page says what's kept, why, for how long, who processes it and
   for (const h of ["What Bolo keeps", "Why", "For how long", "Who processes it", "Deleting your data"]) {
     await expect(page.getByRole("heading", { level: 2, name: h })).toBeVisible();
   }
+  // Review (P2b): what a help report carries is listed too.
+  await expect(page.getByText("If you report a problem: your note, the screen you were on, your last talk's id and your browser's name.")).toBeVisible();
 });
 
 test("the setup questions don't claim to listen", async ({ page }) => {

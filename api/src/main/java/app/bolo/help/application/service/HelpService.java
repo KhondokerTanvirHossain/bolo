@@ -49,6 +49,12 @@ public class HelpService implements HelpUseCase {
         return port.open();
     }
 
+    /** Review (P2b): a guest who signs into an existing account keeps its reports (the guest row is deleted after). */
+    @org.springframework.context.event.EventListener
+    public void onLearnerMerged(app.bolo.common.event.LearnerMerged e) {
+        port.moveLearner(e.from(), e.to());
+    }
+
     @Override
     public void done(long id) {
         port.done(id, clock.now());

@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { unblockGuidance } from "@/audio/micErrors";
 import { CoachFlow } from "@/coach/CoachFlow";
+import { HelpLink } from "@/help/HelpLink";
 import { Icon, Scene } from "@/scene/Scene";
 import type { TalkState } from "./talkState";
 
@@ -218,6 +219,7 @@ export function TalkScreen({ state, deviceId = null, onDone, onEnd, onTalkAgain,
           <>
             <button className="bo-btn bo-btn--primary" onClick={onTalkAgain}>Try again</button>
             <button className="bo-scenebtn" onClick={onLeave}>Back</button>
+            <HelpLink ctx={{ view: "talk", talkId: state.talkId ?? undefined }} className="bo-scenebtn" />
           </>
         )}
       </div>

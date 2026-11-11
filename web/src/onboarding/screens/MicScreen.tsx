@@ -1,4 +1,5 @@
 "use client";
+import { HelpLink } from "@/help/HelpLink";
 import { useEffect, useState, useRef } from "react";
 import { track } from "@/analytics/track";
 import { classifyMicCheck, stickyVerdict, type MicCheckResult } from "@/audio/micCheck";
@@ -67,6 +68,7 @@ export function MicScreen({ deviceId, headphones, onChooseMic, onForgetMic, onHe
             <button className="bo-btn bo-btn--primary bo-btn--block" style={{ marginTop: 20 }} onClick={mic.retry} autoFocus>
               Try again
             </button>
+            <HelpLink ctx={{ view: "onboarding-mic" }} />
           </>
         ) : mic.status === "busy" ? (
           <>
@@ -75,6 +77,7 @@ export function MicScreen({ deviceId, headphones, onChooseMic, onForgetMic, onHe
             <button className="bo-btn bo-btn--primary bo-btn--block" style={{ marginTop: 20 }} onClick={mic.retry} autoFocus>
               Try again
             </button>
+            <HelpLink ctx={{ view: "onboarding-mic" }} />
           </>
         ) : mic.status === "no-device" ? (
           <>
@@ -83,6 +86,7 @@ export function MicScreen({ deviceId, headphones, onChooseMic, onForgetMic, onHe
             <button className="bo-btn bo-btn--primary bo-btn--block" style={{ marginTop: 20 }} onClick={mic.retry} autoFocus>
               Try again
             </button>
+            <HelpLink ctx={{ view: "onboarding-mic" }} />
           </>
         ) : (
           <>

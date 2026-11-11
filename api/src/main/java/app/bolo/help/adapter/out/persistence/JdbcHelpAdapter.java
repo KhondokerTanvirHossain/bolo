@@ -46,6 +46,11 @@ class JdbcHelpAdapter implements HelpPort {
     }
 
     @Override
+    public void moveLearner(LearnerId from, LearnerId to) {
+        jdbc.sql("update help_request set learner_id = ? where learner_id = ?").params(to.value(), from.value()).update();
+    }
+
+    @Override
     public void done(long id, Instant at) {
         jdbc.sql("update help_request set done_at = ? where id = ? and done_at is null").params(Timestamp.from(at), id).update();
     }

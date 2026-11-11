@@ -12,7 +12,7 @@ export default function PrivacyPage() {
     <div style={{ height: "100%", overflowY: "auto" }}>
     <main style={{ maxWidth: 680, margin: "0 auto", padding: "40px 16px 64px", color: "var(--ink)", font: "500 17px/27px var(--font-sans)" }}>
       <h1 className="bo-flow__title">Privacy at Bolo</h1>
-      <p>Bolo helps you practise speaking English. Here is what it keeps about you, and how to remove it. Updated 9 November 2026.</p>
+      <p>Bolo helps you practise speaking English. Here is what it keeps about you, and how to remove it. Updated 12 November 2026.</p>
 
       <h2 className="title-2" style={section}>What Bolo keeps</h2>
       <ul>
@@ -21,6 +21,7 @@ export default function PrivacyPage() {
         <li>Your voice recordings, only if you chose &quot;keep them&quot; at the start. You choose this before Bolo ever listens.</li>
         <li>Your Day 1 clip. It stays in your browser; it goes with your account only if you chose to keep recordings.</li>
         <li>When you sign in with Google: your email address and name.</li>
+        <li>If you report a problem: your note, the screen you were on, your last talk&apos;s id and your browser&apos;s name.</li>
         <li>Simple app events, such as &quot;finished the setup&quot; or how long the first word took. They never contain your words or your voice.</li>
       </ul>
 

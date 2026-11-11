@@ -56,6 +56,20 @@ class HelpAcceptanceTest extends PostgresTestBase {
         assertThat(inbox).doesNotContain("drop me");
     }
 
+    /** Review (P2b): a guest who reports, then signs into an existing account, keeps the report. */
+    @Test
+    void aGuestsReportSurvivesSigningIntoAnExistingAccount() throws Exception {
+        String uid = UUID.randomUUID().toString();
+        String email = "back" + uid.substring(0, 6) + "@x.com";
+        client.send("POST", "/api/auth/google", client.consentedGuest(5), "{\"idToken\":\"fake:" + uid + ":" + email + "\"}");
+        String guest = client.consentedGuest(5);
+        assertThat(client.send("POST", "/api/help", guest, report("lost my way after the mic step")).status()).isEqualTo(204);
+        assertThat(client.send("POST", "/api/auth/google", guest, "{\"idToken\":\"fake:" + uid + ":" + email + "\"}").status()).isEqualTo(200);
+        String inbox = client.send("GET", "/api/admin/help", account("boss@bolo.test"), "").body();
+        List<String> messages = JsonPath.read(inbox, "$.requests[?(@.email == '" + email + "')].message");
+        assertThat(messages).containsExactly("lost my way after the mic step");
+    }
+
     @Test
     void aGuestCanReport() throws Exception {
         assertThat(client.send("POST", "/api/help", client.consentedGuest(5), report("stuck on the mic step")).status()).isEqualTo(204);

@@ -57,3 +57,34 @@ for (const [path, title] of [["/terms", "Terms of Use"], ["/refund", "Refund pol
     await expect(page.getByRole("link", { name: "k.tanvir.hossain@gmail.com" })).toBeInViewport();
   });
 }
+
+/** Review (P2b): where learners get stuck most (the mic step, a talk that can't start), Help is right there, on phones too. */
+test("a blocked mic in onboarding offers Report a problem", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const reports = await stub(page);
+  await page.addInitScript(() => {
+    window.localStorage.setItem("bolo.onboarding.v1", JSON.stringify({ step: "mic" }));
+    navigator.mediaDevices.getUserMedia = () => Promise.reject(new DOMException("denied", "NotAllowedError"));
+  });
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "Bolo needs your mic to hear you" })).toBeVisible();
+  await page.getByRole("button", { name: "Trouble? Report a problem" }).click();
+  await page.getByLabel("What went wrong?").fill("I allowed the mic but nothing");
+  await page.getByRole("button", { name: "Send" }).click();
+  await expect(page.getByText("Thanks. We read every one.")).toBeVisible();
+  expect(JSON.parse(reports[0]).context).toMatchObject({ view: "onboarding-mic" });
+});
+
+test("a talk that can't start offers Report a problem", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const reports = await stub(page);
+  await page.route("**/api/talk", (r) => r.fulfill({ status: 422, json: { code: "busy" } }));
+  await page.goto("/");
+  await page.getByRole("button", { name: "Start talking" }).click();
+  await expect(page.getByText("Bolo is in another talk right now. Try again in a few minutes.")).toBeVisible();
+  await page.getByRole("button", { name: "Trouble? Report a problem" }).click();
+  await page.getByLabel("What went wrong?").fill("Busy all evening");
+  await page.getByRole("button", { name: "Send" }).click();
+  await expect(page.getByText("Thanks. We read every one.")).toBeVisible();
+  expect(JSON.parse(reports[0]).context).toMatchObject({ view: "talk" });
+});

@@ -15,4 +15,6 @@ public interface HelpPort {
     List<Request> open();
 
     void done(long id, Instant at);
+
+    void moveLearner(LearnerId from, LearnerId to);
 }
