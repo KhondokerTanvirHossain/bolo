@@ -88,16 +88,21 @@ public class AdminService {
                 new Now(reports.liveTalks(clock.now().minus(Duration.ofHours(2))), plans.todayCount(), plans.dailyCap()));
     }
 
-    public record Settings(int dailyTalkCap, List<PlansUseCase.Plan> plans) {
+    public record Settings(Integer dailyTalkCap, List<PlansUseCase.Plan> plans) {
     }
 
     public Settings settings() {
         return new Settings(plans.dailyCap(), plans.plans());
     }
 
+    /** All or nothing (review): a missing cap or a bad plan changes nothing. */
+    @org.springframework.transaction.annotation.Transactional
     public void saveSettings(LearnerId admin, Settings s) {
-        plans.setDailyCap(s.dailyTalkCap());
+        if (s == null || s.dailyTalkCap() == null || s.dailyTalkCap() < 0 || s.dailyTalkCap() > 100_000) {
+            throw new app.bolo.common.error.RefusedException("bad-cap");
+        }
         if (s.plans() != null) plans.updatePlans(s.plans());
+        plans.setDailyCap(s.dailyTalkCap());
         log.info("admin {} saved settings: cap {}", admin, s.dailyTalkCap());
     }
 }

@@ -34,7 +34,7 @@ class FreePlanAcceptanceTest {
     }
 
     @Nested
-    @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {"bolo.talk.max-live-sessions=50",
+    @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {"bolo.talk.max-live-sessions=50", "bolo.talk.starts-per-minute=30",
             "bolo.firebase.api-key=k", "bolo.firebase.auth-domain=d", "bolo.firebase.project-id=p", "bolo.firebase.app-id=a"})
     class SignInOn extends PostgresTestBase {
         @LocalServerPort int port;
@@ -221,6 +221,26 @@ class FreePlanAcceptanceTest {
             } finally {
                 plans.setDailyCap(before);
             }
+        }
+
+        /** Review (Critical): starts that never connect can't use up the day's cap for everyone. */
+        @Test
+        void unconnectedStartsDontCountTowardTheDailyCap() throws Exception {
+            String me = account(5);
+            int before = plans.todayCount();
+            for (int i = 0; i < 3; i++) client.startTalk(me);
+            jdbc.sql("update talk_session set started_at = now() - interval '2 minutes' where attached_at is null and ended_at is null").update();
+            jdbc.sql("update talk_session set ended_at = now(), end_reason = 'disconnected' where attached_at is null and ended_at is null").update();
+            assertThat(plans.todayCount()).isEqualTo(before);
+        }
+
+        /** Review: talk starts per learner are limited, so a loop of starts can't run up the count or the bill. */
+        @Test
+        void tooManyStartsInAMinuteIs429() throws Exception {
+            String me = account(5);
+            int last = 0;
+            for (int i = 0; i < 31; i++) last = client.startTalk(me).status(); // the class sets 30 a minute (the 20-talk tests need room)
+            assertThat(last).isEqualTo(429);
         }
 
         @Test

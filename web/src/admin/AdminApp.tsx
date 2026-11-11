@@ -120,15 +120,23 @@ function UsageTab() {
 function SettingsTab() {
   const [s, setS] = useState<Settings | null>(null);
   const [note, setNote] = useState<string | null>(null);
-  useEffect(() => { void fetchSettings().then(setS); }, []);
+  const [capText, setCapText] = useState("");
+  useEffect(() => { void fetchSettings().then((x) => { setS(x); if (x) setCapText(String(x.dailyTalkCap)); }); }, []);
   if (!s) return null;
+  // Review (P2a): an emptied field is not 0 (0 rests everyone), and 0 itself needs a yes.
+  const save = async () => {
+    const cap = capText.trim() === "" ? NaN : Number(capText);
+    if (!Number.isInteger(cap) || cap < 0) { setNote("Enter a daily cap (0 or more)."); return; }
+    if (cap === 0 && !window.confirm("A cap of 0 means: No one can start a talk until you raise it. Save?")) { setNote("Not saved."); return; }
+    setNote((await saveSettings({ ...s, dailyTalkCap: cap })) ? "Saved." : "That didn't save.");
+  };
   const setPlan = (i: number, k: "monthlyTalks" | "priceBdt" | "priceUsd", v: number) =>
     setS({ ...s, plans: s.plans.map((p, j) => (j === i ? { ...p, [k]: v } : p)) });
   return (
     <section>
       <label className="ad-label">Daily talk cap (everyone, except unlimited)
-        <input className="ad-input ad-num" type="number" min={0} aria-label="Daily talk cap" value={s.dailyTalkCap}
-          onChange={(e) => setS({ ...s, dailyTalkCap: Number(e.target.value) })} /></label>
+        <input className="ad-input ad-num" type="number" min={0} aria-label="Daily talk cap" value={capText}
+          onChange={(e) => setCapText(e.target.value)} /></label>
       <div className="ad-scroll">
         <table className="ad-table">
           <thead><tr><th>Plan</th><th>Talks a month</th><th>Price (৳)</th><th>Price ($)</th></tr></thead>
@@ -140,7 +148,7 @@ function SettingsTab() {
             </tr>))}</tbody>
         </table>
       </div>
-      <button className="bo-btn bo-btn--primary" onClick={async () => setNote((await saveSettings(s)) ? "Saved." : "That didn't save.")}>Save</button>
+      <button className="bo-btn bo-btn--primary" onClick={() => void save()}>Save</button>
       {note && <p className="bo-footnote" role="status">{note}</p>}
     </section>
   );

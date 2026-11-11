@@ -26,6 +26,12 @@ class JdbcTalkSessionAdapter implements TalkSessionPort {
     private final JdbcClient jdbc;
 
     @Override
+    public int startsBy(LearnerId learner, Instant since) {
+        return jdbc.sql("select count(*) from talk_session where learner_id = ? and started_at >= ?")
+                .params(learner.value(), Timestamp.from(since)).query(Integer.class).single();
+    }
+
+    @Override
     public void lockStarts() {
         jdbc.sql("select pg_advisory_xact_lock(?)").param(START_LOCK).query().singleRow();
     }

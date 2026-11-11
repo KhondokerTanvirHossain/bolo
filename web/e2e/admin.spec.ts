@@ -68,3 +68,25 @@ test("the admin's Help tab lists a report, and Done clears it", async ({ page })
   await page.getByRole("button", { name: "Done" }).click();
   await expect(page.getByText("No open reports.")).toBeVisible();
 });
+
+/** Review (P2a): an emptied cap field must not save as 0 (that rests everyone); 0 itself needs a yes. */
+test("an empty cap isn't saved, and a cap of 0 asks first", async ({ page }) => {
+  const s = await stub(page, true);
+  await page.goto("/admin");
+  await page.getByRole("tab", { name: "Settings" }).click();
+  await page.getByLabel("Daily talk cap").fill("");
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByText("Enter a daily cap (0 or more).")).toBeVisible();
+  expect(s.settings).toHaveLength(0);
+
+  await page.getByLabel("Daily talk cap").fill("0");
+  page.once("dialog", (d) => { expect(d.message()).toContain("No one can start a talk"); void d.dismiss(); });
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByText("Not saved.")).toBeVisible();
+  expect(s.settings).toHaveLength(0);
+
+  page.once("dialog", (d) => void d.accept());
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByText("Saved.")).toBeVisible();
+  expect(JSON.parse(s.settings[0]).dailyTalkCap).toBe(0);
+});

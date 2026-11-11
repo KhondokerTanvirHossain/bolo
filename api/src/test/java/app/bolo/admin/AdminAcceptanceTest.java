@@ -107,4 +107,23 @@ class AdminAcceptanceTest extends PostgresTestBase {
                     + ",\"plans\":[{\"plan\":\"premium\",\"monthlyTalks\":20,\"priceBdt\":500,\"priceUsd\":5}]}");
         }
     }
+
+    /** Review: a settings save is all or nothing; a bad plan or a missing cap changes nothing. */
+    @Test
+    void aBadSettingsSaveChangesNothing() throws Exception {
+        String boss = account("boss@bolo.test");
+        String before = client.send("GET", "/api/admin/settings", boss, "").body();
+        int cap = JsonPath.read(before, "$.dailyTalkCap");
+        assertThat(client.send("PUT", "/api/admin/settings", boss,
+                "{\"dailyTalkCap\":" + (cap + 7) + ",\"plans\":[{\"plan\":\"basic\",\"monthlyTalks\":9,\"priceBdt\":300,\"priceUsd\":3},"
+                        + "{\"plan\":\"premium\",\"monthlyTalks\":-1,\"priceBdt\":500,\"priceUsd\":5}]}").status()).isEqualTo(422);
+        assertThat(client.send("PUT", "/api/admin/settings", boss, "{\"plans\":[]}").status()).isEqualTo(422);
+        assertThat(client.send("PUT", "/api/admin/settings", boss,
+                "{\"dailyTalkCap\":" + cap + ",\"plans\":[{\"plan\":\"gold\",\"monthlyTalks\":9,\"priceBdt\":1,\"priceUsd\":1}]}").status()).isEqualTo(422);
+        assertThat(client.send("PUT", "/api/admin/settings", boss,
+                "{\"dailyTalkCap\":" + cap + ",\"plans\":[{\"plan\":\"basic\",\"monthlyTalks\":9,\"priceBdt\":1}]}").status()).isEqualTo(422);
+        String after = client.send("GET", "/api/admin/settings", boss, "").body();
+        assertThat((Integer) JsonPath.read(after, "$.dailyTalkCap")).isEqualTo(cap);
+        assertThat((List<Integer>) JsonPath.read(after, "$.plans[?(@.plan=='basic')].monthlyTalks")).containsExactly(8);
+    }
 }

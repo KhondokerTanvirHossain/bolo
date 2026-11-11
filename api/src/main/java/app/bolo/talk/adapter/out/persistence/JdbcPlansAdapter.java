@@ -56,9 +56,12 @@ class JdbcPlansAdapter implements PlansPort {
     }
 
     @Override
-    public int startsSince(Instant since) {
+    public int startsSince(Instant since, Instant connectSince) {
+        // Only talks that connected count (or one that may still): starts that never connect can't use up the day.
         return jdbc.sql("""
                 select count(*) from talk_session s join learner l on l.id = s.learner_id
-                where s.started_at >= ? and not l.unlimited""").param(Timestamp.from(since)).query(Integer.class).single();
+                where s.started_at >= ? and not l.unlimited
+                  and (s.attached_at is not null or (s.ended_at is null and s.started_at > ?))""")
+                .params(Timestamp.from(since), Timestamp.from(connectSince)).query(Integer.class).single();
     }
 }

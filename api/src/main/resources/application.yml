@@ -44,6 +44,7 @@ bolo:
   talk:
     # Live talks at once. Azure Speech's free tier allows one live recognition, so 1 until we move to S0.
     max-live-sessions: ${BOLO_TALK_MAX_LIVE:1}
+    starts-per-minute: 10   # per learner; a loop of starts gets 429 (review P2a)
     # TLK-4: start a speculative reply after this much silence, end the turn after end-after-ms, or after
     # unfinished-end-after-ms when the last word suggests more is coming.
     speculate-after-ms: 1000

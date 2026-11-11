@@ -21,5 +21,6 @@ public interface PlansPort {
 
     void setSetting(String key, String value);
 
-    int startsSince(Instant since);
+    /** Talks started since {@code since} by non-unlimited learners that connected, or may still connect (started after {@code connectSince}). */
+    int startsSince(Instant since, Instant connectSince);
 }

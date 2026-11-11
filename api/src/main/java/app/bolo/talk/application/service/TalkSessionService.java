@@ -34,6 +34,8 @@ public class TalkSessionService implements StartTalkUseCase, app.bolo.talk.appli
     private final app.bolo.learner.application.port.in.VoiceAccessUseCase voiceAccess;
     private final app.bolo.learner.application.port.in.FreePlanKeyUseCase freePlanKeys;
     private final PlansService plans;
+    @Value("${bolo.talk.starts-per-minute:10}")
+    private int startsPerMinute = 10;
 
 
     public TalkSessionService(TalkSessionPort sessions, CurrentLearnerUseCase learners, BoloClock clock,
@@ -59,6 +61,8 @@ public class TalkSessionService implements StartTalkUseCase, app.bolo.talk.appli
         LearnerView view = consented(learner).orElseThrow(() -> new RefusedException("no-consent"));
         // Review (P1d): starts fired at once must not each pass the free-plan check; one at a time, in one transaction.
         sessions.lockStarts();
+        // Review (P2a): a loop of starts can't run up the count or the bill.
+        if (sessions.startsBy(learner, clock.now().minusSeconds(60)) >= startsPerMinute) throw new app.bolo.common.error.TooManyRequestsException();
         // P1d: a guest signs in before the first talk (only while sign-in is on); an account talks on the free plan.
         if (!voiceAccess.guestMayUseVoice(view)) throw new RefusedException("sign-in");
         if (!view.unlimited() && "account".equals(view.kind()) && allowanceOf(learner).left() == 0) {

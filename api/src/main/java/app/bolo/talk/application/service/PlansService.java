@@ -7,7 +7,6 @@ import app.bolo.talk.application.port.in.PlansUseCase;
 import app.bolo.talk.application.port.out.PlansPort;
 import app.bolo.talk.domain.FreePlan;
 import app.bolo.talk.domain.PlanAllowance;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -17,7 +16,6 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 public class PlansService implements PlansUseCase {
 
     static final String DAILY_CAP = "daily_talk_cap";
@@ -25,6 +23,13 @@ public class PlansService implements PlansUseCase {
 
     private final PlansPort port;
     private final BoloClock clock;
+    private final Duration attachWithin;
+
+    public PlansService(PlansPort port, BoloClock clock, @org.springframework.beans.factory.annotation.Value("${bolo.talk.attach-within-ms}") long attachWithinMs) {
+        this.port = port;
+        this.clock = clock;
+        this.attachWithin = Duration.ofMillis(attachWithinMs);
+    }
 
     @Override
     public void grant(LearnerId learner, String plan, int days, String source, String note) {
@@ -43,12 +48,19 @@ public class PlansService implements PlansUseCase {
         return port.plans();
     }
 
+    /** All or nothing: every plan is checked before any is saved; unknown plans and missing prices are refused. */
     @Override
+    @org.springframework.transaction.annotation.Transactional
     public void updatePlans(List<Plan> plans) {
+        var known = monthly().keySet();
         for (Plan p : plans) {
-            if (p.monthlyTalks() < 0 || p.monthlyTalks() > 1000 || p.priceBdt() < 0 || p.priceUsd().signum() < 0) throw new RefusedException("bad-plan");
-            port.savePlan(p);
+            if (p == null || p.plan() == null || !known.contains(p.plan()) || p.monthlyTalks() < 0 || p.monthlyTalks() > 1000
+                    || p.priceBdt() < 0 || p.priceBdt() > 1_000_000 || p.priceUsd() == null || p.priceUsd().signum() < 0
+                    || p.priceUsd().compareTo(new java.math.BigDecimal("100000")) > 0) {
+                throw new RefusedException("bad-plan");
+            }
         }
+        plans.forEach(port::savePlan);
     }
 
     @Override
@@ -68,8 +80,9 @@ public class PlansService implements PlansUseCase {
 
     @Override
     public int todayCount() {
-        var today = clock.now().atZone(FreePlan.ZONE).toLocalDate().atStartOfDay(FreePlan.ZONE).toInstant();
-        return port.startsSince(today);
+        var now = clock.now();
+        var today = now.atZone(FreePlan.ZONE).toLocalDate().atStartOfDay(FreePlan.ZONE).toInstant();
+        return port.startsSince(today, now.minus(attachWithin));
     }
 
     Map<String, Integer> monthly() {

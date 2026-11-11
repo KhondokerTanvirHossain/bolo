@@ -55,6 +55,9 @@ public interface TalkSessionPort {
     /** Serialises talk starts until the caller's transaction ends (the free-plan check, ending old talks and the insert). */
     void lockStarts();
 
+    /** Talk starts (any) by this learner since {@code since}. */
+    int startsBy(LearnerId learner, java.time.Instant since);
+
     /** The keep-recordings choice this talk is made under (US-8.5); the retention sweep follows it. */
     void recordKeepChoice(app.bolo.common.id.TalkSessionId talk, boolean keep);
 
