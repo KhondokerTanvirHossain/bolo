@@ -76,6 +76,28 @@ class AdminController {
         return admin.usage(days);
     }
 
+    record Reject(String reason) {
+    }
+
+    @GetMapping("/api/admin/payments")
+    Map<String, Object> payments(@RequestAttribute(name = CurrentLearner.ATTRIBUTE, required = false) LearnerId learner) {
+        admin(learner);
+        return Map.of("payments", admin.payments());
+    }
+
+    @PostMapping("/api/admin/payments/{id}/approve")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    void approvePayment(@RequestAttribute(name = CurrentLearner.ATTRIBUTE, required = false) LearnerId learner, @PathVariable long id) {
+        admin.approvePayment(admin(learner), id);
+    }
+
+    @PostMapping("/api/admin/payments/{id}/reject")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    void rejectPayment(@RequestAttribute(name = CurrentLearner.ATTRIBUTE, required = false) LearnerId learner, @PathVariable long id,
+                       @org.springframework.web.bind.annotation.RequestBody Reject body) {
+        admin.rejectPayment(admin(learner), id, body == null ? null : body.reason());
+    }
+
     @GetMapping("/api/admin/waitlist")
     Map<String, Object> waitlist(@RequestAttribute(name = CurrentLearner.ATTRIBUTE, required = false) LearnerId learner) {
         admin(learner);

@@ -32,12 +32,15 @@ public class AdminService {
     private final AdminReportsPort reports;
     private final app.bolo.help.application.port.in.HelpUseCase help;
     private final app.bolo.billing.application.port.in.WaitlistUseCase waitlist;
+    private final app.bolo.billing.application.port.in.PaymentUseCase payments;
     private final BoloClock clock;
 
     public AdminService(@Value("${bolo.admin.emails:}") String emails, CurrentLearnerUseCase learners, LearnerAdminUseCase learnerAdmin,
                         PlansUseCase plans, AdminReportsPort reports, BoloClock clock, app.bolo.help.application.port.in.HelpUseCase help,
-                        app.bolo.billing.application.port.in.WaitlistUseCase waitlist) {
+                        app.bolo.billing.application.port.in.WaitlistUseCase waitlist,
+                        app.bolo.billing.application.port.in.PaymentUseCase payments) {
         this.help = help;
+        this.payments = payments;
         this.waitlist = waitlist;
         this.admins = Arrays.stream(emails.split(",")).map(s -> s.trim().toLowerCase(Locale.ROOT)).filter(s -> !s.isEmpty()).collect(Collectors.toSet());
         this.learners = learners;
@@ -69,6 +72,19 @@ public class AdminService {
         log.info("admin {} gave {} for {} days to {}", admin, plan, days, target);
     }
 
+    /** P2e: bKash payments to check: pending first, then the latest decided. */
+    public List<app.bolo.billing.application.port.in.PaymentUseCase.Payment> payments() {
+        return payments.forAdmin();
+    }
+
+    public void approvePayment(LearnerId admin, long id) {
+        payments.approve(admin, id);
+    }
+
+    public void rejectPayment(LearnerId admin, long id, String reason) {
+        payments.reject(admin, id, reason);
+    }
+
     /** P2c: who is waiting for which plan, by region. */
     public java.util.Map<String, Object> waitlist() {
         return java.util.Map.of("counts", waitlist.counts(), "entries", waitlist.entries());
@@ -96,11 +112,12 @@ public class AdminService {
                 new Now(reports.liveTalks(clock.now().minus(Duration.ofHours(2))), plans.todayCount(), plans.dailyCap()));
     }
 
-    public record Settings(Integer dailyTalkCap, List<PlansUseCase.Plan> plans) {
+    /** bkashNumber: null leaves it as it is; "" turns bKash payments off (P2e). */
+    public record Settings(Integer dailyTalkCap, List<PlansUseCase.Plan> plans, String bkashNumber) {
     }
 
     public Settings settings() {
-        return new Settings(plans.dailyCap(), plans.plans());
+        return new Settings(plans.dailyCap(), plans.plans(), payments.bkashNumber().orElse(""));
     }
 
     /** All or nothing (review): a missing cap or a bad plan changes nothing. */
@@ -110,6 +127,7 @@ public class AdminService {
             throw new app.bolo.common.error.RefusedException("bad-cap");
         }
         if (s.plans() != null) plans.updatePlans(s.plans());
+        if (s.bkashNumber() != null) payments.setBkashNumber(s.bkashNumber());
         plans.setDailyCap(s.dailyTalkCap());
         log.info("admin {} saved settings: cap {}", admin, s.dailyTalkCap());
     }
