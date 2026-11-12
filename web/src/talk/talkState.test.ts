@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { initialTalk, talk } from "./talkState";
+import { initialTalk, leftNow, talk, timeLeftLabel } from "./talkState";
 
 describe("talk state", () => {
   it("follows the server's state", () => {
@@ -80,5 +80,70 @@ describe("review fixes", () => {
     expect(s.phase).toBe("paused");
     s = talk(talk(s, { type: "resumed" }), { type: "state", value: "your_turn" });
     expect(s.phase).toBe("your_turn");
+  });
+});
+
+/** P3a (TLK-8, TLK-16 changed 2026-11-12): the talk as a live chat, and the time left from the server. */
+describe("the chat", () => {
+  const yourTurn = (s = initialTalk) => talk(talk(s, { type: "caption", turn: 0, text: "What did you do today?" }), { type: "state", value: "your_turn", leftMs: 222000, at: 0 });
+
+  it("liveWordsBuildTheDashedBubble", () => {
+    let s = talk(yourTurn(), { type: "you", turn: 1, text: "hello" });
+    s = talk(s, { type: "you", turn: 1, text: "hello bolo" });
+    expect(s.live).toEqual({ turn: 1, text: "hello bolo" });
+    expect(s.chat).toEqual([{ turn: 0, who: "bolo", text: "What did you do today?" }]);
+  });
+
+  it("turnEndSettlesTheBubbleWithTheSavedText", () => {
+    let s = talk(yourTurn(), { type: "you", turn: 1, text: "hello bolo" });
+    s = talk(s, { type: "turn_end", turn: 1, text: "Hello Bolo." });
+    expect(s.chat.at(-1)).toEqual({ turn: 1, who: "you", text: "Hello Bolo." });
+    expect(s.live).toBeNull();
+  });
+
+  it("aLateYouAfterTurnEndIsIgnored", () => {
+    let s = talk(yourTurn(), { type: "turn_end", turn: 1, text: "Hello Bolo." });
+    s = talk(s, { type: "you", turn: 1, text: "hello bolo" });
+    expect(s.live).toBeNull();
+    expect(s.chat.filter((t) => t.who === "you")).toHaveLength(1);
+  });
+
+  it("youDropRemovesTheLiveBubble", () => {
+    let s = talk(yourTurn(), { type: "you", turn: 1, text: "ami" });
+    s = talk(s, { type: "you_drop", turn: 1 });
+    expect(s.live).toBeNull();
+    expect(s.chat).toHaveLength(1);
+  });
+
+  it("captionSentencesJoinOneBoloBubble", () => {
+    let s = talk(initialTalk, { type: "caption", turn: 2, text: "A." });
+    s = talk(s, { type: "caption", turn: 2, text: "B." });
+    expect(s.chat).toEqual([{ turn: 2, who: "bolo", text: "A. B." }]);
+  });
+
+  it("repeatReplaysTheExistingBoloBubble", () => {
+    let s = talk(initialTalk, { type: "caption", turn: 2, text: "What was hard?" });
+    s = talk(s, { type: "caption", turn: 4, text: "What was hard?", repeatOf: 2 });
+    expect(s.chat).toHaveLength(1);
+    expect(s.replay).toBe(2);
+    expect(s.caption).toBe("What was hard?");
+  });
+
+  it("timeLeftLabels", () => {
+    const c = (leftMs: number) => ({ leftMs, at: 0, paused: false });
+    expect(timeLeftLabel(c(222000), 0)).toBe("3:42 left");
+    expect(timeLeftLabel(c(61000), 0)).toBe("1:01 left");
+    expect(timeLeftLabel(c(60000), 0)).toBe("1 minute left");
+    expect(timeLeftLabel(c(1000), 0)).toBe("1 minute left");
+    expect(timeLeftLabel(c(0), 0)).toBe("Wrapping up");
+    expect(timeLeftLabel(c(-5000), 0)).toBe("Wrapping up");
+    expect(timeLeftLabel(null, 0)).toBeNull();
+  });
+
+  it("clockStopsWhilePaused", () => {
+    let s = talk(yourTurn(), { type: "paused", reason: "learner", leftMs: 100000, at: 1_000 });
+    expect(leftNow(s.clock, 31_000)).toBe(100000);
+    s = talk(s, { type: "resumed", leftMs: 100000, at: 50_000 });
+    expect(leftNow(s.clock, 60_000)).toBe(90000);
   });
 });

@@ -143,7 +143,8 @@ export function useTalk(deviceId: string | null) {
         l.pendingPlayed = m.turn;
         maybePlayed();
       }
-      dispatch(m);
+      // P3a: the countdown runs from when the server's time left arrived.
+      dispatch("leftMs" in m ? { ...m, at: Date.now() } : m);
     };
     ws.onclose = () => {
       dispatch({ type: "socket_closed" });
