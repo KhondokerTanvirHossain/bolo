@@ -56,6 +56,9 @@ class WaitlistAcceptanceTest extends PostgresTestBase {
         List<String> plans = JsonPath.read(r.body(), "$.plans[*].plan");
         assertThat(plans).containsExactly("basic", "premium", "ultimate");
         assertThat((Integer) JsonPath.read(r.body(), "$.plans[0].priceBdt")).isEqualTo(300);
+        // The founder's numbers (2026-11-12): Basic ৳300 / 30, Premium ৳500 / 50, Ultimate ৳1000 / 100 talks a month.
+        assertThat((List<Integer>) JsonPath.read(r.body(), "$.plans[*].monthlyTalks")).containsExactly(30, 50, 100);
+        assertThat((List<Integer>) JsonPath.read(r.body(), "$.plans[*].priceBdt")).containsExactly(300, 500, 1000);
         assertThat(((Number) JsonPath.read(r.body(), "$.plans[0].priceUsd")).doubleValue()).isEqualTo(3.0);
     }
 

@@ -313,7 +313,7 @@ The goal: someone who has never seen Bolo gets from opening it to talk to feedba
   - **Usage:** per day, talks, minutes, new accounts and an **estimated** cost from the usage ledger (speech $1 per audio hour, voice $16 per million characters, Claude $3 / $15 per million tokens in / out). Also live talks now, and today against the daily cap.
   - **Settings:** the **daily talk cap** (default 300), and each plan's talks a month and prices in ৳ and $. No deploy needed.
 - **Plans** (`plan_setting`, `subscription`; ACC-5):
-  - Basic 8, Premium 20, Ultimate 45 talks a month (placeholders, editable in Settings). A plan counts the Dhaka calendar month since it began; the biggest active plan wins; when it ends, the free plan applies again.
+  - Basic ৳300 / 30, Premium ৳500 / 50, Ultimate ৳1000 / 100 talks a month (the founder's numbers, 2026-11-12, migration V24; editable in Settings). A plan counts the Dhaka calendar month since it began; a new plan starts when the current one ends; when it ends, the free plan applies again.
   - Grants come from the admin now; referrals and bKash come next.
 - **Daily cap:** when today's talks (Asia/Dhaka, unlimited learners excluded) reach the cap, a start is refused (`422 daily-cap`) and the learner sees "Bolo is resting… Back tomorrow." A running talk always finishes.
 
@@ -352,7 +352,7 @@ The goal: someone who has never seen Bolo gets from opening it to talk to feedba
 
 ## bKash payments (manual, Option A)
 
-- **Turn it on:** go to /admin → Settings → "bKash number for payments", type your personal bKash number (01XXXXXXXXX) and Save.
+- **Turn it on:** go to /admin → Settings → "bKash number for payments", type your personal bKash number (01XXXXXXXXX) and Save. **On since 2026-11-12: 01998356878.**
   - Empty means bKash is off, and ৳ pricing shows the waitlist instead.
   - The number is shown publicly on /pricing (`GET /api/payments/bkash`).
 - **The learner's side:** /pricing in ৳ → "Pay with bKash · ৳300".

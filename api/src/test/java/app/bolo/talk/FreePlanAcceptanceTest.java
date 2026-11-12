@@ -34,7 +34,7 @@ public class FreePlanAcceptanceTest {
     }
 
     @Nested
-    @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {"bolo.talk.max-live-sessions=50", "bolo.talk.starts-per-minute=30",
+    @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {"bolo.talk.max-live-sessions=50", "bolo.talk.starts-per-minute=60",
             "bolo.firebase.api-key=k", "bolo.firebase.auth-domain=d", "bolo.firebase.project-id=p", "bolo.firebase.app-id=a"})
     class SignInOn extends PostgresTestBase {
         @LocalServerPort int port;
@@ -184,13 +184,13 @@ public class FreePlanAcceptanceTest {
 
         /** P2a: a plan given by the admin (or earned) is its monthly talk count. */
         @Test
-        void aGrantedPremiumLearnerHas20ThisMonth() throws Exception {
+        void aGrantedPremiumLearnerHas50ThisMonth() throws Exception {
             String me = account(5);
             plans.grant(learnerOf(me), "premium", 30, "admin", "a friend");
             String home = client.send("GET", "/api/home", me, "").body();
             assertThat((String) JsonPath.read(home, "$.freeTalks.plan")).isEqualTo("premium");
-            assertThat((Integer) JsonPath.read(home, "$.freeTalks.total")).isEqualTo(20);
-            assertThat((Integer) JsonPath.read(home, "$.freeTalks.left")).isEqualTo(20);
+            assertThat((Integer) JsonPath.read(home, "$.freeTalks.total")).isEqualTo(50);
+            assertThat((Integer) JsonPath.read(home, "$.freeTalks.left")).isEqualTo(50);
         }
 
         /** P2d: a second grant of the same plan starts when the first ends (a month earned while on it is a month more). */
@@ -208,10 +208,10 @@ public class FreePlanAcceptanceTest {
         }
 
         @Test
-        void theTwentyFirstPremiumTalkIsRefused() throws Exception {
+        void theFiftyFirstPremiumTalkIsRefused() throws Exception {
             String me = account(5);
             plans.grant(learnerOf(me), "premium", 30, "admin", null);
-            talkTimes(client, jdbc, me, 20);
+            talkTimes(client, jdbc, me, 50);
             var r = client.startTalk(me);
             assertThat(r.status()).isEqualTo(422);
             assertThat(r.body()).contains("free-limit");
@@ -253,7 +253,7 @@ public class FreePlanAcceptanceTest {
         void tooManyStartsInAMinuteIs429() throws Exception {
             String me = account(5);
             int last = 0;
-            for (int i = 0; i < 31; i++) last = client.startTalk(me).status(); // the class sets 30 a minute (the 20-talk tests need room)
+            for (int i = 0; i < 61; i++) last = client.startTalk(me).status(); // the class sets 60 a minute (the 50-talk test needs room)
             assertThat(last).isEqualTo(429);
         }
 

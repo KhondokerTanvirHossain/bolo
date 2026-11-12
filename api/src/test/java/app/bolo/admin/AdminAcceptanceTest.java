@@ -104,7 +104,7 @@ class AdminAcceptanceTest extends PostgresTestBase {
             assertThat((List<Integer>) JsonPath.read(after, "$.plans[?(@.plan=='premium')].monthlyTalks")).containsExactly(25);
         } finally {
             client.send("PUT", "/api/admin/settings", boss, "{\"dailyTalkCap\":" + JsonPath.read(before, "$.dailyTalkCap")
-                    + ",\"plans\":[{\"plan\":\"premium\",\"monthlyTalks\":20,\"priceBdt\":500,\"priceUsd\":5}]}");
+                    + ",\"plans\":[{\"plan\":\"premium\",\"monthlyTalks\":50,\"priceBdt\":500,\"priceUsd\":5}]}");
         }
     }
 
@@ -124,6 +124,6 @@ class AdminAcceptanceTest extends PostgresTestBase {
                 "{\"dailyTalkCap\":" + cap + ",\"plans\":[{\"plan\":\"basic\",\"monthlyTalks\":9,\"priceBdt\":1}]}").status()).isEqualTo(422);
         String after = client.send("GET", "/api/admin/settings", boss, "").body();
         assertThat((Integer) JsonPath.read(after, "$.dailyTalkCap")).isEqualTo(cap);
-        assertThat((List<Integer>) JsonPath.read(after, "$.plans[?(@.plan=='basic')].monthlyTalks")).containsExactly(8);
+        assertThat((List<Integer>) JsonPath.read(after, "$.plans[?(@.plan=='basic')].monthlyTalks")).containsExactly(30);
     }
 }
