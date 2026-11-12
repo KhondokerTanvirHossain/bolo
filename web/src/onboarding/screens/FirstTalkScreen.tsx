@@ -150,6 +150,7 @@ export function FirstTalkScreen({ deviceId }: { deviceId: string | null }) {
       onTalkAgain={() => void conversation.start()} onLeave={conversation.reset} onPause={conversation.pause}
       onResume={conversation.resume} onRepeat={conversation.repeat} onKeepSlower={conversation.answerKeepSlower}
       captionsDefault={captions} onCoachReady={coachReady}
+      talkView={me?.settings?.talkView ?? "chat"} level={conversation.level}
       onPractise={(pattern, talkId) => { conversation.reset(); setView(talkId ? { kind: "drills", talkId } : { kind: "practice", pattern }); }} />;
   }
   // Practise (3 min) (DRL-1): drills from that talk's fixes; Done and Close go Home.
