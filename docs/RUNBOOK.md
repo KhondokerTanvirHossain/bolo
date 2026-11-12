@@ -370,3 +370,20 @@ The goal: someone who has never seen Bolo gets from opening it to talk to feedba
 - **TrxIDs stay used for good,** even after "delete everything" (the `used_trx` table holds only the TrxID and a time). A pending payment deleted with its learner disappears from the list, so refund it from the bKash statement.
 - **Refunds** (refund policy): send the money back by bKash to the "Paid from" number by hand. Nothing in Bolo changes automatically, so ask Claude to end the subscription early if needed.
 - **Later (P2f):** an SMS forwarder on your Android phone will auto-match TrxID and amount.
+
+## Talk view: the live chat (TLK-8, TLK-16 changed 2026-11-12)
+
+- **Chat (the default)** shows the talk as a chat in the sky above the unchanged scene:
+  - Bolo's turns are on the left, filling in sentence by sentence as it speaks. Repeat sits on its latest turn, and R replays that bubble.
+  - The learner's words appear live in a dashed bubble on the right, then settle into the text saved for the debrief.
+  - The chat follows the newest line unless the learner has scrolled up; **Latest** brings it back.
+  - The top shows the time left ("3:42 left", then "1 minute left", then "Wrapping up"), from the server, and it stops while paused.
+  - The dock shows a five-bar mic level meter.
+  - C (or the CC button) hides or shows the chat.
+- **Classic** (Me → Talk view) is the earlier screen: Bolo's caption only and the time arc. The setting is stored in `learner_settings.talk_view`.
+- **New socket messages** (server → browser):
+  - `you {turn, text}`: the learner's live words, at most every 200 ms, during their turn only, never stored;
+  - `you_drop {turn}`: a live turn that isn't kept (unclear, paused, repeat asked);
+  - `turn_end` now carries `text`;
+  - `caption` carries `repeatOf` for an R repeat;
+  - `state`, `paused` and `resumed` carry `leftMs`.
