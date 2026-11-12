@@ -88,6 +88,67 @@ class TalkRelayAcceptanceTest extends PostgresTestBase {
         assertThat(rows.get(2).get("server_ms")).isNotNull();
     }
 
+    /** P3a (TLK-8 changed 2026-11-12): the learner's words go to their own screen while they speak. */
+    @Test
+    void theLearnersWordsAreSentLive() throws Exception {
+        try (TalkSocket s = yourTurn()) {
+            s.tone(400);
+            s.await(2000, "\"you\"", "\"turn\":1", "\"text\":\"hello bolo\"");
+        }
+    }
+
+    @Test
+    void turnEndCarriesTheSavedText() throws Exception {
+        try (TalkSocket s = yourTurn()) {
+            s.tone(400);
+            s.zeros(600);
+            s.await(2000, "\"turn_end\"", "\"turn\":1", "\"text\":\"hello bolo\"");
+        }
+    }
+
+    /** At most one live update every 200 ms (the fake recogniser gives one partial per utterance, so this guards the cap). */
+    @Test
+    void liveWordsComeAtMostFiveASecond() throws Exception {
+        try (TalkSocket s = yourTurn()) {
+            s.tone(1500);
+            Thread.sleep(1500);
+            long you = s.inbox.stream().filter(m -> m instanceof String t && t.contains("\"you\"")).count();
+            assertThat(you).isBetween(1L, 9L);
+        }
+    }
+
+    @Test
+    void aPauseMidTurnDropsTheLiveWords() throws Exception {
+        try (TalkSocket s = yourTurn()) {
+            s.tone(400);
+            s.await(2000, "\"you\"", "\"turn\":1");
+            s.json("{\"type\":\"pause\"}");
+            s.await(2000, "\"you_drop\"", "\"turn\":1");
+        }
+    }
+
+    @Test
+    void aRepeatIsMarkedAsTheEarlierLine() throws Exception {
+        try (TalkSocket s = yourTurn()) {
+            s.json("{\"type\":\"repeat\"}");
+            s.await(3000, "\"caption\"", "\"repeatOf\":0");
+        }
+    }
+
+    /** TLK-16 changed 2026-11-12: the screen counts down from the server's own time, which stops while paused. */
+    @Test
+    void statesCarryTimeLeft() throws Exception {
+        TalkSocket s = openAndHearTheOpening();
+        try (s) {
+            s.json("{\"type\":\"played\",\"turn\":0}");
+            String turn = s.await(2000, "\"state\"", "\"your_turn\"");
+            long left = ((Number) com.jayway.jsonpath.JsonPath.read(turn, "$.leftMs")).longValue();
+            assertThat(left).isPositive().isLessThanOrEqualTo(5 * 60_000L);
+            s.json("{\"type\":\"pause\"}");
+            assertThat(s.await(2000, "\"paused\"")).contains("\"leftMs\"");
+        }
+    }
+
     @Test
     void doneEndsTheTurnAtOnce() throws Exception {
         try (TalkSocket s = yourTurn()) {

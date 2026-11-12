@@ -66,6 +66,7 @@ import java.util.function.LongSupplier;
 final class TalkConversation implements TalkConnection {
 
     enum Phase { BUDDY_SPEAKING, YOUR_TURN, THINKING, PAUSED, ENDED }
+    static final long LIVE_EVERY_MS = 200;
 
     private static final Object END = new Object();
     private static final int FRAME_BYTES = 640;
@@ -147,6 +148,13 @@ final class TalkConversation implements TalkConnection {
     private QuietClock quiet;
     private int shortStreak;
     private String lastBuddyText = "";
+    /** P3a: the learner's live words this turn (TLK-8 changed 2026-11-12): sent at most every LIVE_EVERY_MS. */
+    private boolean youSent;
+    private String lastYouText = "";
+    private long lastYouMs = Long.MIN_VALUE / 2;
+    /** P3a: the turn repeatOnRequest made, and the earlier Bolo turn it repeats (the screen replays that bubble). */
+    private int repeatTurn = -1;
+    private int repeatOf = -1;
     private volatile long pausedAtMs = -1;
     private volatile long pausedTotalMs;
     private EndReason endAfterSpeaking;
@@ -189,7 +197,7 @@ final class TalkConversation implements TalkConnection {
         try {
             startedMs = nowMs.getAsLong();
             lastFrameMs = startedMs;
-            out.send(message("state", "value", "buddy_speaking"));
+            out.send(message("state", "value", "buddy_speaking", "leftMs", leftMs()));
         } finally {
             lock.unlock();
         }
@@ -290,6 +298,9 @@ final class TalkConversation implements TalkConnection {
             } else {
                 phase = Phase.YOUR_TURN;
                 transcript = "";
+                youSent = false;
+                lastYouText = "";
+                lastYouMs = Long.MIN_VALUE / 2;
                 audioMs = 0;
                 taker.reset();
                 turnStreamStartMs = streamMs;
@@ -298,7 +309,7 @@ final class TalkConversation implements TalkConnection {
                 // Marked inside the lock but the utterance never calls back while holding its own lock (no cycle).
                 TranscriptionStream s = stt;
                 if (s != null) s.mark();
-                out.send(message("state", "value", "your_turn"));
+                out.send(message("state", "value", "your_turn", "leftMs", leftMs()));
             }
         } finally {
             lock.unlock();
@@ -353,7 +364,10 @@ final class TalkConversation implements TalkConnection {
                 speculation = null;
             }
             case COMMIT -> commit();
-            case UNCLEAR -> cue(BuddyPrompt.UNCLEAR_CUE);
+            case UNCLEAR -> {
+                dropLive();
+                cue(BuddyPrompt.UNCLEAR_CUE);
+            }
             case NONE -> { }
         }
     }
@@ -365,8 +379,9 @@ final class TalkConversation implements TalkConnection {
         phase = Phase.THINKING;
         learnerTurns++;
         int learnerIdx = nextIdx++;
-        out.send(message("turn_end", "turn", learnerIdx));
-        out.send(message("state", "value", "thinking"));
+        out.send(message("turn_end", "turn", learnerIdx, "text", said));
+        youSent = false;
+        out.send(message("state", "value", "thinking", "leftMs", leftMs()));
         turns.saveLearner(talk.id(), learnerIdx, said, keepTurnAudio(learnerIdx), turnStreamStartMs, List.copyOf(turnWords));
         lastLearnerIdx = learnerIdx;
         lastTurnStreamStartMs = turnStreamStartMs;
@@ -462,7 +477,7 @@ final class TalkConversation implements TalkConnection {
     /** A Bolo line driven by a cue instead of a learner turn: silence (TLK-6), Bangla or unclear speech (TLK-7), resume. */
     private void cue(String cue) {
         phase = Phase.THINKING;
-        out.send(message("state", "value", "thinking"));
+        out.send(message("state", "value", "thinking", "leftMs", leftMs()));
         cancel(speculation);
         speculation = null;
         history.add(new Exchange(Exchange.Speaker.LEARNER, cue));
@@ -571,9 +586,11 @@ final class TalkConversation implements TalkConnection {
             if (ended || gen != speakGen) return;
             if (phase == Phase.THINKING) {
                 phase = Phase.BUDDY_SPEAKING;
-                out.send(message("state", "value", "buddy_speaking"));
+                out.send(message("state", "value", "buddy_speaking", "leftMs", leftMs()));
             }
-            out.send(message("caption", "turn", idx, "text", sentence));
+            out.send(idx == repeatTurn
+                    ? message("caption", "turn", idx, "text", sentence, "repeatOf", repeatOf)
+                    : message("caption", "turn", idx, "text", sentence));
         } finally {
             lock.unlock();
         }
@@ -619,6 +636,7 @@ final class TalkConversation implements TalkConnection {
         lock.lock();
         try {
             if (ended || phase == Phase.PAUSED || endAfterSpeaking != null) return;
+            if (phase == Phase.YOUR_TURN) dropLive();
             phase = Phase.PAUSED;
             resumeToken++;
             pausedAtMs = nowMs.getAsLong();
@@ -627,7 +645,7 @@ final class TalkConversation implements TalkConnection {
             ++speakGen;
             s = stt;
             stt = null;
-            out.send(message("paused", "reason", reason));
+            out.send(message("paused", "reason", reason, "leftMs", leftMs()));
         } finally {
             lock.unlock();
         }
@@ -646,7 +664,7 @@ final class TalkConversation implements TalkConnection {
             pausedAtMs = -1;
             lastFrameMs = now;
             phase = Phase.THINKING;
-            out.send(message("resumed"));
+            out.send(message("resumed", "leftMs", leftMs()));
         } finally {
             lock.unlock();
         }
@@ -682,7 +700,10 @@ final class TalkConversation implements TalkConnection {
             quiet.onSpeech();
             history.add(new Exchange(Exchange.Speaker.LEARNER, "(asks you to repeat that)"));
             history.add(new Exchange(Exchange.Speaker.BUDDY, lastBuddyText));
+            dropLive();
+            repeatOf = buddyTurn;
             buddyTurn = nextIdx++;
+            repeatTurn = buddyTurn;
             startSpeaker(buddyTurn, fixed(lastBuddyText), null);
         } finally {
             lock.unlock();
@@ -824,6 +845,18 @@ final class TalkConversation implements TalkConnection {
         return values.get(Math.max(0, rank - 1));
     }
 
+    /** P3a: time left for the screen's countdown (TLK-16 changed 2026-11-12); negative once time is up. */
+    private long leftMs() {
+        return limitMs() - elapsedMs();
+    }
+
+    /** P3a: the learner's live words for a turn that isn't kept (unclear, paused, repeat asked): the screen drops them. */
+    private void dropLive() {
+        if (!youSent) return;
+        out.send(message("you_drop", "turn", nextIdx));
+        youSent = false;
+    }
+
     /** Talk time, not counting pauses. */
     private long elapsedMs() {
         long pausedNow = pausedAtMs >= 0 ? nowMs.getAsLong() - pausedAtMs : 0;
@@ -857,6 +890,14 @@ final class TalkConversation implements TalkConnection {
                 if (phase != Phase.YOUR_TURN) return;
                 transcript = textSoFar == null ? "" : textSoFar;
                 taker.onTranscript(transcript);
+                // P3a: the learner's own screen shows their words live; at most every LIVE_EVERY_MS, never stored.
+                long now = nowMs.getAsLong();
+                if (!transcript.isBlank() && !transcript.equals(lastYouText) && now - lastYouMs >= LIVE_EVERY_MS) {
+                    out.send(message("you", "turn", nextIdx, "text", transcript));
+                    lastYouText = transcript;
+                    lastYouMs = now;
+                    youSent = true;
+                }
             } finally {
                 lock.unlock();
             }
