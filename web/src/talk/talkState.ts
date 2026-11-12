@@ -119,6 +119,8 @@ export function talk(state: TalkState, action: TalkAction): TalkState {
       // While paused, only "resumed" brings the talk back (a late Bolo line must not reopen the mic).
       if (state.phase === "paused") return state;
       return { ...state, phase: action.value, hint: action.value === "your_turn" ? state.hint : null,
+        // Review (P3a): a live bubble only lives during the learner's turn.
+        live: action.value === "your_turn" ? state.live : null,
         clock: clockOf(action.leftMs, action.at, false, state.clock) };
     case "slower":
       return { ...state, askKeepSlower: true };
@@ -132,7 +134,7 @@ export function talk(state: TalkState, action: TalkAction): TalkState {
     case "resumed":
       return state.phase === "paused" ? { ...state, phase: "thinking", clock: clockOf(action.leftMs, action.at, false, state.clock) } : state;
     case "crisis":
-      return { ...state, phase: "crisis", hint: null, crisis: { title: action.title, lines: action.lines, help: action.help } };
+      return { ...state, phase: "crisis", hint: null, live: null, crisis: { title: action.title, lines: action.lines, help: action.help } };
     case "caption": {
       const classic = action.turn === state.captionTurn
         ? { caption: `${state.caption} ${action.text}`.trim() }
@@ -159,10 +161,10 @@ export function talk(state: TalkState, action: TalkAction): TalkState {
     case "ended": {
       if (state.phase === "crisis") return state;
       const summary = { turns: action.turns, p50Ms: action.p50Ms, p90Ms: action.p90Ms };
-      return { ...state, phase: action.reason === "voice_unavailable" ? "no_voice" : "ended", summary };
+      return { ...state, phase: action.reason === "voice_unavailable" ? "no_voice" : "ended", summary, live: null, clock: null };
     }
     case "socket_closed":
-      return FINAL.includes(state.phase) ? state : { ...state, phase: "no_voice" };
+      return FINAL.includes(state.phase) ? state : { ...state, phase: "no_voice", live: null, clock: null };
     default:
       return state;
   }

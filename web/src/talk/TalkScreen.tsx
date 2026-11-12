@@ -204,7 +204,7 @@ export function TalkScreen({ state, deviceId = null, onDone, onEnd, onTalkAgain,
             <Icon name="pause" fill />
           </button>
           {chatView && (
-            <div className={`bo-level${yourTurn ? "" : " bo-level--rest"}`} aria-hidden="true">
+            <div className={`bo-talklevel${yourTurn ? "" : " bo-talklevel--rest"}`} aria-hidden="true">
               {BARS.map((w, i) => <i key={i} style={{ "--l": yourTurn ? Math.max(0.15, level * w) : 0.15 } as React.CSSProperties} />)}
             </div>
           )}
@@ -267,7 +267,7 @@ export function TalkScreen({ state, deviceId = null, onDone, onEnd, onTalkAgain,
         <Scene />
         <div className="dk-talk__top">
           <span />
-          <TimeLeft clock={state.clock} minutes={state.minutes} />
+          <TimeLeft clock={live || state.phase === "paused" ? state.clock : null} minutes={state.minutes} />
           {topRight}
         </div>
         <div className="dk-talk__chat">

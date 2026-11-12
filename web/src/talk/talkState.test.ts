@@ -147,3 +147,14 @@ describe("the chat", () => {
     expect(leftNow(s.clock, 60_000)).toBe(90000);
   });
 });
+
+describe("the live bubble ends with the turn (review P3a)", () => {
+  const speaking = () => talk(talk(initialTalk, { type: "state", value: "your_turn" }), { type: "you", turn: 1, text: "I went to" });
+  it("clears when Bolo takes the floor", () => expect(talk(speaking(), { type: "state", value: "thinking" }).live).toBeNull());
+  it("clears when the talk ends", () => expect(talk(speaking(), { type: "ended", reason: "learner_ended", turns: 0, p50Ms: null, p90Ms: null }).live).toBeNull());
+  it("clears when the socket closes", () => expect(talk(speaking(), { type: "socket_closed" }).live).toBeNull());
+  it("the clock stops when the talk ends", () => {
+    const s = talk(talk(initialTalk, { type: "state", value: "your_turn", leftMs: 100000, at: 0 }), { type: "ended", reason: "learner_ended", turns: 0, p50Ms: null, p90Ms: null });
+    expect(s.clock).toBeNull();
+  });
+});

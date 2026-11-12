@@ -181,7 +181,12 @@ export function useTalk(deviceId: string | null) {
           node.port.onmessage = (ev: MessageEvent<Float32Array>) => {
             if (l.paused) return;
             const now = performance.now();
-            if (now - levelAt.current >= LEVEL_EVERY_MS) { levelAt.current = now; setLevel(levelOf(ev.data)); }
+            if (now - levelAt.current >= LEVEL_EVERY_MS) {
+              levelAt.current = now;
+              // Only a visible change re-renders the screen (quiet rooms and steady voices cost nothing).
+              const next = Math.round(levelOf(ev.data) * 20) / 20;
+              setLevel((prev) => (prev === next ? prev : next));
+            }
             for (const frame of downsampleTo16k(ev.data, down)) {
               if (ws.readyState === WebSocket.OPEN) ws.send(frame.buffer);
             }

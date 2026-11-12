@@ -325,3 +325,17 @@ test("no connection says so on a card in the middle of the screen", async ({ pag
   expect(box.y + box.height).toBeLessThanOrEqual(vp.height);
   expect(Math.abs(box.x + box.width / 2 - vp.width / 2)).toBeLessThan(4);
 });
+
+/** Review (P3a): the talk's level meter styles must not change the mic check's meter. */
+test("the mic check's level bars keep their own size and colours", async ({ page }) => {
+  await stubApi(page, { consent: true });
+  await seed(page,
+    JSON.stringify({ step: "mic", over13: true, keepRecordings: true, micDeviceId: null, headphones: false }));
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "Choose your microphone" })).toBeVisible();
+  const meter = page.locator("[data-mic-status] .bo-level").first();
+  expect((await meter.boundingBox())!.height).toBeGreaterThanOrEqual(66);
+  const unlit = await meter.locator("i:not(.on)").first().evaluate((el) => getComputedStyle(el).backgroundColor);
+  const lit = await page.evaluate(() => { const i = document.createElement("i"); i.className = "on"; const d = document.querySelector("[data-mic-status] .bo-level")!; d.appendChild(i); const c = getComputedStyle(i).backgroundColor; i.remove(); return c; });
+  expect(unlit).not.toBe(lit);
+});

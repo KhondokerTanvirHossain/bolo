@@ -126,9 +126,9 @@ test("scrolled up, the chat stops following and Latest brings it back", async ({
 test("the meter moves on my turn and rests while Bolo speaks", async ({ page }) => {
   const ws = await startTalk(page);
   await openingThenYourTurn(ws);
-  await expect(page.locator(".bo-level")).not.toHaveClass(/bo-level--rest/);
+  await expect(page.locator(".bo-talklevel")).not.toHaveClass(/bo-talklevel--rest/);
   send(ws, { type: "state", value: "buddy_speaking", leftMs: 200000 });
-  await expect(page.locator(".bo-level")).toHaveClass(/bo-level--rest/);
+  await expect(page.locator(".bo-talklevel")).toHaveClass(/bo-talklevel--rest/);
 });
 
 test("Classic view keeps the caption and the arc", async ({ page }) => {
@@ -162,4 +162,34 @@ test("on a phone the keyboard row is hidden (no keys there)", async ({ page }) =
   const ws = await startTalk(page);
   await openingThenYourTurn(ws);
   await expect(page.locator(".dk-keys")).toBeHidden();
+});
+
+/** Review (P3a): small scroll steps up (a finger or trackpad) are not snapped back while the mic meter moves. */
+test("scrolling up in small steps is not snapped back", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const ws = await startTalk(page);
+  for (let t = 0; t < 8; t++) {
+    if (t % 2 === 0) send(ws, { type: "caption", turn: t, text: `Bolo's question number ${t}, a fairly long one to fill the space?` });
+    else send(ws, { type: "turn_end", turn: t, text: `My answer number ${t}, also long enough to wrap onto two lines.` });
+  }
+  send(ws, { type: "state", value: "your_turn", leftMs: 200000 });
+  await expect(log(page).getByText("Bolo's question number 6", { exact: false })).toBeVisible();
+  const sc = page.locator(".bo-chat");
+  for (let i = 0; i < 8; i++) {
+    await sc.evaluate((el) => { el.scrollTop -= 20; el.dispatchEvent(new Event("scroll")); });
+    await page.waitForTimeout(120);
+  }
+  expect(await sc.evaluate((el) => el.scrollHeight - el.scrollTop - el.clientHeight)).toBeGreaterThan(100);
+});
+
+/** Review (P3a): once the talk stops, the countdown stops and no "speaking" bubble is left behind. */
+test("after the talk ends, no live bubble and no running countdown", async ({ page }) => {
+  const ws = await startTalk(page);
+  await openingThenYourTurn(ws);
+  send(ws, { type: "you", turn: 1, text: "I went to" });
+  await expect(page.locator(".bo-chat__turn--live")).toBeVisible();
+  send(ws, { type: "ended", reason: "learner_ended", turns: 0, p50Ms: null, p90Ms: null });
+  await expect(page.getByText("Nice talk. You took 0 turns.")).toBeVisible();
+  await expect(page.locator(".bo-chat__turn--live")).toHaveCount(0);
+  await expect(page.getByRole("timer")).toHaveCount(0);
 });

@@ -23,10 +23,11 @@ export function TalkChat({ chat, live, replay, status, canRepeat, onRepeat }: {
   const box = useRef<HTMLDivElement>(null);
   const [following, setFollowing] = useState(true);
 
+  // Review (P3a): only when the talk itself changes. Re-renders from the mic meter must not snap back a reader.
   useLayoutEffect(() => {
     const b = box.current;
     if (b && following) b.scrollTop = b.scrollHeight;
-  });
+  }, [chat, live, following, Boolean(status)]);
 
   const onScroll = () => {
     const b = box.current;

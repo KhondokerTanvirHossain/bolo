@@ -882,15 +882,15 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #0b0816; }
 .bo-timeleft { display: inline-flex; align-items: center; gap: var(--space-2); height: 36px; padding: 0 var(--space-4); border-radius: var(--radius-full);
   background: rgba(255, 248, 239, .14); color: var(--on-scene); font: 650 15px/20px var(--font-sans); font-variant-numeric: tabular-nums; }
 .bo-timeleft__what { color: var(--on-scene-secondary); font-weight: 500; }
-.bo-level { display: inline-flex; align-items: center; gap: 3px; height: 32px; }
-.bo-level i { display: block; width: 4px; border-radius: 2px; background: var(--scene-sun); height: calc(var(--l, .15) * 32px); min-height: 4px; transition: height 60ms linear; }
-.bo-level--rest i { background: rgba(255, 248, 239, .35); }
+.bo-talklevel { display: inline-flex; align-items: center; gap: 3px; height: 32px; }
+.bo-talklevel i { display: block; width: 4px; border-radius: 2px; background: var(--scene-sun); height: calc(var(--l, .15) * 32px); min-height: 4px; transition: height 60ms linear; }
+.bo-talklevel--rest i { background: rgba(255, 248, 239, .35); }
 .bo-mic--noarc .arc { display: none; }
 .dk-talk__chat { position: absolute; top: 92px; left: 50%; transform: translateX(-50%); width: min(760px, calc(100% - 64px)); height: 35%; z-index: 2; }
 .dk-talk__chat .bo-chat { height: 100%; }
 .dk-talk__chat .bo-chat__turn--bolo { font: 500 22px/30px var(--font-sans); }
 .dk-talk__chat .bo-chat__turn--you { font: 500 19px/28px var(--font-sans); }
-@media (prefers-reduced-motion: reduce) { .bo-chat__turn--live .bo-chat__text::after { animation: none; } .bo-level i, .bo-chat__text .w { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .bo-chat__turn--live .bo-chat__text::after { animation: none; } .bo-talklevel i, .bo-chat__text .w { transition: none; } }
 @media (prefers-reduced-transparency: reduce) { .bo-chat__turn, .bo-chat__latest { -webkit-backdrop-filter: none; backdrop-filter: none; background: var(--scene-hill-near); } }
 /* App additions (P3a): the settled turns sit in their own log region; R replays a bubble with one soft pulse; phones. */
 .bo-chat__log { display: flex; flex-direction: column; gap: var(--space-2); }
