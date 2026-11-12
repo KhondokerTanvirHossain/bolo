@@ -2,7 +2,10 @@
 import { useEffect, useState } from "react";
 import { fetchSettings, saveSettings, type Settings } from "@/settings/settings";
 
-/** US-9.5 Speaking group (P0 rows): Bolo's speed and captions, as chips; each change saves at once, for the next talk. */
+/**
+ * US-9.5 Speaking group (P0 rows): Bolo's speed, captions and the talk view (P3a), as chips. Each change saves at once,
+ * for the next talk.
+ */
 export function SpeakingSettings() {
   const [s, setS] = useState<Settings | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "unreadable" | "failed">("loading");
@@ -21,6 +24,13 @@ export function SpeakingSettings() {
         <div style={{ display: "flex", gap: 8 }}>
           {chip("Normal", s?.buddySpeed === "normal", () => s && void change({ ...s, buddySpeed: "normal" }))}
           {chip("Slower", s?.buddySpeed === "slower", () => s && void change({ ...s, buddySpeed: "slower" }))}
+        </div>
+      </div>
+      <div className="bo-row">
+        <div className="bo-row__body"><div className="bo-row__title">Talk view</div><div className="bo-row__sub">Chat shows both sides; Classic shows Bolo only</div></div>
+        <div style={{ display: "flex", gap: 8 }}>
+          {chip("Chat", (s?.talkView ?? "chat") === "chat" && !!s, () => s && void change({ ...s, talkView: "chat" }))}
+          {chip("Classic", s?.talkView === "classic", () => s && void change({ ...s, talkView: "classic" }))}
         </div>
       </div>
       <div className="bo-row">

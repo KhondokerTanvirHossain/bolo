@@ -150,3 +150,16 @@ test("Delete everything keeps focus inside, and Esc keeps my data", async ({ pag
   await expect(dialog).toHaveCount(0);
   expect(s.deleted).toBe(false);
 });
+
+/** P3a: Settings → Talk view, Chat (default) or Classic (TLK-8, TLK-16 changed 2026-11-12). */
+test("Talk view switches between Chat and Classic", async ({ page }) => {
+  await stub(page, true);
+  const puts: string[] = [];
+  await page.route("**/api/me/settings", (r) => { puts.push(r.request().postData() ?? ""); return r.fulfill({ status: 204 }); });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Me", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Chat", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "Classic", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Classic", exact: true })).toHaveAttribute("aria-pressed", "true");
+  expect(JSON.parse(puts.at(-1) ?? "{}")).toMatchObject({ talkView: "classic", buddySpeed: "normal", captions: true });
+});

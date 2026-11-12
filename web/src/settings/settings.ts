@@ -1,7 +1,8 @@
 import { api, type LearnerView } from "@/api/browser";
 
-export type Settings = { buddySpeed: "normal" | "slower"; captions: boolean };
-export const DEFAULT_SETTINGS: Settings = { buddySpeed: "normal", captions: true };
+/** talkView (P3a): "chat" shows the talk as a live chat (the default); "classic" shows Bolo's caption only. */
+export type Settings = { buddySpeed: "normal" | "slower"; captions: boolean; talkView?: "chat" | "classic" };
+export const DEFAULT_SETTINGS: Settings = { buddySpeed: "normal", captions: true, talkView: "chat" };
 export const CAPTIONS_KEY = "bolo.captions";
 
 /** null when they can't be read: callers must not save defaults over what the learner chose. */
