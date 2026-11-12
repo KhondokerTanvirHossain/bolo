@@ -1,0 +1,31 @@
+<!-- @dsCard group="Screens" height=820 subtitle="Classic view: scene, caption, mic ring with time arc, Pause, End" page -->
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>ScreenConversationClassic — Bolo</title></head>
+<body>
+<div class="bo-stage bo-stage--center" style="padding:24px 0">
+<div class="bo-phone bo-scene">
+  <svg class="bo-scene__art" viewBox="0 0 360 520" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+<defs><radialGradient id="bo-aura"><stop offset="0%" style="stop-color:var(--scene-sun);stop-opacity:.75"/><stop offset="42%" style="stop-color:var(--scene-sun);stop-opacity:.32"/><stop offset="100%" style="stop-color:var(--scene-sun);stop-opacity:0"/></radialGradient><radialGradient id="bo-star"><stop offset="0%" style="stop-color:var(--scene-star);stop-opacity:.7"/><stop offset="100%" style="stop-color:var(--scene-star);stop-opacity:0"/></radialGradient></defs><circle class="dust" cx="70" cy="48" r="1.4" opacity="0.6"/><circle class="dust" cx="118" cy="92" r="1.7" opacity="0.5"/><circle class="dust" cx="250" cy="40" r="1.0" opacity="0.5"/><circle class="dust" cx="300" cy="110" r="1.4" opacity="0.5"/><circle class="dust" cx="180" cy="70" r="1.2" opacity="0.5"/><circle class="dust" cx="88" cy="150" r="1.0" opacity="0.85"/><circle class="dust" cx="140" cy="190" r="1.7" opacity="0.5"/><circle class="dust" cx="286" cy="176" r="1.2" opacity="0.5"/><circle class="dust" cx="318" cy="232" r="1.7" opacity="0.5"/><circle class="dust" cx="64" cy="236" r="1.0" opacity="0.6"/><circle class="dust" cx="150" cy="240" r="1.0" opacity="0.85"/><circle class="dust" cx="226" cy="128" r="1.0" opacity="0.6"/><circle class="dust" cx="110" cy="262" r="1.0" opacity="0.6"/><circle class="dust" cx="300" cy="268" r="1.4" opacity="0.85"/><circle class="dust" cx="96" cy="30" r="1.2" opacity="0.5"/><circle class="dust" cx="206" cy="24" r="1.4" opacity="0.6"/><circle class="dust" cx="160" cy="118" r="1.0" opacity="0.6"/><circle class="dust" cx="268" cy="152" r="1.4" opacity="0.5"/><circle class="dust" cx="78" cy="112" r="1.0" opacity="0.5"/><circle class="dust" cx="196" cy="170" r="1.2" opacity="0.85"/><circle class="dust" cx="240" cy="206" r="1.7" opacity="0.7"/><circle class="dust" cx="124" cy="226" r="1.7" opacity="0.85"/><circle class="dust" cx="332" cy="58" r="1.4" opacity="0.7"/><circle class="dust" cx="48" cy="184" r="1.2" opacity="0.6"/><circle class="dust" cx="270" cy="98" r="1.2" opacity="0.5"/><circle class="dust" cx="136" cy="58" r="1.4" opacity="0.85"/><g class="twinkle" style="animation-delay:0s"><circle class="starglow" cx="96" cy="206" r="10.4"/><path class="spark" d="M96 199.5 Q96 206 102.5 206 Q96 206 96 212.5 Q96 206 89.5 206 Q96 206 96 199.5Z"/></g><g class="twinkle" style="animation-delay:1.6s"><circle class="starglow" cx="258" cy="166" r="8.0"/><path class="spark" d="M258 161 Q258 166 263 166 Q258 166 258 171 Q258 166 253 166 Q258 166 258 161Z"/></g><circle class="aura" cx="222" cy="300" r="140"/>
+<circle class="sun" cx="222" cy="300" r="54"/>
+<path class="far" d="M0 316 C64 290 118 300 168 312 C228 326 286 294 360 302 L360 520 L0 520Z"/>
+<path class="near" d="M0 386 C96 356 204 362 360 392 L360 520 L0 520Z"/>
+<g transform="translate(104 312)"><path class="figure" d="M-27 66 C-27 33 -16 18 0 18 C16 18 27 33 27 66 Z"/><circle class="figure" cx="0" cy="3" r="14"/><path class="rim" d="M9 -8 A14 14 0 0 1 14 9"/><path class="rim" d="M17 26 C22 34 25 44 26 56"/></g>
+</svg>
+  <div class="bo-statusbar bo-statusbar--scene"><span>9:41</span><span><span class="bo-icon bo-icon--sm" aria-hidden="true">signal_cellular_alt</span> <span class="bo-icon bo-icon--sm" aria-hidden="true">battery_5_bar</span></span></div>
+  <div style="position:relative;z-index:2;display:flex;justify-content:space-between;padding:48px var(--space-5) 0">
+    <button class="bo-scenebtn" aria-label="Change scene"><span class="bo-icon bo-icon--sm" aria-hidden="true">landscape</span></button>
+    <button class="bo-scenebtn">End</button>
+  </div>
+  <div style="position:relative;z-index:2;padding:var(--space-4) var(--space-5) 0">
+    <div class="bo-caption"><p class="bo-caption__text">Oh nice. What was the bug doing before you fixed it?</p><button class="bo-caption__replay" aria-label="Repeat that"><span class="bo-icon bo-icon--sm" aria-hidden="true">replay</span></button></div>
+  </div>
+  <div style="flex:1"></div>
+  <div style="position:relative;z-index:2;display:flex;align-items:center;justify-content:space-between;padding:0 var(--space-8) var(--space-10)">
+    <button class="bo-scenebtn" aria-label="Pause"><span class="bo-icon bo-icon--fill" aria-hidden="true">pause</span></button>
+    <div class="bo-mic bo-mic--turn" role="status" aria-label="Your turn"><svg class="arc" viewBox="0 0 96 96" aria-hidden="true"><circle class="track" cx="48" cy="48" r="46"/><circle class="left" cx="48" cy="48" r="46" stroke-dasharray="167.6 289.0"/></svg><div class="bo-mic__core"><span class="bo-icon bo-icon--lg" aria-hidden="true">mic</span></div></div>
+    <button class="bo-scenebtn" aria-label="Done, end my turn">Done</button>
+  </div>
+</div></div>
+</body>
+</html>

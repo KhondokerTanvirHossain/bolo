@@ -151,7 +151,7 @@ The MVP has 77 functional requirements across 11 modules. **P0** is required for
 | TLK-5 | Prompt for longer answers when a turn is under about 5 words ("Tell me more", "Why?", "Give an example"). | P0 |
 | TLK-6 | Gently re-prompt after 8 s of silence; offer a hint after 15 s. | P0 |
 | TLK-7 | If the learner speaks Bangla, the Buddy acknowledges it kindly and asks them to try in English, offering a starter phrase. | P0 |
-| TLK-8 | Show a live caption of the Buddy's lines (toggle; on by default). The learner's own words are not shown live. | P0 |
+| TLK-8 | **Changed 2026-11-12 (founder):** the talk is shown as a live chat in the sky above the companion. The Buddy's turns appear word by word as it speaks; the learner's own words appear live while they speak (exactly as recognised) and settle into their bubble when the turn ends; earlier turns stay and the chat scrolls itself. A **Talk view** setting keeps the earlier style (Buddy caption only, learner's words not shown) for anyone who prefers it. *Was: a live caption of the Buddy's lines only; the learner's own words not shown live.* | P0 |
 | TLK-9 | End the session naturally when the chosen talk time (5 or 10 minutes) is reached; allow early end at any time. | P0 |
 | TLK-10 | Pause and resume within 30 minutes without losing the conversation. | P0 |
 | TLK-11 | Remember the previous session's topic and open the next session with a follow-up about it. | P0 |
@@ -159,7 +159,7 @@ The MVP has 77 functional requirements across 11 modules. **P0** is required for
 | TLK-13 | Let the learner ask the Buddy to repeat or slow down ("Sorry?", "Slower please"). | P0 |
 | TLK-14 | Keep conversations safe: refuse harmful topics and redirect politely; crisis responses use approved local helpline content. | P0 |
 | TLK-15 | Barge-in (learner speaking over the Buddy stops it) works only when the learner says they use headphones (asked once in the mic picker, since a browser can't detect them); it is off otherwise, and switches off automatically if the Buddy's voice is heard in the mic. | P0 |
-| TLK-16 | The conversation screen shows only: the companion scene, the mic state, the Buddy's caption, a subtle time-remaining arc, Pause and End. | P0 |
+| TLK-16 | **Changed 2026-11-12 (founder):** the conversation screen shows the companion scene (unchanged), the chat (TLK-8), a countdown of the time left in numbers ("3:42 left", turning to a gentle "1 minute left" near the end), a mic level meter that moves with the learner's voice, Pause, Done and End. The Talk view setting's earlier style keeps the subtle time-remaining arc with no numbers. *Was: only the scene, the mic state, the Buddy's caption, a subtle time-remaining arc, Pause and End.* | P0 |
 
 ### 5.3 Silent assessment (ASM)
 
@@ -407,7 +407,8 @@ The 9 epics below cover the happy path and every edge case we can foresee for ea
 *As a* learner, *I want* to read the Buddy's words, *so that* an unfamiliar accent doesn't block me.
 
 - **Given** captions are on (default), **when** the Buddy speaks, **then** its words appear on screen as it speaks.
-- **Given** it's my turn, **when** I speak, **then** my own words are not shown live, so I focus on speaking rather than reading.
+- **Given** it's my turn and the chat view is on (default), **when** I speak, **then** my own words appear live in my bubble as Bolo hears them, and settle when my turn ends (changed 2026-11-12).
+- **Given** I chose the earlier view in Settings → Talk view, **when** I speak, **then** my own words are not shown live, so I focus on speaking rather than reading.
 
 **US-2.9 · End the session** · P0 · TLK-9 · edge case
 
@@ -458,9 +459,10 @@ The 9 epics below cover the happy path and every edge case we can foresee for ea
 
 *As a* nervous speaker, *I want* a calm conversation screen, *so that* nothing distracts me from speaking.
 
-- **Given** a conversation is running, **when** I look at the screen, **then** I see only: the companion scene, the mic ring (listening, thinking or my turn), the Buddy's caption, a thin time-remaining arc with no numbers, a Pause button and a small End button.
-- **Given** it's my turn, **when** I speak, **then** the mic ring gently reacts to my voice level. My words, scores and timers are never shown.
-- **Given** 1 minute of talk time is left, **when** the arc reaches that point, **then** nothing changes on screen; the Buddy starts wrapping up naturally instead.
+- **Given** a conversation is running in the chat view (default, changed 2026-11-12), **when** I look at the screen, **then** I see the companion scene, the chat in the sky above it, the time left in numbers, a mic level meter, Pause, Done and a small End button. Scores are never shown.
+- **Given** it's my turn, **when** I speak, **then** the level meter moves with my voice, so I know Bolo hears me.
+- **Given** 1 minute of talk time is left, **when** the countdown reaches it, **then** it gently reads "1 minute left" (no colour change, no sound); the Buddy starts wrapping up naturally.
+- **Given** I chose the earlier view in Settings → Talk view, **when** I look at the screen, **then** I see only the scene, the mic ring, the Buddy's caption, a thin time-remaining arc with no numbers, Pause and End, as before.
 - **Given** a hint is triggered (US-2.5), **when** it appears, **then** it slides up from the bottom and disappears as soon as I start speaking.
 
 ### 6.3 E3 · Silent assessment

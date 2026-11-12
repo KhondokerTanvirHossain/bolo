@@ -1,0 +1,36 @@
+<!-- @dsCard group="Conversation" height=600 subtitle="The live chat: Bolo, you settled, you speaking, status, Latest, time left, level meter" -->
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>TalkChat — Bolo</title></head>
+<body>
+<div class="bo-scene" style="position:relative;padding:24px;min-height:600px;display:flex;flex-direction:column;gap:16px">
+  <svg class="bo-scene__art" viewBox="0 0 360 520" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+<defs><radialGradient id="bo-aura"><stop offset="0%" style="stop-color:var(--scene-sun);stop-opacity:.75"/><stop offset="42%" style="stop-color:var(--scene-sun);stop-opacity:.32"/><stop offset="100%" style="stop-color:var(--scene-sun);stop-opacity:0"/></radialGradient><radialGradient id="bo-star"><stop offset="0%" style="stop-color:var(--scene-star);stop-opacity:.7"/><stop offset="100%" style="stop-color:var(--scene-star);stop-opacity:0"/></radialGradient></defs><circle class="dust" cx="70" cy="48" r="1.4" opacity="0.6"/><circle class="dust" cx="118" cy="92" r="1.7" opacity="0.5"/><circle class="dust" cx="250" cy="40" r="1.0" opacity="0.5"/><circle class="dust" cx="300" cy="110" r="1.4" opacity="0.5"/><circle class="dust" cx="180" cy="70" r="1.2" opacity="0.5"/><circle class="dust" cx="88" cy="150" r="1.0" opacity="0.85"/><circle class="dust" cx="140" cy="190" r="1.7" opacity="0.5"/><circle class="dust" cx="286" cy="176" r="1.2" opacity="0.5"/><circle class="dust" cx="318" cy="232" r="1.7" opacity="0.5"/><circle class="dust" cx="64" cy="236" r="1.0" opacity="0.6"/><circle class="dust" cx="150" cy="240" r="1.0" opacity="0.85"/><circle class="dust" cx="226" cy="128" r="1.0" opacity="0.6"/><circle class="dust" cx="110" cy="262" r="1.0" opacity="0.6"/><circle class="dust" cx="300" cy="268" r="1.4" opacity="0.85"/><circle class="dust" cx="96" cy="30" r="1.2" opacity="0.5"/><circle class="dust" cx="206" cy="24" r="1.4" opacity="0.6"/><circle class="dust" cx="160" cy="118" r="1.0" opacity="0.6"/><circle class="dust" cx="268" cy="152" r="1.4" opacity="0.5"/><circle class="dust" cx="78" cy="112" r="1.0" opacity="0.5"/><circle class="dust" cx="196" cy="170" r="1.2" opacity="0.85"/><circle class="dust" cx="240" cy="206" r="1.7" opacity="0.7"/><circle class="dust" cx="124" cy="226" r="1.7" opacity="0.85"/><circle class="dust" cx="332" cy="58" r="1.4" opacity="0.7"/><circle class="dust" cx="48" cy="184" r="1.2" opacity="0.6"/><circle class="dust" cx="270" cy="98" r="1.2" opacity="0.5"/><circle class="dust" cx="136" cy="58" r="1.4" opacity="0.85"/><g class="twinkle" style="animation-delay:0s"><circle class="starglow" cx="96" cy="206" r="10.4"/><path class="spark" d="M96 199.5 Q96 206 102.5 206 Q96 206 96 212.5 Q96 206 89.5 206 Q96 206 96 199.5Z"/></g><g class="twinkle" style="animation-delay:1.6s"><circle class="starglow" cx="258" cy="166" r="8.0"/><path class="spark" d="M258 161 Q258 166 263 166 Q258 166 258 171 Q258 166 253 166 Q258 166 258 161Z"/></g><circle class="aura" cx="222" cy="300" r="140"/>
+<circle class="sun" cx="222" cy="300" r="54"/>
+<path class="far" d="M0 316 C64 290 118 300 168 312 C228 326 286 294 360 302 L360 520 L0 520Z"/>
+<path class="near" d="M0 386 C96 356 204 362 360 392 L360 520 L0 520Z"/>
+<g transform="translate(104 312)"><path class="figure" d="M-27 66 C-27 33 -16 18 0 18 C16 18 27 33 27 66 Z"/><circle class="figure" cx="0" cy="3" r="14"/><path class="rim" d="M9 -8 A14 14 0 0 1 14 9"/><path class="rim" d="M17 26 C22 34 25 44 26 56"/></g>
+</svg>
+  <div style="position:relative;display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;align-items:center">
+    <span class="bo-timeleft" role="timer" aria-label="3 minutes 42 seconds left"><span class="bo-timeleft__what">Free talk</span>3:42 left</span>
+    <span class="bo-timeleft" role="timer">1 minute left</span>
+    <span class="bo-timeleft" role="timer">Wrapping up</span>
+  </div>
+  <div style="position:relative;height:360px">
+    <div class="bo-chat" role="log" aria-live="polite" aria-label="Conversation" style="height:100%">
+      <div class="bo-chat__turn bo-chat__turn--bolo"><p class="bo-chat__text"><span class="bo-chat__who">Bolo</span>Tell me about a time a plan went wrong at work.</p></div>
+      <div class="bo-chat__turn bo-chat__turn--you"><span class="bo-chat__who">You</span><p class="bo-chat__text">Last month our client changed the deadline.</p></div>
+      <div class="bo-chat__turn bo-chat__turn--bolo"><p class="bo-chat__text"><span class="bo-chat__who">Bolo</span><span class="w on">Ouch.</span> <span class="w on">What</span> <span class="w on">did</span> <span class="w">you</span> <span class="w">do</span> <span class="w">first?</span></p><button class="bo-caption__replay" aria-label="Repeat that"><span class="bo-icon bo-icon--sm" aria-hidden="true">replay</span></button></div>
+      <div class="bo-chat__turn bo-chat__turn--you bo-chat__turn--live"><span class="bo-chat__who">You · speaking</span><p class="bo-chat__text">First I called my team and we</p></div>
+      <div class="bo-chat__status">Bolo is thinking…</div>
+      <button class="bo-chat__latest"><span class="bo-icon bo-icon--sm" aria-hidden="true">arrow_downward</span>Latest</button>
+    </div>
+  </div>
+  <div style="position:relative;display:flex;gap:32px;justify-content:center;align-items:center">
+    <div style="display:flex;align-items:center;gap:8px"><div class="bo-level" aria-hidden="true"><i style="--l:.25"></i><i style="--l:.55"></i><i style="--l:.9"></i><i style="--l:.6"></i><i style="--l:.3"></i></div><span class="micro" style="color:var(--on-scene-secondary)">Your voice</span></div>
+    <div style="display:flex;align-items:center;gap:8px"><div class="bo-level bo-level--rest" aria-hidden="true"><i style="--l:.15"></i><i style="--l:.15"></i><i style="--l:.15"></i><i style="--l:.15"></i><i style="--l:.15"></i></div><span class="micro" style="color:var(--on-scene-secondary)">Resting</span></div>
+  </div>
+</div>
+<script>document.querySelectorAll(".bo-chat").forEach(function(c){c.scrollTop=c.scrollHeight})</script>
+</body>
+</html>

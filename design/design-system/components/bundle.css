@@ -572,3 +572,35 @@ button { font: inherit; color: inherit; -webkit-tap-highlight-color: transparent
 .dk-perm .bo-icon { font-size: 18px; color: #444; }
 .dk-perm__btns { display: flex; justify-content: flex-end; gap: 8px; } .dk-perm__btns button { height: 34px; padding: 0 16px; border-radius: 999px; border: 1px solid #c4c7c5; background: #fff; color: #0b57d0; font: 600 14px/1 system-ui, sans-serif; cursor: pointer; } .dk-perm__btns button:last-child { background: #0b57d0; color: #fff; border-color: #0b57d0; }
 .dk-perm__note { margin-top: 10px; font-size: 11px; color: #777; border-top: 1px dashed #ddd; padding-top: 8px; }
+
+/* ---- Talk chat (TLK-8, TLK-16, changed 2026-11-12): the talk as a live chat in the sky above the companion ---- */
+.bo-chat { display: flex; flex-direction: column; gap: var(--space-2); overflow-y: auto; scrollbar-width: none; padding-top: var(--space-8);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 26%); mask-image: linear-gradient(to bottom, transparent 0, #000 26%); }
+.bo-chat > :first-child { margin-top: auto; }
+.bo-chat::-webkit-scrollbar { display: none; }
+.bo-chat__turn { position: relative; max-width: 84%; padding: var(--space-3) var(--space-4); border-radius: var(--radius-lg); border: 1.5px solid transparent;
+  background: var(--scene-plate); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); color: var(--on-scene); font: 500 18px/26px var(--font-sans); }
+.bo-chat__turn--bolo { align-self: flex-start; border-color: rgba(201, 138, 163, .72); border-bottom-left-radius: var(--radius-xs); display: flex; gap: var(--space-3); align-items: flex-start; }
+.bo-chat__turn--you { align-self: flex-end; border-color: rgba(244, 185, 66, .78); border-bottom-right-radius: var(--radius-xs); font-size: 17px; line-height: 24px; }
+.bo-chat__turn--live { border-style: dashed; }
+.bo-chat__turn--live .bo-chat__text::after { content: ""; display: inline-block; width: 2px; height: 1em; margin-left: 3px; vertical-align: -2px; background: var(--scene-sun); animation: bo-caret 1s steps(2) infinite; }
+@keyframes bo-caret { 50% { opacity: 0; } }
+.bo-chat__who { display: block; font: 650 12px/16px var(--font-sans); letter-spacing: .02em; color: var(--on-scene-secondary); margin-bottom: 2px; }
+.bo-chat__text { margin: 0; flex: 1; }
+.bo-chat__text .w { opacity: .55; transition: opacity 140ms ease; } .bo-chat__text .w.on { opacity: 1; }
+.bo-chat__status { align-self: center; color: var(--on-scene-secondary); font: 500 15px/20px var(--font-sans); padding: var(--space-1) 0; }
+.bo-chat__latest { position: sticky; bottom: var(--space-2); align-self: center; appearance: none; border: 1.5px solid rgba(255, 248, 239, .24); cursor: pointer; height: 36px; padding: 0 var(--space-4); border-radius: var(--radius-full);
+  background: var(--scene-hill-near); box-shadow: 0 6px 18px rgba(0, 0, 0, .35); color: var(--on-scene); font: 650 14px/1 var(--font-sans); display: inline-flex; align-items: center; gap: 4px; }
+.bo-timeleft { display: inline-flex; align-items: center; gap: var(--space-2); height: 36px; padding: 0 var(--space-4); border-radius: var(--radius-full);
+  background: rgba(255, 248, 239, .14); color: var(--on-scene); font: 650 15px/20px var(--font-sans); font-variant-numeric: tabular-nums; }
+.bo-timeleft__what { color: var(--on-scene-secondary); font-weight: 500; }
+.bo-level { display: inline-flex; align-items: center; gap: 3px; height: 32px; }
+.bo-level i { display: block; width: 4px; border-radius: 2px; background: var(--scene-sun); height: calc(var(--l, .15) * 32px); min-height: 4px; transition: height 60ms linear; }
+.bo-level--rest i { background: rgba(255, 248, 239, .35); }
+.bo-mic--noarc .arc { display: none; }
+.dk-talk__chat { position: absolute; top: 92px; left: 50%; transform: translateX(-50%); width: min(760px, calc(100% - 64px)); height: 35%; z-index: 2; }
+.dk-talk__chat .bo-chat { height: 100%; }
+.dk-talk__chat .bo-chat__turn--bolo { font: 500 22px/30px var(--font-sans); }
+.dk-talk__chat .bo-chat__turn--you { font: 500 19px/28px var(--font-sans); }
+@media (prefers-reduced-motion: reduce) { .bo-chat__turn--live .bo-chat__text::after { animation: none; } .bo-level i, .bo-chat__text .w { transition: none; } }
+@media (prefers-reduced-transparency: reduce) { .bo-chat__turn, .bo-chat__latest { -webkit-backdrop-filter: none; backdrop-filter: none; background: var(--scene-hill-near); } }

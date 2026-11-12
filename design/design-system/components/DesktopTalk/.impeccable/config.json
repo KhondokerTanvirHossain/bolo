@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "clipped-overflow-container",
+        "value": "*",
+        "files": [
+          "/Users/tanvirhossain/Documents/projects/github/bolo/.superpowers/brainstorm/2987-1794502570/content/talk-layout.html"
+        ],
+        "createdAt": "2026-11-12T16:56:52.950Z",
+        "reason": "Claude: throwaway brainstorm mockup; the scene frame clips the hill and glow on purpose, no popovers inside"
+      }
+    ]
+  }
+}
