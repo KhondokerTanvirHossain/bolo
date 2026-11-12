@@ -1,5 +1,6 @@
 "use client";
-import { useCallback, useEffect, useReducer, useRef } from "react";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
+import { levelOf } from "./level";
 import { firstWordSpoken } from "@/analytics/track";
 import { keepSlower } from "@/settings/settings";
 import { api } from "@/api/browser";
@@ -40,8 +41,13 @@ function socketUrl(id: string): string {
  * relay when Bolo's line has finished playing ("played"), and how long after the end of the learner's turn Bolo's
  * voice started ("heard", NFR-1).
  */
+const LEVEL_EVERY_MS = 50;
+
 export function useTalk(deviceId: string | null) {
   const [state, dispatch] = useReducer(talk, initialTalk);
+  /** P3a: the mic level (0–1) for the meter, published at most every LEVEL_EVERY_MS. */
+  const [level, setLevel] = useState(0);
+  const levelAt = useRef(0);
   const live = useRef<Live | null>(null);
 
   const teardown = useCallback(() => {
@@ -174,6 +180,8 @@ export function useTalk(deviceId: string | null) {
           const down = createDownsampler(ctx.sampleRate);
           node.port.onmessage = (ev: MessageEvent<Float32Array>) => {
             if (l.paused) return;
+            const now = performance.now();
+            if (now - levelAt.current >= LEVEL_EVERY_MS) { levelAt.current = now; setLevel(levelOf(ev.data)); }
             for (const frame of downsampleTo16k(ev.data, down)) {
               if (ws.readyState === WebSocket.OPEN) ws.send(frame.buffer);
             }
@@ -237,5 +245,5 @@ export function useTalk(deviceId: string | null) {
     if (keep) void keepSlower();
   }, []);
 
-  return { state, start, done, end, reset, pause, resume, repeat, answerKeepSlower };
+  return { state, level, start, done, end, reset, pause, resume, repeat, answerKeepSlower };
 }
