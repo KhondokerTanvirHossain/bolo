@@ -17,7 +17,8 @@ class SettingsController {
 
     private final UpdateSettingsUseCase settings;
 
-    record SettingsRequest(String buddySpeed, boolean captions) {
+    /** talkView may be left out: the current choice stays. */
+    record SettingsRequest(String buddySpeed, boolean captions, String talkView) {
     }
 
     @PutMapping("/api/me/settings")
@@ -25,6 +26,6 @@ class SettingsController {
     void update(@RequestAttribute(name = SessionCookie.LEARNER_ATTRIBUTE, required = false) LearnerId learner,
                 @RequestBody SettingsRequest body) {
         if (learner == null) throw new SignedOutException();
-        settings.update(learner, body.buddySpeed(), body.captions());
+        settings.update(learner, body.buddySpeed(), body.captions(), body.talkView());
     }
 }

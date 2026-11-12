@@ -39,6 +39,29 @@ class SettingsAcceptanceTest extends PostgresTestBase {
         assertThat((Boolean) JsonPath.read(me, "$.settings.captions")).isFalse();
     }
 
+    /** P3a: Settings → Talk view, Chat (the default) or Classic (TLK-8, TLK-16 changed 2026-11-12). */
+    @Test
+    void talkViewDefaultsToChat() throws Exception {
+        String me = client.send("GET", "/api/me", cookie, "").body();
+        assertThat((String) JsonPath.read(me, "$.settings.talkView")).isEqualTo("chat");
+    }
+
+    @Test
+    void talkViewSavesAndSurvivesOtherChanges() throws Exception {
+        assertThat(client.send("PUT", "/api/me/settings", cookie, "{\"buddySpeed\":\"normal\",\"captions\":true,\"talkView\":\"classic\"}").status()).isEqualTo(204);
+        assertThat(client.send("PUT", "/api/me/settings", cookie, "{\"buddySpeed\":\"slower\",\"captions\":true}").status()).isEqualTo(204);
+        String me = client.send("GET", "/api/me", cookie, "").body();
+        assertThat((String) JsonPath.read(me, "$.settings.talkView")).isEqualTo("classic");
+        assertThat((String) JsonPath.read(me, "$.settings.buddySpeed")).isEqualTo("slower");
+    }
+
+    @Test
+    void aBadTalkViewIs422() throws Exception {
+        var r = client.send("PUT", "/api/me/settings", cookie, "{\"buddySpeed\":\"normal\",\"captions\":true,\"talkView\":\"cinema\"}");
+        assertThat(r.status()).isEqualTo(422);
+        assertThat(r.body()).contains("talk-view");
+    }
+
     @Test
     void aBadSpeedIs422() throws Exception {
         var r = client.send("PUT", "/api/me/settings", cookie, "{\"buddySpeed\":\"turbo\",\"captions\":true}");

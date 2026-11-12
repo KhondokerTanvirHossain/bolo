@@ -17,8 +17,10 @@ public class SettingsService implements UpdateSettingsUseCase {
     private final BoloClock clock;
 
     @Override
-    public void update(LearnerId learner, String buddySpeed, boolean captions) {
+    public void update(LearnerId learner, String buddySpeed, boolean captions, String talkView) {
         if (!Settings.validSpeed(buddySpeed)) throw new RefusedException("buddy-speed");
-        settings.upsert(learner, new Settings(buddySpeed, captions), clock.now());
+        if (talkView != null && !Settings.validTalkView(talkView)) throw new RefusedException("talk-view");
+        String view = talkView != null ? talkView : settings.find(learner).map(Settings::talkView).orElse(Settings.DEFAULTS.talkView());
+        settings.upsert(learner, new Settings(buddySpeed, captions, view), clock.now());
     }
 }

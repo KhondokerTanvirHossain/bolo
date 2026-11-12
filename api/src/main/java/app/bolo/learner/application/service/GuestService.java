@@ -90,7 +90,7 @@ public class GuestService implements StartGuestUseCase, CurrentLearnerUseCase {
                 .orElse(null);
         Settings s = settings.find(id).orElse(Settings.DEFAULTS);
         LearnerView.AccountView account = accounts.find(id).map(a -> new LearnerView.AccountView(a.email(), a.name())).orElse(null);
-        return new LearnerView(id, learner.kind().dbValue(), consent, profile, new LearnerView.SettingsView(s.buddySpeed(), s.captions()),
+        return new LearnerView(id, learner.kind().dbValue(), consent, profile, new LearnerView.SettingsView(s.buddySpeed(), s.captions(), s.talkView()),
                 account, learners.unlimited(id));
     }
 
