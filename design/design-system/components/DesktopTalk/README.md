@@ -13,4 +13,4 @@ The talk fills the window as a live chat (TLK-8 and TLK-16, changed 2026-11-12).
   - Pause and Done.
 
   The keys are written underneath: Space (done), P (pause), R (repeat), Esc (end) and C (chat on or off; the same as Captions in Settings). Switching tabs pauses the talk and closes the mic.
-- Canvas: 1440 × 900 (the preview scales it down to fit). Classes: `dk-*`, plus `bo-chat*`, `bo-timeleft` and `bo-level` in `bundle.css`.
+- Canvas: 1440 × 900 (the preview scales it down to fit). Classes: `dk-*`, plus `bo-chat*`, `bo-timeleft` and `bo-talklevel` in `bundle.css`.

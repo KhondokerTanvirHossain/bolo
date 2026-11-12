@@ -20,7 +20,7 @@ The talk as a live chat in the sky above the companion (TLK-8 and TLK-16, change
 - **Status line** (`bo-chat__status`): "Bolo is thinking…", "Paused. Tap to continue", connecting and error lines. It sits under the last turn as plain text, not as a bubble.
 - **Following the talk:** the newest line is always in view, and older turns fade out at the top (`mask-image`). If the learner scrolls up, the chat stops following and shows **Latest**; tapping it scrolls down and follows again.
 - **Time left** (`bo-timeleft`): numbers ("3:42 left"). The last minute reads "1 minute left", and after time is up "Wrapping up" while Bolo says goodbye. Same colours throughout, no sound, and each change is announced once. It stops while paused.
-- **Level meter** (`bo-level`): five bars that move with your voice on your turn, and rest (`--rest`) while Bolo speaks or thinks. It is decorative (`aria-hidden`), because the mic ring carries the state.
+- **Level meter** (`bo-talklevel`): five bars that move with your voice on your turn, and rest (`--rest`) while Bolo speaks or thinks. It is decorative (`aria-hidden`), because the mic ring carries the state.
 - **Accessibility:** the chat is `role="log"` with `aria-live="polite"`, so a screen reader hears each settled turn once and never the live words. The Captions setting (C on desktop) hides the whole chat in Chat view, and the caption in Classic.
 - **Other overlays:** the hint card and the "Keep Bolo slower?" question stay where they are and sit over the chat while shown.
 
