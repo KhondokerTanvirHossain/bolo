@@ -108,6 +108,16 @@ class RatingAcceptanceTest extends PostgresTestBase {
         assertThat(row(t)).containsEntry("score", 5);
     }
 
+    /** Review I2: a face tap arriving after Send (or any score-only save) keeps the note. */
+    @Test
+    void aScoreOnlySaveKeepsTheNote() throws Exception {
+        talk();
+        String t = talk();
+        rate(t, "{\"score\":4,\"note\":\"Bolo was fun\"}");
+        rate(t, "{\"score\":4}");
+        assertThat(row(t)).containsEntry("score", 4).containsEntry("note", "Bolo was fun");
+    }
+
     @Test
     void anEmptyNoteIsNoNote() throws Exception {
         talk();

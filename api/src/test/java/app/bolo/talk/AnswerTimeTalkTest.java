@@ -68,13 +68,53 @@ class AnswerTimeTalkTest extends PostgresTestBase {
 
     /** The learner turn is saved just after turn_end goes out: wait for its row. */
     Integer learnerStart() throws InterruptedException {
+        return learnerStart(1);
+    }
+
+    /** The start delay of the learner's {@code nth} answer in this talk (1-based). */
+    Integer learnerStart(int nth) throws InterruptedException {
         for (int i = 0; i < 40; i++) {
-            var rows = jdbc.sql("select start_ms from talk_turn where session_id = ? and speaker = 'learner'")
+            var rows = jdbc.sql("select start_ms from talk_turn where session_id = ? and speaker = 'learner' order by idx")
                     .param(UUID.fromString(id)).query((rs, n) -> (Integer) rs.getObject(1)).list();
-            if (!rows.isEmpty()) return rows.getFirst();
+            if (rows.size() >= nth) return rows.get(nth - 1);
             Thread.sleep(50);
         }
-        throw new AssertionError("no learner turn saved");
+        throw new AssertionError("learner turn " + nth + " not saved");
+    }
+
+    /** Review C1: the wait after one answer ends must not count toward the next answer's start delay. */
+    @Test
+    void theSecondAnswersStartDelayIsOnlyItsOwnSilence() throws Exception {
+        stt.nextText("I want to tell you about my day at the office");
+        try (TalkSocket s = yourTurn()) {
+            s.zeros(200);
+            s.tone(400);
+            s.zeros(600);
+            s.await(3000, "\"turn_end\"");
+            s.await(3000, "\"buddy_done\"", "\"turn\":2");
+            s.json("{\"type\":\"played\",\"turn\":2}");
+            s.await(2000, "\"your_turn\"");
+            s.zeros(700);
+            s.tone(400);
+            s.zeros(600);
+            s.await(3000, "\"turn_end\"", "\"turn\":3");
+        }
+        assertThat(learnerStart(2)).isBetween(640, 800);
+    }
+
+    /** Review I1: a click or cough shorter than real speech doesn't fix the start delay; its time still counts as quiet. */
+    @Test
+    void aShortNoiseDoesNotFixTheStartDelay() throws Exception {
+        stt.nextText("I want to tell you about my day at the office");
+        try (TalkSocket s = yourTurn()) {
+            s.zeros(300);
+            s.tone(100);
+            s.zeros(500);
+            s.tone(400);
+            s.zeros(600);
+            s.await(3000, "\"turn_end\"");
+        }
+        assertThat(learnerStart()).isBetween(860, 1_000);
     }
 
     @Test

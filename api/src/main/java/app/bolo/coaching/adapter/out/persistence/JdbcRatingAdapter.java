@@ -26,7 +26,7 @@ class JdbcRatingAdapter implements RatingPort {
         jdbc.sql("""
                 insert into talk_rating (talk_id, learner_id, score, note, created_at, updated_at) values (?, ?, ?, ?, ?, ?)
                 on conflict (talk_id) do update set score = coalesce(excluded.score, talk_rating.score),
-                    note = case when excluded.score is null then talk_rating.note else excluded.note end,
+                    note = case when excluded.score is null then talk_rating.note else coalesce(excluded.note, talk_rating.note) end,
                     updated_at = excluded.updated_at""")
                 .params(talk.value(), learner.value(), score, note, Timestamp.from(at), Timestamp.from(at)).update();
     }

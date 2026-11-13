@@ -151,6 +151,12 @@ final class TalkConversation implements TalkConnection {
      * pause, resume or replay that restarted the clock before the learner spoke. Guarded by lock. */
     private Integer turnStartMs;
     private long carriedQuietMs;
+    /** Review I1: a start waits for 300 ms of speech; shorter sound (a click, a cough) is quiet time after all. */
+    static final long CONFIRM_SPEECH_MS = 300;
+    private Integer pendingStartMs;
+    private long pendingSpeechMs;
+    private long pendingElapsedMs;
+    private long pendingSilenceRunMs;
     private int shortStreak;
     private String lastBuddyText = "";
     /** P3a: the learner's live words this turn (TLK-8 changed 2026-11-12): sent at most every LIVE_EVERY_MS. */
@@ -274,9 +280,12 @@ final class TalkConversation implements TalkConnection {
                 audioMs += frameMs;
                 boolean speech = vad.isSpeech(samples(frame));
                 if (speech) {
-                    if (turnStartMs == null) turnStartMs = (int) Math.min(Integer.MAX_VALUE, carriedQuietMs + quiet.quietMs());
+                    startSpeech(frameMs);
                     quiet.onSpeech();
-                } else onQuiet(quiet.onQuiet(frameMs));
+                } else {
+                    startSilence(frameMs);
+                    onQuiet(quiet.onQuiet(frameMs));
+                }
                 if (phase == Phase.YOUR_TURN) handle(taker.onFrame(speech, audioMs));
             }
             if (phase == Phase.YOUR_TURN && elapsedMs() >= limitMs() + settings.wrapGraceMs()) wrapUpNow();
@@ -399,9 +408,11 @@ final class TalkConversation implements TalkConnection {
         out.send(message("turn_end", "turn", learnerIdx, "text", said));
         youSent = false;
         out.send(message("state", "value", "thinking", "leftMs", leftMs()));
-        turns.saveLearner(talk.id(), learnerIdx, said, keepTurnAudio(learnerIdx), turnStreamStartMs, List.copyOf(turnWords), turnStartMs);
-        turnStartMs = null;
-        carriedQuietMs = 0;
+        turns.saveLearner(talk.id(), learnerIdx, said, keepTurnAudio(learnerIdx), turnStreamStartMs, List.copyOf(turnWords),
+                turnStartMs != null ? turnStartMs : pendingStartMs);
+        resetStart();
+        // Review C1: the wait for this turn to end is not the next turn's silence (TLK-6 and the start delay).
+        quiet.onSpeech();
         lastLearnerIdx = learnerIdx;
         lastTurnStreamStartMs = turnStreamStartMs;
         lastTurnWords.clear();
@@ -673,7 +684,44 @@ final class TalkConversation implements TalkConnection {
 
     /** AX-7: the clock restarts without speech (resume, replay); the quiet time so far still counts toward the start delay. */
     private void carryQuiet() {
-        if (turnStartMs == null) carriedQuietMs += quiet.quietMs();
+        if (turnStartMs == null && pendingStartMs == null) carriedQuietMs += quiet.quietMs();
+    }
+
+    /** AX-7: a speech frame; the start is confirmed once the learner has spoken for CONFIRM_SPEECH_MS. Guarded by lock. */
+    private void startSpeech(long frameMs) {
+        if (turnStartMs != null) return;
+        if (pendingStartMs == null) {
+            pendingStartMs = (int) Math.min(Integer.MAX_VALUE, carriedQuietMs + quiet.quietMs());
+            pendingSpeechMs = 0;
+            pendingElapsedMs = 0;
+        }
+        pendingSpeechMs += frameMs;
+        pendingElapsedMs += frameMs;
+        pendingSilenceRunMs = 0;
+        if (pendingSpeechMs >= CONFIRM_SPEECH_MS) {
+            turnStartMs = pendingStartMs;
+            pendingStartMs = null;
+        }
+    }
+
+    /** AX-7: a silent frame; sound that stops before it's confirmed was noise, and its time counts as quiet. Guarded by lock. */
+    private void startSilence(long frameMs) {
+        if (turnStartMs != null || pendingStartMs == null) return;
+        pendingElapsedMs += frameMs;
+        pendingSilenceRunMs += frameMs;
+        if (pendingSilenceRunMs >= CONFIRM_SPEECH_MS) {
+            // The quiet clock already holds this silence run (it restarted at the last sound), so carry the rest.
+            carriedQuietMs = pendingStartMs + pendingElapsedMs - pendingSilenceRunMs;
+            pendingStartMs = null;
+            pendingSilenceRunMs = 0;
+        }
+    }
+
+    private void resetStart() {
+        turnStartMs = null;
+        pendingStartMs = null;
+        pendingSilenceRunMs = 0;
+        carriedQuietMs = 0;
     }
 
     /** Back from a pause: a fresh recogniser, then Bolo welcomes the learner back and asks its last question again. */

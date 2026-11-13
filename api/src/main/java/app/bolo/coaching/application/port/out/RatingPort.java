@@ -9,7 +9,7 @@ public interface RatingPort {
 
     boolean exists(TalkSessionId talk);
 
-    /** Inserts or updates; a null score keeps the saved one; the note is replaced only when a score is given. */
+    /** Inserts or updates; a null score keeps the saved one; a null note keeps the saved note (review I2). */
     void upsert(TalkSessionId talk, LearnerId learner, Integer score, String note, Instant at);
 
     /** A guest's ratings move to the account they joined (US-8.1, US-8.4). */
