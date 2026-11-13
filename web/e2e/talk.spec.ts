@@ -232,8 +232,11 @@ test("R asks Bolo to repeat; CC hides the caption; a long wait says Bolo is thin
   send(fake.ws(), { type: "caption", turn: 0, text: "What did you do today?" });
   send(fake.ws(), { type: "state", value: "your_turn" });
   await expect(page.getByText("What did you do today?")).toBeVisible();
-  await page.keyboard.press("r");
-  await expect.poll(() => fake.texts.includes('{"type":"repeat"}')).toBe(true);
+  // Flaky in CI (2 of the last 16 runs): the key can land before the talk screen listens. Press until it's heard.
+  await expect(async () => {
+    await page.keyboard.press("r");
+    expect(fake.texts.includes('{"type":"repeat"}')).toBe(true);
+  }).toPass({ timeout: 10_000 });
   await page.getByRole("button", { name: "Captions" }).click();
   await expect(page.getByText("What did you do today?")).toBeHidden();
   await page.getByRole("button", { name: "Captions" }).click();
