@@ -111,6 +111,16 @@ class JdbcDebriefAdapter implements DebriefPort {
     }
 
     @Override
+    public int readyCountBefore(LearnerId learner, TalkSessionId talk) {
+        return jdbc.sql("""
+                select count(*) from debrief d join talk_session s on s.id = d.session_id
+                where s.learner_id = ? and d.status = 'ready'
+                  and s.started_at < (select started_at from talk_session where id = ?)""")
+                .params(learner.value(), talk.value())
+                .query(Integer.class).single();
+    }
+
+    @Override
     public void logDispute(TalkSessionId talk, int fixIndex, String kind, Instant at) {
         jdbc.sql("insert into fix_dispute (session_id, fix_index, kind, at) values (?, ?, ?, ?)")
                 .params(talk.value(), fixIndex, kind, Timestamp.from(at))

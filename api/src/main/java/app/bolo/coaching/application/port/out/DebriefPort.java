@@ -44,6 +44,9 @@ public interface DebriefPort {
     /** Ready debriefs this learner already had, other than this talk's. */
     int readyCountFor(LearnerId learner, TalkSessionId except);
 
+    /** DBF-8: the learner's ready debriefs of talks that started before this one. */
+    int readyCountBefore(LearnerId learner, TalkSessionId talk);
+
     void logDispute(TalkSessionId talk, int fixIndex, String kind, Instant at);
 
     /**
