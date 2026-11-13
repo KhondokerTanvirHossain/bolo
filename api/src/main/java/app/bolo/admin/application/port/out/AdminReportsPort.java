@@ -20,4 +20,13 @@ public interface AdminReportsPort {
     List<Day> days(LocalDate from, LocalDate to);
 
     int liveTalks(Instant since);
+
+    /** DBF-8: "How was today?" — average and share of 4–5 since {@code since} (skips left out), and the newest notes. */
+    record Ratings(Double average30, Double share45, int count30, List<Note> latest) {
+    }
+
+    record Note(int score, String note, Instant at) {
+    }
+
+    Ratings ratings(Instant since, int notes);
 }

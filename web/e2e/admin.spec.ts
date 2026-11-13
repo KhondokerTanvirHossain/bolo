@@ -25,6 +25,8 @@ async function stub(page: Page, admin: boolean) {
   await page.route("**/api/admin/payments/5/approve", (r) => { paid = true; (sent as { approvals?: number }).approvals = 1; return r.fulfill({ status: 204 }); });
   await page.route("**/api/admin/waitlist", (r) => r.fulfill({ json: { counts: [{ plan: "basic", bd: 3, intl: 1 }, { plan: "premium", bd: 0, intl: 2 }],
     entries: [{ email: "far@x.com", plan: "premium", region: "intl", timeZone: "Europe/London", at: "2026-11-11T09:30:00Z" }] } }));
+  await page.route("**/api/admin/ratings", (r) => r.fulfill({ json: { average30: 3.6667, share45: 0.6667, count30: 3,
+    latest: [{ score: 4, note: "Bolo was fun", at: "2026-11-13T08:00:00Z" }] } }));
   await page.route("**/api/admin/help/7/done", (r) => { helpOpen = false; return r.fulfill({ status: 204 }); });
   return sent;
 }
@@ -139,4 +141,15 @@ test("saving the cap leaves the bKash number alone unless it was edited", async 
   await page.getByRole("button", { name: "Save" }).click();
   await expect(page.getByText("Saved.")).toBeVisible();
   expect(JSON.parse(s.settings[0])).not.toHaveProperty("bkashNumber");
+});
+
+/** DBF-8: "How was today?" — the average, the share of 4–5 against the 70% goal, and the newest notes. */
+test("the Ratings tab shows the average, the share of 4-5 and the notes", async ({ page }) => {
+  await stub(page, true);
+  await page.goto("/admin");
+  await page.getByRole("tab", { name: "Ratings" }).click();
+  await expect(page.getByText("Average (30 days): 3.7 of 5")).toBeVisible();
+  await expect(page.getByText("Rated 4–5: 67% (goal 70%)")).toBeVisible();
+  await expect(page.getByText("Ratings (30 days): 3")).toBeVisible();
+  await expect(page.getByRole("cell", { name: "Bolo was fun" })).toBeVisible();
 });

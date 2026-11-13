@@ -23,6 +23,13 @@ export async function fetchUsage(days = 14): Promise<Usage | null> {
   const r = await api.get<Usage>(`/api/admin/usage?days=${days}`);
   return r.kind === "ok" ? r.value : null;
 }
+/** DBF-8: "How was today?" over the last 30 days (skips left out) and the newest notes. */
+export type Ratings = { average30: number | null; share45: number | null; count30: number;
+  latest: { score: number; note: string; at: string }[] };
+export async function fetchRatings(): Promise<Ratings | null> {
+  const r = await api.get<Ratings>("/api/admin/ratings");
+  return r.kind === "ok" ? r.value : null;
+}
 export async function setUnlimited(id: string, on: boolean): Promise<boolean> {
   return (await api.post<void>(`/api/admin/users/${id}/unlimited`, { on })).kind === "ok";
 }

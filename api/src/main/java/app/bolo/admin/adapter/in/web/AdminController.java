@@ -76,6 +76,13 @@ class AdminController {
         return admin.usage(days);
     }
 
+    @GetMapping("/api/admin/ratings")
+    app.bolo.admin.application.port.out.AdminReportsPort.Ratings ratings(
+            @RequestAttribute(name = CurrentLearner.ATTRIBUTE, required = false) LearnerId learner) {
+        admin(learner);
+        return admin.ratings();
+    }
+
     record Reject(String reason) {
     }
 

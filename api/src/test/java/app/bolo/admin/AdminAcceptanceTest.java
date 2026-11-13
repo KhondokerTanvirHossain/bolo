@@ -126,4 +126,36 @@ class AdminAcceptanceTest extends PostgresTestBase {
         assertThat((Integer) JsonPath.read(after, "$.dailyTalkCap")).isEqualTo(cap);
         assertThat((List<Integer>) JsonPath.read(after, "$.plans[?(@.plan=='basic')].monthlyTalks")).containsExactly(30);
     }
+
+    /** DBF-8: ratings of the last 30 days (skips left out) and the newest notes. */
+    @Test
+    void ratingsReport() throws Exception {
+        jdbc.sql("delete from talk_rating").update();
+        String boss = account("boss@bolo.test");
+        assertThat((Object) JsonPath.read(client.send("GET", "/api/admin/ratings", boss, "").body(), "$.average30")).isNull();
+
+        UUID learner = UUID.fromString(id(client.consentedGuest(5)));
+        rating(learner, 5, null, 1);
+        rating(learner, 4, "Bolo was fun", 2);
+        rating(learner, 2, null, 3);
+        rating(learner, null, null, 4);
+        rating(learner, 1, "too fast", 40);
+        var r = client.send("GET", "/api/admin/ratings", boss, "");
+        assertThat(r.status()).isEqualTo(200);
+        assertThat((Double) JsonPath.read(r.body(), "$.average30")).isCloseTo(3.67, org.assertj.core.data.Offset.offset(0.01));
+        assertThat((Double) JsonPath.read(r.body(), "$.share45")).isCloseTo(0.67, org.assertj.core.data.Offset.offset(0.01));
+        assertThat((Integer) JsonPath.read(r.body(), "$.count30")).isEqualTo(3);
+        assertThat((List<String>) JsonPath.read(r.body(), "$.latest[*].note")).containsExactly("Bolo was fun", "too fast");
+        assertThat((List<Integer>) JsonPath.read(r.body(), "$.latest[*].score")).containsExactly(4, 1);
+        assertThat(client.send("GET", "/api/admin/ratings", account("someone@x.com"), "").status()).isEqualTo(404);
+    }
+
+    void rating(UUID learner, Integer score, String note, int daysAgo) {
+        UUID talk = UUID.randomUUID();
+        jdbc.sql("insert into talk_session (id, learner_id, minutes, started_at, ended_at, end_reason) values (?, ?, 5, now(), now(), 'time_up')")
+                .params(talk, learner).update();
+        jdbc.sql("insert into talk_rating (talk_id, learner_id, score, note, created_at, updated_at) "
+                        + "values (?, ?, ?, ?, now() - make_interval(days => ?), now())")
+                .params(talk, learner, score, note, daysAgo).update();
+    }
 }

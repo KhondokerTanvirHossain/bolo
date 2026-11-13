@@ -82,4 +82,20 @@ class JdbcAdminReports implements AdminReportsPort {
         return jdbc.sql("select count(*) from talk_session where ended_at is null and attached_at is not null and started_at > ?")
                 .param(Timestamp.from(since)).query(Integer.class).single();
     }
+
+    @Override
+    public Ratings ratings(Instant since, int notes) {
+        Ratings totals = jdbc.sql("""
+                select avg(score)::float8 as average, (avg(case when score >= 4 then 1.0 else 0.0 end))::float8 as share, count(*) as n
+                from talk_rating where score is not null and created_at >= ?""")
+                .param(Timestamp.from(since))
+                .query((rs, n) -> new Ratings((Double) rs.getObject("average"), (Double) rs.getObject("share"), rs.getInt("n"), List.of()))
+                .single();
+        List<Note> latest = jdbc.sql("""
+                select score, note, created_at from talk_rating where note is not null and score is not null
+                order by created_at desc limit ?""")
+                .param(notes)
+                .query((rs, n) -> new Note(rs.getInt("score"), rs.getString("note"), rs.getTimestamp("created_at").toInstant())).list();
+        return new Ratings(totals.average30(), totals.share45(), totals.count30(), latest);
+    }
 }

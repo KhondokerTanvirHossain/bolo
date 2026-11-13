@@ -1,10 +1,11 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import { approvePayment, fetchPayments, rejectPayment, type AdminPayment } from "./admin";
+import { approvePayment, fetchPayments, fetchRatings, rejectPayment, type AdminPayment, type Ratings } from "./admin";
 import { fetchHelp, fetchSettings, fetchUsage, fetchUsers, fetchWaitlist, type Waitlist, grant, helpDone, saveSettings, setUnlimited, type AdminUser, type HelpRequest, type Settings, type Usage } from "./admin";
 
-type Tab = "users" | "payments" | "help" | "waitlist" | "usage" | "settings";
-const TAB_NAMES: Record<Tab, string> = { users: "Users", payments: "Payments", help: "Help", waitlist: "Waitlist", usage: "Usage", settings: "Settings" };
+type Tab = "users" | "payments" | "help" | "waitlist" | "usage" | "ratings" | "settings";
+const TAB_NAMES: Record<Tab, string> = { users: "Users", payments: "Payments", help: "Help", waitlist: "Waitlist", usage: "Usage", ratings: "Ratings",
+  settings: "Settings" };
 const day = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "Asia/Dhaka" }) : "–");
 
 /** The founder's admin portal (P2a): users (unlock, give a plan), usage and cost, settings (daily cap, plans). */
@@ -29,6 +30,7 @@ export function AdminApp() {
       {tab === "payments" && <PaymentsTab />}
       {tab === "waitlist" && <WaitlistTab />}
       {tab === "usage" && <UsageTab />}
+      {tab === "ratings" && <RatingsTab />}
       {tab === "settings" && <SettingsTab />}
     </main>
   );
@@ -184,6 +186,29 @@ function UsageTab() {
         </table>
       </div>
       <p className="bo-footnote">Cost is an estimate from the usage ledger (speech, voice, Claude), not a bill.</p>
+    </section>
+  );
+}
+
+/** DBF-8: "How was today?" — the PRD goal is at least 70% of ratings at 4–5. */
+function RatingsTab() {
+  const [r, setR] = useState<Ratings | null>(null);
+  useEffect(() => { void fetchRatings().then(setR); }, []);
+  if (!r) return null;
+  return (
+    <section>
+      <p className="dk-sub">Average (30 days): {r.average30 == null ? "none yet" : `${r.average30.toFixed(1)} of 5`}</p>
+      <p className="dk-sub">Rated 4–5: {r.share45 == null ? "none yet" : `${Math.round(r.share45 * 100)}%`} (goal 70%)</p>
+      <p className="dk-sub">Ratings (30 days): {r.count30}</p>
+      <div className="ad-scroll">
+        <table className="ad-table">
+          <thead><tr><th>Day</th><th>Score</th><th>Note</th></tr></thead>
+          <tbody>{r.latest.map((n, i) => (
+            <tr key={i}><td>{day(n.at)}</td><td>{n.score}</td><td>{n.note}</td></tr>
+          ))}</tbody>
+        </table>
+      </div>
+      {r.latest.length === 0 && <p className="bo-footnote">No notes yet.</p>}
     </section>
   );
 }

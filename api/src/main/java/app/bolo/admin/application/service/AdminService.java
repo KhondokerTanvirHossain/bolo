@@ -112,6 +112,11 @@ public class AdminService {
                 new Now(reports.liveTalks(clock.now().minus(Duration.ofHours(2))), plans.todayCount(), plans.dailyCap()));
     }
 
+    /** DBF-8: the last 30 days of ratings and the 20 newest notes. */
+    public AdminReportsPort.Ratings ratings() {
+        return reports.ratings(clock.now().minus(Duration.ofDays(30)), 20);
+    }
+
     /** bkashNumber: null leaves it as it is; "" turns bKash payments off (P2e). */
     public record Settings(Integer dailyTalkCap, List<PlansUseCase.Plan> plans, String bkashNumber) {
     }
