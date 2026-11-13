@@ -29,12 +29,36 @@ public class AzureTextToSpeech implements TextToSpeechPort {
         this(key, region, voice, rate, voice);
     }
 
+    /** P3c (SET-5): the learner's voice key ("american-male") to an Azure voice; the Coach's voice is never one of them. */
+    private java.util.Map<String, String> buddyVoices = java.util.Map.of();
+
+    public AzureTextToSpeech(String key, String region, String voice, String rate, String coachVoice,
+                             java.util.Map<String, String> buddyVoices) {
+        this(key, region, voice, rate, coachVoice);
+        this.buddyVoices = buddyVoices.entrySet().stream().filter(e -> !e.getValue().equals(coachVoice))
+                .collect(java.util.stream.Collectors.toUnmodifiableMap(java.util.Map.Entry::getKey, java.util.Map.Entry::getValue));
+    }
+
     public AzureTextToSpeech(String key, String region, String voice, String rate, String coachVoice) {
         this.key = key;
         this.region = region;
         this.voice = voice;
         this.rate = rate;
         this.coachVoice = coachVoice;
+    }
+
+    /** The Azure voice for a key; an unknown or missing key is the default Bolo voice. */
+    String voiceFor(String buddyVoice) {
+        return buddyVoice == null ? voice : buddyVoices.getOrDefault(buddyVoice, voice);
+    }
+
+    @Override
+    public void synthesize(Voice who, String buddyVoice, String text, Consumer<byte[]> pcm24kChunk) {
+        switch (who) {
+            case COACH -> speak(coachVoice, "0%", text, pcm24kChunk);
+            case BUDDY_SLOW -> speak(voiceFor(buddyVoice), "-25%", text, pcm24kChunk);
+            default -> speak(voiceFor(buddyVoice), rate, text, pcm24kChunk);
+        }
     }
 
     @Override

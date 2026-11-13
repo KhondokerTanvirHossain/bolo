@@ -62,9 +62,9 @@ public class SpeechService implements StreamTranscriptionUseCase, SynthesizeUseC
     }
 
     @Override
-    public void synthesize(TalkContext ctx, Voice voice, String text, Consumer<byte[]> pcm24kChunk) {
+    public void synthesize(TalkContext ctx, Voice voice, String buddyVoice, String text, Consumer<byte[]> pcm24kChunk) {
         try {
-            tts.synthesize(voice, text, pcm24kChunk);
+            tts.synthesize(voice, buddyVoice, text, pcm24kChunk);
         } finally {
             usage.record(ctx.learnerId(), ctx.sessionId(), tts.vendor(), "tts", text.length(), "chars");
         }

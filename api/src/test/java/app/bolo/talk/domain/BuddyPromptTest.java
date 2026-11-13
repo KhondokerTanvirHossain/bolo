@@ -75,4 +75,29 @@ class BuddyPromptTest {
         assertThat(system).contains("built on what you remember").doesNotContain("what kind of job they're going for")
                 .doesNotContain("a real question about their situation");
     }
+
+    /** P3c (SET-6, 2026-11-13): a mood adds one style line and keeps every rule. */
+    @Test
+    void eachMoodAddsItsStyleAndKeepsTheRules() {
+        for (String mood : new String[]{"funny", "professional", "calm"}) {
+            String system = BuddyPrompt.system("work_meetings", "speaking_up", 5, null, BuddyPrompt.Opening.FROM_GOAL, mood);
+            assertThat(system).contains("Your mood is " + mood).contains("Never correct").contains("one open question")
+                    .contains("never invent a life of your own");
+            assertThat(system.toLowerCase()).doesNotContain("wrong").doesNotContain("error").doesNotContain("fail");
+        }
+    }
+
+    @Test
+    void friendlyIsTodaysPrompt() {
+        assertThat(BuddyPrompt.system("work_meetings", "speaking_up", 5, "brief", BuddyPrompt.Opening.FROM_NOTES, "friendly"))
+                .isEqualTo(BuddyPrompt.system("work_meetings", "speaking_up", 5, "brief", BuddyPrompt.Opening.FROM_NOTES));
+        assertThat(BuddyPrompt.system("work_meetings", "speaking_up", 5, null, BuddyPrompt.Opening.FROM_GOAL, "romantic"))
+                .doesNotContain("Your mood is");
+    }
+
+    @Test
+    void theMoodComesBeforeTheBrief() {
+        String system = BuddyPrompt.system("work_meetings", "speaking_up", 5, "What you remember about them: x", BuddyPrompt.Opening.FROM_NOTES, "calm");
+        assertThat(system.indexOf("Your mood is calm")).isLessThan(system.indexOf("What you remember about them"));
+    }
 }

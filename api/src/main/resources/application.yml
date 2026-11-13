@@ -81,6 +81,15 @@ bolo:
       # Alternatives if wanted: en-GB-LibbyNeural (younger, brighter), en-GB-OliviaNeural (calmer, lower).
       buddy-voice: en-GB-SoniaNeural
       buddy-rate: "-5%"
+      # P3c (SET-5, 2026-11-13): the learner picks Bolo's voice. Key = accent-gender. american-male is Guy, the one least
+      # like the Coach's Andrew; the Coach's voice is never one of these.
+      buddy-voices:
+        british-female: en-GB-SoniaNeural
+        british-male: en-GB-RyanNeural
+        american-female: en-US-AvaNeural
+        american-male: en-US-GuyNeural
+        indian-female: en-IN-NeerjaNeural
+        indian-male: en-IN-PrabhatNeural
       # The Coach is a separate character with its own voice (PRD §4).
       coach-voice: en-US-AndrewNeural
   media:

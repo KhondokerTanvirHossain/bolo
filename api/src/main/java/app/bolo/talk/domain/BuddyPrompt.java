@@ -35,6 +35,27 @@ public final class BuddyPrompt {
     public enum Opening { FOLLOW_UP, FROM_NOTES, FROM_GOAL }
 
     public static String system(String goal, String fearedMoment, int minutes, String brief, Opening opening) {
+        return system(goal, fearedMoment, minutes, brief, opening, null);
+    }
+
+    /**
+     * P3c (SET-6, 2026-11-13): Bolo's mood as one style line after the core rules (it can't override them) and before
+     * the brief. Friendly is today's prompt; an unknown mood is friendly.
+     */
+    public static String moodStyle(String mood) {
+        if (mood == null) return "";
+        return switch (mood) {
+            case "funny" -> "- Your mood is funny: playful, with light jokes, gentle teasing about the topic and the odd pun. "
+                    + "Laugh with them, never at them, and never about their English, accent or country. No jokes about sensitive subjects.\n";
+            case "professional" -> "- Your mood is professional: like a friendly colleague. A little more formal, clear and polite, "
+                    + "and questions lean toward their work and their goal. It is never a test and never a role-play of an interview.\n";
+            case "calm" -> "- Your mood is calm: gentle and very patient. Shorter sentences, simpler words, more encouragement. "
+                    + "Never rush them.\n";
+            default -> "";
+        };
+    }
+
+    public static String system(String goal, String fearedMoment, int minutes, String brief, Opening opening, String mood) {
         String focus = goal == null
                 ? "Talk about everyday life in an interesting way: their work or studies, plans, people and opinions."
                 : "Their goal is " + human(goal) + (fearedMoment == null ? "" : ", and the moment they dread most is "
@@ -66,6 +87,7 @@ public final class BuddyPrompt {
                     case FROM_GOAL -> "- Open with a short hello and a real question about their situation for their goal"
                             + (goal == null ? "" : " (" + opening(goal) + ")") + ", never a routine question.\n";
                 }
+                + moodStyle(mood)
                 + (brief == null || brief.isBlank() ? "" : "\n" + brief.strip() + "\n");
     }
 

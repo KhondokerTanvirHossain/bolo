@@ -197,7 +197,7 @@ final class TalkConversation implements TalkConnection {
         this.slow = talk.slowVoice();
         this.quiet = new QuietClock(settings.quietEncourageMs(), settings.quietHintMs(), settings.quietPauseMs());
         this.taker = new TurnTaker(settings.policy());
-        this.system = BuddyPrompt.system(talk.goal(), talk.fearedMoment(), talk.minutes(), brief, opening);
+        this.system = BuddyPrompt.system(talk.goal(), talk.fearedMoment(), talk.minutes(), brief, opening, talk.mood());
     }
 
     /** Opens the recogniser and starts Bolo's opening line, off the socket thread, and starts the watchdog. */
@@ -604,7 +604,7 @@ final class TalkConversation implements TalkConnection {
             lock.unlock();
         }
         // Runs on the TTS vendor's thread: never throw into it, and never block it (output only enqueues).
-        voice.synthesize(ctx, slow ? Voice.BUDDY_SLOW : Voice.BUDDY, sentence, chunk -> {
+        voice.synthesize(ctx, slow ? Voice.BUDDY_SLOW : Voice.BUDDY, talk.voice(), sentence, chunk -> {
             if (ended || gen != speakGen) return;
             if (serverMs[0] == null && commitAt != null) serverMs[0] = (int) (nowMs.getAsLong() - commitAt);
             out.audio(chunk);

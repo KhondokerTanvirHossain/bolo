@@ -19,6 +19,19 @@ public class FakeTextToSpeech implements TextToSpeechPort {
         return voices;
     }
 
+    private final List<String> buddyVoices = new CopyOnWriteArrayList<>();
+
+    /** P3c: every Bolo voice key asked for, in order ("default" for none); the Coach isn't recorded here (tests). */
+    public List<String> buddyVoices() {
+        return buddyVoices;
+    }
+
+    @Override
+    public void synthesize(Voice voice, String buddyVoice, String text, java.util.function.Consumer<byte[]> pcm24kChunk) {
+        if (voice != Voice.COACH) buddyVoices.add(buddyVoice == null ? "default" : buddyVoice);
+        synthesize(voice, text, pcm24kChunk);
+    }
+
     @Override
     public void synthesize(Voice voice, String text, java.util.function.Consumer<byte[]> pcm24kChunk) {
         voices.add(voice);

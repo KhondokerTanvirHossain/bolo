@@ -34,8 +34,12 @@ class SpeechConfiguration {
                                            @Value("${bolo.speech.azure.region}") String region,
                                            @Value("${bolo.speech.azure.buddy-voice}") String voice,
                                            @Value("${bolo.speech.azure.buddy-rate}") String rate,
-                                           @Value("${bolo.speech.azure.coach-voice}") String coachVoice) {
-            return new AzureTextToSpeech(requireKey(key), region, voice, rate, coachVoice);
+                                           @Value("${bolo.speech.azure.coach-voice}") String coachVoice,
+                                           org.springframework.core.env.Environment env) {
+            java.util.Map<String, String> voices = org.springframework.boot.context.properties.bind.Binder.get(env)
+                    .bind("bolo.speech.azure.buddy-voices", org.springframework.boot.context.properties.bind.Bindable.mapOf(String.class, String.class))
+                    .orElse(java.util.Map.of());
+            return new AzureTextToSpeech(requireKey(key), region, voice, rate, coachVoice, voices);
         }
 
         @Bean
