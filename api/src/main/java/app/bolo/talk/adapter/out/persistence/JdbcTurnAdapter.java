@@ -81,4 +81,13 @@ class JdbcTurnAdapter implements TurnPort {
         if (json == null || json.isBlank()) return List.of();
         return List.of(JSON.readValue(json, ScoredWord[].class));
     }
+
+    @Override
+    public List<Integer> recentStartDelays(app.bolo.common.id.LearnerId learner, int limit) {
+        return jdbc.sql("""
+                select t.start_ms from talk_turn t join talk_session s on s.id = t.session_id
+                where s.learner_id = ? and t.speaker = 'learner' and t.start_ms is not null
+                order by t.at desc, t.id desc limit ?""")
+                .params(learner.value(), limit).query(Integer.class).list();
+    }
 }

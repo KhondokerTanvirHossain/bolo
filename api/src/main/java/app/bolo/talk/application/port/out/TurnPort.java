@@ -24,4 +24,7 @@ public interface TurnPort {
     void updateScored(TalkSessionId session, int idx, List<ScoredWord> words);
 
     Optional<TalkRecord> record(TalkSessionId session);
+
+    /** AX-7: the start delays of the learner's newest learner turns that have one, across talks, newest first. */
+    List<Integer> recentStartDelays(app.bolo.common.id.LearnerId learner, int limit);
 }
