@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MOODS, moodLabel, voiceKey, voiceSummary } from "./voices";
+import { ANSWER_TIMES, MOODS, answerTimeSummary, moodLabel, voiceKey, voiceSummary } from "./voices";
 
 describe("Bolo's voice and mood (P3c)", () => {
   it("names the voice the way the Settings row shows it", () => {
@@ -19,5 +19,19 @@ describe("Bolo's voice and mood (P3c)", () => {
     expect(MOODS[2].example).toBe("Good to see you, Rafi. How did the client demo go?");
     expect(moodLabel({})).toBe("Friendly");
     expect(moodLabel({ mood: "calm" })).toBe("Calm");
+  });
+});
+
+describe("Time to answer (AX-7, changed 2026-11-14)", () => {
+  it("names the choice the way the Settings row shows it", () => {
+    expect(answerTimeSummary({ answerTime: "auto", answerTimeAuto: "relaxed" })).toBe("Automatic · Relaxed");
+    expect(answerTimeSummary({ answerTime: "quick", answerTimeAuto: "relaxed" })).toBe("Quick");
+    expect(answerTimeSummary({})).toBe("Automatic · Normal");
+  });
+
+  it("has the four choices with the design system's words", () => {
+    expect(ANSWER_TIMES.map((a) => a.value)).toEqual(["auto", "quick", "normal", "relaxed"]);
+    expect(ANSWER_TIMES[1]).toMatchObject({ label: "Quick", desc: "Bolo replies as soon as you stop. Help comes after 5 seconds of silence" });
+    expect(ANSWER_TIMES[3].desc).toBe("Plenty of time to think. Help comes after 30 seconds");
   });
 });

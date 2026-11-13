@@ -1,4 +1,4 @@
-import type { Mood, Settings, VoiceAccent, VoiceGender } from "@/settings/settings";
+import type { AnswerSpeed, AnswerTime, Mood, Settings, VoiceAccent, VoiceGender } from "@/settings/settings";
 
 /** P3c (SET-5, SET-6; design system v38 ScreenVoicePicker, ScreenMoodPicker). */
 type VoicePart = Pick<Settings, "voiceGender" | "voiceAccent" | "mood">;
@@ -38,6 +38,29 @@ export function voiceSummary(s: VoicePart): string {
 
 export function moodLabel(s: VoicePart): string {
   return (MOODS.find((m) => m.value === (s.mood ?? "friendly")) ?? MOODS[0]).label;
+}
+
+/** AX-7 (changed 2026-11-14; design system v41 ScreenAnswerTime). */
+export const ANSWER_TIMES: { value: AnswerTime; label: string; desc: string }[] = [
+  { value: "auto", label: "Automatic", desc: "Bolo learns how long you take to start answering and matches it." },
+  { value: "quick", label: "Quick", desc: "Bolo replies as soon as you stop. Help comes after 5 seconds of silence" },
+  { value: "normal", label: "Normal", desc: "A short wait after you stop. Help comes after 8 seconds" },
+  { value: "relaxed", label: "Relaxed", desc: "Plenty of time to think. Help comes after 30 seconds" },
+];
+
+type AnswerPart = Pick<Settings, "answerTime" | "answerTimeAuto">;
+
+/** Bolo's current automatic pick, e.g. "Relaxed". */
+export function autoSpeedLabel(s: AnswerPart): string {
+  const pick: AnswerSpeed = s.answerTimeAuto ?? "normal";
+  return ANSWER_TIMES.find((a) => a.value === pick)!.label;
+}
+
+/** "Automatic · Relaxed" or the chosen speed, as the Settings row shows it. */
+export function answerTimeSummary(s: AnswerPart): string {
+  const t = s.answerTime ?? "auto";
+  if (t === "auto") return `Automatic · ${autoSpeedLabel(s)}`;
+  return ANSWER_TIMES.find((a) => a.value === t)!.label;
 }
 
 /** One sample at a time across the app: starting one stops the last. */

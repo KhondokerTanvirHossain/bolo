@@ -29,7 +29,7 @@ import { clearThisBrowser } from "@/account/session";
 import { TalkScreen } from "@/talk/TalkScreen";
 import { useTalk } from "@/talk/useTalk";
 
-type View = { kind: "home" } | { kind: "practice"; pattern?: string } | { kind: "feedback"; talkId: string } | { kind: "me" } | { kind: "privacy" } | { kind: "invite" } | { kind: "memory" } | { kind: "voice" } | { kind: "mood" }
+type View = { kind: "home" } | { kind: "practice"; pattern?: string } | { kind: "feedback"; talkId: string } | { kind: "me" } | { kind: "privacy" } | { kind: "invite" } | { kind: "memory" } | { kind: "voice" } | { kind: "mood" } | { kind: "answer" }
   | { kind: "progress" } | { kind: "history" } | { kind: "session"; talkId: string; from: "progress" | "history" }
   | { kind: "intro"; day: number } | { kind: "drills"; talkId: string };
 
@@ -184,17 +184,18 @@ export function FirstTalkScreen({ deviceId }: { deviceId: string | null }) {
       </AppShell>
     );
   }
-  if (view.kind === "me" || view.kind === "privacy" || view.kind === "invite" || view.kind === "memory" || view.kind === "voice" || view.kind === "mood") {
+  if (view.kind === "me" || view.kind === "privacy" || view.kind === "invite" || view.kind === "memory" || view.kind === "voice" || view.kind === "mood" || view.kind === "answer") {
     return (
       <AppShell tab="me" onTab={toTab} foot={foot}>
         {view.kind === "invite" ? <InviteScreen onBack={() => setView({ kind: "me" })} />
           : view.kind === "memory" ? <MemoryScreen onBack={() => setView({ kind: "me" })} />
-          : view.kind === "voice" || view.kind === "mood" ? <VoiceMoodScreen kind={view.kind} onBack={() => setView({ kind: "me" })} />
+          : view.kind === "voice" || view.kind === "mood" || view.kind === "answer" ? <VoiceMoodScreen kind={view.kind} onBack={() => setView({ kind: "me" })} />
           : view.kind === "me"
           ? <MeScreen me={me} onPrivacy={() => setView({ kind: "privacy" })} onSignedIn={signedIn}
               onInvite={me?.kind === "account" ? () => setView({ kind: "invite" }) : undefined}
               onMemory={me ? () => setView({ kind: "memory" }) : undefined}
-              onVoice={() => setView({ kind: "voice" })} onMood={() => setView({ kind: "mood" })} />
+              onVoice={() => setView({ kind: "voice" })} onMood={() => setView({ kind: "mood" })}
+              onAnswerTime={() => setView({ kind: "answer" })} />
           : <PrivacyScreen keep={me?.consent?.keepRecordings === true}
               onDeleted={() => void clearThisBrowser().then(() => window.location.assign("/"))} />}
       </AppShell>

@@ -4,14 +4,14 @@ import { fetchSettings, saveSettings, type Settings } from "@/settings/settings"
 import { Icon } from "@/scene/Scene";
 import { MoodPicker } from "@/voice/MoodPicker";
 import { VoicePicker } from "@/voice/VoicePicker";
-import { moodLabel, voiceSummary } from "@/voice/voices";
+import { ANSWER_TIMES, answerTimeSummary, autoSpeedLabel, moodLabel, voiceSummary } from "@/voice/voices";
 
 /**
  * US-9.5 Speaking group (P0 rows): Bolo's speed, captions and the talk view (P3a), as chips. Each change saves at once,
  * for the next talk. P3c (SET-5, SET-6; design system v38): Bolo's voice and mood come first. On a phone they are rows
  * that open their pickers; on desktop (DesktopVoiceMood) the pickers sit here, side by side.
  */
-export function SpeakingSettings({ onVoice, onMood }: { onVoice?: () => void; onMood?: () => void } = {}) {
+export function SpeakingSettings({ onVoice, onMood, onAnswerTime }: { onVoice?: () => void; onMood?: () => void; onAnswerTime?: () => void } = {}) {
   const [s, setS] = useState<Settings | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "unreadable" | "failed">("loading");
   useEffect(() => { void fetchSettings().then((v) => { if (v) { setS(v); setState("ready"); } else setState("unreadable"); }); }, []);
@@ -55,6 +55,24 @@ export function SpeakingSettings({ onVoice, onMood }: { onVoice?: () => void; on
       <div className="bo-speak__rows">
         {open("Bolo's voice", s ? voiceSummary(s) : "", onVoice)}
         {open("Bolo's mood", s ? moodLabel(s) : "", onMood)}
+        {open("Time to answer", s ? answerTimeSummary(s) : "", onAnswerTime)}
+      </div>
+      {/* AX-7 (v42 DesktopMe): on desktop the four choices sit in the row. */}
+      <div className="bo-row bo-speak__desk">
+        <div className="bo-row__body"><div className="bo-row__title">Time to answer</div>
+          <div className="bo-row__sub">Automatic matches how long you take to start. Right now: {s ? autoSpeedLabel(s) : ""}</div></div>
+        <div role="radiogroup" aria-label="Time to answer" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {ANSWER_TIMES.map((a) => (
+            <button key={a.value} className="bo-chip" role="radio" aria-checked={(s?.answerTime ?? "auto") === a.value && !!s} disabled={!s}
+              onClick={() => s && (s.answerTime ?? "auto") !== a.value && void change({ ...s, answerTime: a.value })}>{a.label}</button>
+          ))}
+        </div>
+      </div>
+      <div className="bo-row">
+        <div className="bo-row__body"><div className="bo-row__title">I stammer</div>
+          <div className="bo-row__sub">Bolo waits through repeats and pauses, and your feedback won&apos;t count them</div></div>
+        <button className="bo-toggle" role="switch" aria-checked={s?.stammer === true} aria-label="I stammer" disabled={!s}
+          onClick={() => s && void change({ ...s, stammer: !s.stammer })} />
       </div>
       <div className="bo-row">
         <div className="bo-row__body"><div className="bo-row__title">Bolo&apos;s speed</div><div className="bo-row__sub">From your next talk</div></div>

@@ -934,9 +934,12 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #0b0816; }
 
 /* P3c: phone shows rows that open the pickers; desktop (>= 900px) shows the pickers in place (DesktopVoiceMood). */
 .bo-speak__inline { display: none; }
+.bo-speak__desk { display: none; }
 @media (min-width: 900px) {
   .bo-speak__inline { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-6); margin-bottom: var(--space-5); }
   .bo-speak__rows { display: none; }
+  .bo-speak__desk { display: flex; }
 }
+.bo-chip[role="radio"][aria-checked="true"] { background: var(--sun-soft); color: var(--ink); border-color: var(--sun-ink); }
 .bo-voicemood { max-width: 560px; }
 .bo-voicemood .bo-group__title, .bo-speak__inline .bo-group__title { padding-left: 0; margin: var(--space-2) 0 var(--space-2); }
