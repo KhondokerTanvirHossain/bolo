@@ -424,3 +424,25 @@ The learner picks Bolo's voice and mood in Me → Speaking (on a phone, the rows
   4. Start a talk: Bolo speaks in the American male voice, playfully.
   5. Switch back to British · Female and Friendly.
 
+## Time to answer and I stammer (AX-7 changed, AX-8; 2026-11-14)
+
+Me → Speaking → **Time to answer** (Automatic, Quick, Normal, Relaxed) and **I stammer**. Both apply from the next talk.
+
+- **The timings** are in `application.yml`: the normal speed is the flat `bolo.talk.*` keys (`quiet-encourage-ms`, `quiet-hint-ms`, `quiet-pause-ms`, `speculate-after-ms`, `end-after-ms`, `unfinished-end-after-ms`); quick and relaxed are under `bolo.talk.speeds.*`; the stammer floors are under `bolo.talk.stammer.*` (each value is at least the floor when I stammer is on).
+- **Automatic.** Each learner turn saves `talk_turn.start_ms` (quiet time before they started, kept across a pause or replay). After every talk, the median of the last 30 picks the speed into `learner_settings.answer_time_auto` (under 3 s quick, up to 6 s normal, else relaxed; fewer than 5 answers changes nothing). A speed the learner chose (`answer_time`) is never changed.
+- **I stammer** also makes the feedback leave out repeats and broken-off words from sound cards, ignores blocks in words per minute, and tells the Coach never to pick or fix repeats, blocks or pauses.
+- **Test it by clicking:**
+  1. Me → Speaking → Time to answer: it says "Automatic · Normal" for a new learner.
+  2. Choose Relaxed, start a talk and stay quiet: Bolo waits about 30 s before helping.
+  3. Choose Quick: Bolo helps after about 5 s and replies sooner when you stop.
+  4. Turn I stammer on, start a talk, pause for 3 s mid-sentence: Bolo doesn't take the turn.
+  5. Set it back to Automatic and I stammer off.
+
+## Ratings (DBF-8; 2026-11-14)
+
+"How was today?" shows after the feedback of a learner's 2nd, 3rd and 4th talks with feedback, then every third (7, 10, 13 …), never after the first, never twice for one talk, never from History.
+
+- **Data:** `talk_rating` (one row per talk; `score` 1–5, or null when skipped; `note` up to 300 characters).
+- **API:** `GET /api/talk/{id}/rating` → `{ask}`; `PUT /api/talk/{id}/rating` `{score, note}`. A skip never clears a saved score.
+- **Admin → Ratings:** the 30-day average, the share of 4–5 (the PRD goal is at least 70%), the count, and the 20 newest notes.
+- **Test it by clicking:** finish the feedback of your 2nd talk (go to the last card). The sheet asks "How was today?"; tap a face, write a note, Send. Then check Admin → Ratings.

@@ -185,7 +185,7 @@ The MVP has 77 functional requirements across 11 modules. **P0** is required for
 | DBF-5 | Show the session's 4 skill scores as simple levels (Building / Good / Strong), not raw numbers. | P0 |
 | DBF-6 | Let the learner view the full transcript of the session, with fixed spots highlighted. | P1 |
 | DBF-7 | Offer a Bangla explanation for any tip (tap "বাংলায়"). | P1 |
-| DBF-8 | Ask for a session rating after sessions 2, 3 and 4, then every 3rd session; never after session 1. | P0 |
+| DBF-8 | Ask for a session rating after sessions 2, 3 and 4, then every 3rd session; never after session 1. Five faces and an optional typed note (≤ 300 characters). *Changed 2026-11-13 (founder): a typed note instead of a voice comment.* | P0 |
 
 ### 5.5 Drills (DRL)
 
@@ -209,7 +209,7 @@ The MVP has 77 functional requirements across 11 modules. **P0** is required for
 | PRG-4 | Track a gentle streak that allows 1 rest day per week without breaking it. | P1 |
 | PRG-5 | Send a daily reminder at the learner's chosen time, with a Buddy-story hook. Maximum 1 per day. On the free plan after the first week, remind only when free talks are available. | P0 |
 | PRG-6 | Stop reminders after 3 ignored in a row; send one "we're here when you're ready" message after 7 days. | P0 |
-| PRG-7 | End the first loop in a fixed order: drills offer → save progress → reminder time with notification permission. No rating in session 1. | P0 |
+| PRG-7 | End the first loop in a fixed order: drills offer → reminder time with notification permission. No rating in session 1. *Changed 2026-11-13 (founder): sign-in stays before the first talk, so the save-progress step is dropped.* | P0 |
 | PRG-8 | History lists past sessions newest first, each with date, topic and its fixes. | P0 |
 
 ### 5.7 Scenarios (SCN)
@@ -608,7 +608,7 @@ The learner never sees this epic directly; it powers the debrief. Its stories ar
 
 *As a* product team, *we want* a quick rating after each debrief, *so that* we can track satisfaction.
 
-- **Given** I finish the debrief of session 2, 3 or 4, or of every 3rd session after that, **when** the summary closes, **then** I'm asked "How was today?" with 5 faces. One tap answers it, and there's an optional voice comment.
+- **Given** I finish the debrief of session 2, 3 or 4, or of every 3rd session after that, **when** the summary closes, **then** I'm asked "How was today?" with 5 faces. One tap answers it, and there's an optional typed note ("Want to tell us why?", up to 300 characters). *Changed 2026-11-13 (founder): typed note, not a voice comment.*
 - **Given** it's my first session, **when** the debrief ends, **then** no rating is asked, so the first loop ends without extra steps.
 
 ### 6.5 E5 · Drills
@@ -968,8 +968,8 @@ The MVP meets WCAG 2.1 AA in every supported browser. Because Bolo is voice-firs
 | AX-4 | Layouts work with system font scaling up to 200% without clipping or horizontal scrolling. | P0 |
 | AX-5 | Results never rely on colour alone: each result has an icon and a word (✓ Nailed it, ↗ Closer, ↻ Once more). | P0 |
 | AX-6 | Every audio element has a text equivalent (captions for the Buddy, transcripts for clips). | P0 |
-| AX-7 | Silence timers (TLK-6) can be extended to 2× or turned off in settings. | P0 |
-| AX-8 | "I stammer" setting: repetitions and blocks are not counted as fluency issues, and the Buddy never re-prompts during a block. | P0 |
+| AX-7 | Time to answer: Automatic (the default), Quick, Normal or Relaxed sets the silence help (TLK-6) and when a turn ends (TLK-4). Automatic picks the speed from how long the learner takes to start answering (median of the last 30 answers: under 3 s Quick, up to 6 s Normal, else Relaxed). Never off: Bolo always helps and then pauses the talk. *Changed 2026-11-14 (founder): replaces "2× or off".* | P0 |
+| AX-8 | "I stammer" setting: repetitions and blocks are not counted as fluency issues, and the Buddy never re-prompts during a block (silence help never before 16 s; a turn never ends before 4.5 s of silence). | P0 |
 | AX-9 | Respect the system "Remove animations" setting; no flashing content. | P0 |
 | AX-10 | Haptic tick when it's the learner's turn, as well as the visual mic ring. | P1 |
 
@@ -999,16 +999,17 @@ The MVP meets WCAG 2.1 AA in every supported browser. Because Bolo is voice-firs
 
 **US-9.4 · Take more time** · P0 · AX-7
 
-*As a* learner who needs more time to think, *I want* longer silence limits, *so that* I'm not rushed.
+*As a* learner who needs more (or less) time to think, *I want* Bolo to wait the way I talk, *so that* I'm neither rushed nor kept waiting. *Changed 2026-11-14 (founder).*
 
-- **Given** I set "More time to answer", **when** I'm silent, **then** the prompts come at 16 / 30 / 90 s instead of 8 / 15 / 45 s.
-- **Given** I turn silence prompts off, **when** I'm silent, **then** the Buddy waits until I speak or tap.
+- **Given** Time to answer is Automatic (the default), **when** I have talked, **then** Bolo picks Quick, Normal or Relaxed from how long I take to start my answers, and Settings shows "Automatic · Relaxed" (or the pick).
+- **Given** I choose Quick / Normal / Relaxed, **when** I'm silent, **then** Bolo helps at 5 / 8 / 30 s, shows a starter card at 10 / 15 / 45 s and pauses the talk at 30 s / 45 s / 2 min; my turn ends 1.5 / 2.5 / 3.5 s after I stop.
+- **Given** I chose a speed, **when** Bolo measures my talks, **then** my choice stays until I change it.
 
 **US-9.5 · Adjust how Bolo sounds and looks** · P0 (theme and data saver P1) · SET-1, SET-2, SET-3, SET-4
 
 *As a* learner, *I want* a few simple settings, *so that* Bolo suits my ears, eyes and data plan.
 
-- **Given** I open Me → Settings, **when** it loads, **then** I see 2 groups only: Speaking (Buddy speed, captions, more time to answer, I stammer, ambient sound) and Display & data (scene and companion, voice-only mode, theme, data saver).
+- **Given** I open Me → Settings, **when** it loads, **then** I see 2 groups only: Speaking (Buddy speed, captions, time to answer, I stammer, ambient sound) and Display & data (scene and companion, voice-only mode, theme, data saver).
 - **Given** I set Buddy speed to Slower, **when** the Buddy next speaks, **then** it uses the slower speed in every session until I change it.
 - **Given** I turn captions off, **when** the Buddy speaks, **then** no text appears; caption and UI text size always follow the phone's font setting.
 - **Given** theme is set to System (default, P1), **when** my phone switches to dark mode, **then** Bolo switches too and still meets AX-1 contrast.
