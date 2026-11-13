@@ -19,6 +19,8 @@ import java.util.function.Consumer;
 @Slf4j
 public class AzureTextToSpeech implements TextToSpeechPort {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AzureTextToSpeech.class);
+
     private final String key;
     private final String region;
     private final String voice;
@@ -56,8 +58,27 @@ public class AzureTextToSpeech implements TextToSpeechPort {
     public void synthesize(Voice who, String buddyVoice, String text, Consumer<byte[]> pcm24kChunk) {
         switch (who) {
             case COACH -> speak(coachVoice, "0%", text, pcm24kChunk);
-            case BUDDY_SLOW -> speak(voiceFor(buddyVoice), "-25%", text, pcm24kChunk);
-            default -> speak(voiceFor(buddyVoice), rate, text, pcm24kChunk);
+            case BUDDY_SLOW -> speakChosen(voiceFor(buddyVoice), "-25%", text, pcm24kChunk);
+            default -> speakChosen(voiceFor(buddyVoice), rate, text, pcm24kChunk);
+        }
+    }
+
+    /**
+     * Review (P3c): a chosen voice Azure can't speak (renamed, retired, not in this region) falls back to the default
+     * voice, as long as no audio went out yet, so the talk goes on instead of ending.
+     */
+    private void speakChosen(String voiceName, String voiceRate, String text, Consumer<byte[]> pcm24kChunk) {
+        if (voiceName.equals(voice)) {
+            speak(voiceName, voiceRate, text, pcm24kChunk);
+            return;
+        }
+        boolean[] sent = {false};
+        try {
+            speak(voiceName, voiceRate, text, chunk -> { sent[0] = true; pcm24kChunk.accept(chunk); });
+        } catch (RuntimeException e) {
+            if (sent[0]) throw e;
+            log.error("Bolo's voice {} failed ({}); speaking in the default voice instead", voiceName, e.getClass().getSimpleName());
+            speak(voice, voiceRate, text, pcm24kChunk);
         }
     }
 
@@ -80,7 +101,7 @@ public class AzureTextToSpeech implements TextToSpeechPort {
         speak(voice, rate, text, pcm24kChunk);
     }
 
-    private void speak(String voiceName, String voiceRate, String text, Consumer<byte[]> pcm24kChunk) {
+    void speak(String voiceName, String voiceRate, String text, Consumer<byte[]> pcm24kChunk) {
         SpeechConfig config = SpeechConfig.fromSubscription(key, region);
         config.setSpeechSynthesisOutputFormat(SpeechSynthesisOutputFormat.Raw24Khz16BitMonoPcm);
         SpeechSynthesizer synthesizer = new SpeechSynthesizer(config, (AudioConfig) null);

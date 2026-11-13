@@ -16,8 +16,14 @@ export function SpeakingSettings({ onVoice, onMood }: { onVoice?: () => void; on
   const [state, setState] = useState<"loading" | "ready" | "unreadable" | "failed">("loading");
   useEffect(() => { void fetchSettings().then((v) => { if (v) { setS(v); setState("ready"); } else setState("unreadable"); }); }, []);
   const change = async (next: Settings) => {
+    const before = s;
     setS(next);
-    setState((await saveSettings(next)) ? "ready" : "failed");
+    if (await saveSettings(next)) setState("ready");
+    else {
+      // Review (P3c): show what is really saved, not the choice that failed.
+      setS(before);
+      setState("failed");
+    }
   };
   const chip = (label: string, on: boolean, pick: () => void) => (
     <button className="bo-chip" style={{ justifyContent: "center" }} aria-pressed={on} onClick={pick} disabled={!s}>{label}</button>

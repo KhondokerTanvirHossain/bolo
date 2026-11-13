@@ -125,4 +125,15 @@ test.describe("desktop", () => {
     await page.getByRole("radio", { name: /Professional/ }).click();
     expect(saved.at(-1)).toMatchObject({ mood: "professional" });
   });
+
+  /** Review (P3c): a failed save puts the earlier choice back, as on the phone screens. */
+  test("a failed save puts the earlier voice back", async ({ page }) => {
+    await stub(page);
+    await page.route("**/api/me/settings", (r) => r.fulfill({ status: 500, json: { code: "unknown" } }));
+    await openMe(page);
+    await page.getByRole("radio", { name: /American/ }).click();
+    await expect(page.getByText("That didn't save. Try again.")).toBeVisible();
+    await expect(page.getByRole("radio", { name: /British/ })).toHaveAttribute("aria-checked", "true");
+    await expect(page.getByRole("radio", { name: /American/ })).toHaveAttribute("aria-checked", "false");
+  });
 });

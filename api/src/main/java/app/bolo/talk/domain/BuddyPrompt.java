@@ -48,7 +48,7 @@ public final class BuddyPrompt {
             case "funny" -> "- Your mood is funny: playful, with light jokes, gentle teasing about the topic and the odd pun. "
                     + "Laugh with them, never at them, and never about their English, accent or country. No jokes about sensitive subjects.\n";
             case "professional" -> "- Your mood is professional: like a friendly colleague. A little more formal, clear and polite, "
-                    + "and questions lean toward their work and their goal. It is never a test and never a role-play of an interview.\n";
+                    + "and questions lean toward their goal and what they are working on for it. It is never a test and never a role-play of an interview.\n";
             case "calm" -> "- Your mood is calm: gentle and very patient. Shorter sentences, simpler words, more encouragement. "
                     + "Never rush them.\n";
             default -> "";

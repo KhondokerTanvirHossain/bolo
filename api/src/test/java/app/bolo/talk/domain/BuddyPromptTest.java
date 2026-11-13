@@ -100,4 +100,10 @@ class BuddyPromptTest {
         String system = BuddyPrompt.system("work_meetings", "speaking_up", 5, "What you remember about them: x", BuddyPrompt.Opening.FROM_NOTES, "calm");
         assertThat(system.indexOf("Your mood is calm")).isLessThan(system.indexOf("What you remember about them"));
     }
+
+    /** Review (P3c): Professional leans toward the learner's own goal, not "work" for everyone (study abroad too). */
+    @Test
+    void professionalLeansTowardTheirGoal() {
+        assertThat(BuddyPrompt.moodStyle("professional")).contains("toward their goal").doesNotContain("their work");
+    }
 }
