@@ -1,0 +1,27 @@
+<!-- @dsCard group="Screens" height=820 subtitle="After the feedback on talk 2, 3, 4 and every 3rd: How was today? One tap, an optional note" page -->
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>ScreenRating — Bolo</title></head>
+<body>
+<div class="bo-stage bo-stage--center" style="padding:24px 0">
+<div class="bo-phone">
+<div class="bo-statusbar"><span>9:41</span><span><span class="bo-icon bo-icon--sm" aria-hidden="true">signal_cellular_alt</span> <span class="bo-icon bo-icon--sm" aria-hidden="true">battery_5_bar</span></span></div>
+<div class="bo-sheet-host" style="flex:1;border-radius:0">
+  <div style="padding:var(--space-5)">
+    <h1 class="large-title" style="margin:var(--space-2) 0 var(--space-3)">Nice talk, Rafi</h1>
+    <p class="bo-row__sub" style="font-size:15px">3 fixes to try · Sentences: Good · Vocabulary: Building</p>
+  </div>
+  <div class="bo-sheet-scrim"></div>
+  <div class="bo-sheet" role="dialog" aria-label="How was today?">
+    <div class="bo-sheet__grabber"></div>
+    <p class="bo-sheet__title">How was today?</p>
+    <div class="bo-faces" role="radiogroup" aria-label="How was today?"><button class="bo-face" role="radio" aria-checked="false" aria-label="Bad"><span class="bo-icon" aria-hidden="true">sentiment_very_dissatisfied</span>Bad</button><button class="bo-face" role="radio" aria-checked="false" aria-label="Not great"><span class="bo-icon" aria-hidden="true">sentiment_dissatisfied</span>Not great</button><button class="bo-face" role="radio" aria-checked="false" aria-label="Okay"><span class="bo-icon" aria-hidden="true">sentiment_neutral</span>Okay</button><button class="bo-face" role="radio" aria-checked="true" aria-label="Good"><span class="bo-icon" aria-hidden="true">sentiment_satisfied</span>Good</button><button class="bo-face" role="radio" aria-checked="false" aria-label="Great"><span class="bo-icon" aria-hidden="true">sentiment_very_satisfied</span>Great</button></div>
+    <label class="bo-row__sub" for="rate-note" style="font-size:14px">Want to tell us why? (optional)</label>
+    <textarea id="rate-note" class="bo-note" maxlength="300" placeholder="Bolo asked good questions about my demo"></textarea>
+    <div style="display:flex;gap:var(--space-2);margin-top:var(--space-3)"><button class="bo-btn bo-btn--primary" style="flex:1">Send</button><button class="bo-btn bo-btn--quiet-neutral">Not now</button></div>
+  </div>
+</div>
+</div>
+</div>
+</body>
+</html>

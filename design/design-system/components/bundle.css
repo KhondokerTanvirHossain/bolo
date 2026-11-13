@@ -624,3 +624,14 @@ button { font: inherit; color: inherit; -webkit-tap-highlight-color: transparent
 .bo-mood .bo-radio { margin-top: 2px; }
 .bo-mood__example { display: block; margin-top: var(--space-2); padding-left: var(--space-3); border-left: 2px solid var(--line-strong); font: 500 15px/22px var(--font-sans); color: var(--ink-secondary); }
 .bo-mood[aria-checked="true"] .bo-mood__example { border-left-color: var(--sun-ink); }
+
+/* ---------- Session rating (v39, 2026-11-13; DBF-8, US-4.11): five faces after the feedback ---------- */
+.bo-faces { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--space-2); margin: var(--space-2) 0 var(--space-3); }
+.bo-face { appearance: none; border: 0; background: transparent; border-radius: var(--radius-lg); min-height: 76px; padding: var(--space-2) 0; display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--ink-secondary); font: 600 13px/16px var(--font-sans); cursor: pointer; transition: transform 160ms cubic-bezier(.25,1,.5,1), background-color 160ms ease; }
+.bo-face .bo-icon { font-size: 36px; color: var(--ink); }
+.bo-face:active { transform: scale(.96); }
+.bo-face[aria-checked="true"] { background: var(--sun-soft); color: var(--ink); }
+.bo-face[aria-checked="true"] .bo-icon { color: var(--sun-ink); font-variation-settings: "FILL" 1; }
+.bo-face:focus-visible { outline: 2px solid var(--sun-ink); outline-offset: 2px; }
+.bo-note { width: 100%; min-height: 84px; resize: none; border: 0; border-radius: var(--radius-md); box-shadow: inset 0 0 0 1.5px var(--line-strong); background: var(--surface); padding: var(--space-3) var(--space-4); font: 500 16px/22px var(--font-sans); color: var(--ink); }
+.bo-note:focus { outline: none; box-shadow: inset 0 0 0 2px var(--focus-ring); }
