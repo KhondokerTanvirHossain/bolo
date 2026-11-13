@@ -12,11 +12,12 @@ import { QUESTIONS } from "@/onboarding/questions";
 import { Icon } from "@/scene/Scene";
 import { SpeakingSettings } from "./SpeakingSettings";
 import { HelpDialog } from "@/help/HelpDialog";
+import { fetchMemory, meRowLine, type MemoryView } from "@/memory/memory";
 
 const LABEL: Record<string, string> = Object.fromEntries(QUESTIONS.flatMap((q) => q.chips.map((c) => [c.value, c.label] as const)));
 
 /** ScreenMe: who you are, your goals, Speaking, Privacy, and sign in or out. Nothing nested more than 2 levels. */
-export function MeScreen({ me, onPrivacy, onSignedIn, onInvite }: { me: LearnerView | null; onPrivacy: () => void; onSignedIn: (l: LearnerView) => void; onInvite?: () => void }) {
+export function MeScreen({ me, onPrivacy, onSignedIn, onInvite, onMemory }: { me: LearnerView | null; onPrivacy: () => void; onSignedIn: (l: LearnerView) => void; onInvite?: () => void; onMemory?: () => void }) {
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const account = me?.account ?? null;
@@ -27,6 +28,11 @@ export function MeScreen({ me, onPrivacy, onSignedIn, onInvite }: { me: LearnerV
   const [payment, setPayment] = useState<MyPayment | null>(null);
   useEffect(() => { if (account) void myPayment().then(setPayment); }, [account]);
   const paymentStatus = paymentLine(payment);
+  /** P3b: the "What Bolo remembers" row's sub-line. */
+  const [memory, setMemory] = useState<MemoryView | null>(null);
+  const memoryRow = Boolean(onMemory);
+  // Keyed on whether the row shows, not on the callback (a new function each render would refetch forever).
+  useEffect(() => { if (memoryRow) void fetchMemory().then(setMemory); }, [memoryRow]);
   const google = async () => {
     setBusy(true);
     setProblem(null);
@@ -71,6 +77,14 @@ export function MeScreen({ me, onPrivacy, onSignedIn, onInvite }: { me: LearnerV
       <SpeakingSettings />
       <h2 className="dk-h2" style={{ marginTop: 28 }}>Privacy</h2>
       <div className="bo-group">
+        {onMemory && (
+          <button className="bo-row" style={{ width: "100%", border: 0, background: "transparent", textAlign: "left", color: "inherit", font: "inherit" }} onClick={onMemory}>
+            <Icon name="auto_stories" />
+            <span className="bo-row__body"><span className="bo-row__title" style={{ display: "block" }}>What Bolo remembers</span>
+              <span className="bo-row__sub">{meRowLine(memory)}</span></span>
+            <Icon name="chevron_right" />
+          </button>
+        )}
         <button className="bo-row" style={{ width: "100%", border: 0, background: "transparent", textAlign: "left", color: "inherit", font: "inherit" }} onClick={onPrivacy}>
           <Icon name="shield_person" />
           <span className="bo-row__body"><span className="bo-row__title" style={{ display: "block" }}>Privacy</span>

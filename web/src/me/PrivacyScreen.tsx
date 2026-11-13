@@ -43,6 +43,7 @@ export function PrivacyScreen({ keep, onDeleted }: { keep: boolean; onDeleted: (
         <ul className="bo-row__sub" style={{ margin: "6px 0 0", paddingLeft: 18, fontSize: 15, lineHeight: "22px" }}>
           <li>Your voice clips, only if you choose to keep them (90 days). Your Day 1 clip stays until you delete everything, so you can hear your progress.</li>
           <li>The text of your talks and your scores, for feedback and progress.</li>
+          <li>Short notes from your talks, so Bolo can follow up. See them in Me → What Bolo remembers.</li>
           <li>Your Google email and name, when you sign in.</li>
         </ul>
         <p className="bo-row__sub" style={{ margin: "10px 0 0", fontSize: 15 }}>
