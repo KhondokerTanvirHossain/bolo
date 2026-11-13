@@ -404,3 +404,23 @@ Bolo keeps one short note per learner (table `learner_memory`) and uses it to op
 - **Privacy.** There is no admin view of anyone's note. Delete everything removes it (database cascade). Turning remembering off deletes the note.
 - **Costs.** One Sonnet call per finished talk, on the `usage` table like the Coach's.
 
+## Bolo's voice and mood (SET-5, SET-6; 2026-11-13)
+
+The learner picks Bolo's voice and mood in Me → Speaking (on a phone, the rows "Bolo's voice" and "Bolo's mood"; on desktop, the pickers in place). Both apply from the next talk; a live talk keeps what it started with.
+
+- **The voice map** is in `api/src/main/resources/application.yml` under `bolo.speech.azure.buddy-voices`. The key is accent-gender:
+  - British: female Sonia (the default), male Ryan;
+  - American: female Ava, male Guy;
+  - Indian: female Neerja, male Prabhat.
+  - To change a voice, edit the map and deploy. An unknown key falls back to Sonia.
+  - Any voice equal to the Coach's (`en-US-AndrewNeural`) is dropped, so Bolo never sounds like the Coach.
+  - Guy was picked for American male because it's the American voice least like Andrew.
+- **Mood** is one style line in Bolo's instructions (`BuddyPrompt.moodStyle`): funny, professional or calm (friendly adds nothing). It never changes the voice or the speed.
+- **Hear it.** `GET /api/voices/{key}/sample` synthesises "Hi, I'm Bolo. What would you like to talk about today?" once per voice, then serves it from memory until the next deploy. It's limited to 20 requests a minute per learner (429). The first play of each voice after a deploy costs one short Azure call.
+- **Test it by clicking** on bolo.eliooo.org:
+  1. Me → Speaking → Bolo's voice. Press Hear it on all 6 voices (switch Female/Male).
+  2. Choose American · Male.
+  3. Bolo's mood → Funny.
+  4. Start a talk: Bolo speaks in the American male voice, playfully.
+  5. Switch back to British · Female and Friendly.
+

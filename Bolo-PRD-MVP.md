@@ -55,7 +55,7 @@ The MVP serves one persona well: a working professional who writes English comfo
 | --- | --- | --- |
 | Platform | Desktop browser (closed beta), then mobile browser as an installable web app (public launch); English UI with Bangla helper text | Android app (Play Store wrapper of the web app first), native iOS |
 | Onboarding | Voice-first: consent, mic, 3 questions, 30-second Day 1 clip; account after the first loop | Placement test |
-| Buddy | 1 Buddy persona; free talk + daily topic | Multiple personas, learner chooses voice/accent |
+| Buddy | 1 Buddy persona with 6 voices (Female/Male; British, American, Indian) and 4 moods, chosen in Settings (SET-5, SET-6, added 2026-11-13); free talk + daily topic | More accents and personas |
 | Scenarios | Free talk, Standup Rehearsal | Job interview, IELTS, presentation, clinical role-play |
 | Assessment | Pronunciation (Bangla-specific sounds), fluency, sentence building, vocabulary | Intonation and stress detail, band estimates |
 | Coach debrief | 1 strength + max 3 fixes, own-voice clips, dispute a fix | Weekly human-teacher review |
@@ -242,6 +242,8 @@ The MVP has 77 functional requirements across 11 modules. **P0** is required for
 | SET-2 | Captions on/off; text size follows the system setting. | P0 |
 | SET-3 | Light and dark themes following the system. | P1 |
 | SET-4 | Data saver: lower audio quality, no auto-play of model audio. | P1 |
+| SET-5 | **Added 2026-11-13 (founder):** Bolo's voice: Female or Male, and British, American or Indian English (6 voices; default British, Female). "Hear it" plays a short sample of each before choosing. Applies from the next talk; the Coach keeps its own voice, and how the learner is understood and scored doesn't change. | P0 |
+| SET-6 | **Added 2026-11-13 (founder):** Bolo's mood: Friendly (default), Funny, Professional or Calm. A mood changes Bolo's words and manner only, works with every voice, and keeps every rule (never correct, one question, safety and crisis care, "Bolo knows you"). Applies from the next talk. A romantic mood is the founder's to decide later. | P0 |
 
 ### 5.10 Home (HOM)
 
