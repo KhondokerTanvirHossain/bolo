@@ -117,4 +117,82 @@ class SettingsAcceptanceTest extends PostgresTestBase {
         assertThat(m.status()).isEqualTo(422);
         assertThat(m.body()).contains("\"mood\"");
     }
+
+    // AX-7 (changed 2026-11-14) and AX-8: Time to answer and I stammer.
+
+    @org.springframework.beans.factory.annotation.Autowired
+    app.bolo.learner.application.port.in.AutoAnswerTimeUseCase autoAnswerTime;
+
+    private app.bolo.common.id.LearnerId learner() throws Exception {
+        String me = client.send("GET", "/api/me", cookie, "").body();
+        return new app.bolo.common.id.LearnerId(java.util.UUID.fromString(JsonPath.read(me, "$.learnerId")));
+    }
+
+    @Test
+    void newLearnerHasAutomaticAnswerTimeAtNormalAndNoStammer() throws Exception {
+        String me = client.send("GET", "/api/me", cookie, "").body();
+        assertThat((String) JsonPath.read(me, "$.settings.answerTime")).isEqualTo("auto");
+        assertThat((String) JsonPath.read(me, "$.settings.answerTimeAuto")).isEqualTo("normal");
+        assertThat((Boolean) JsonPath.read(me, "$.settings.stammer")).isFalse();
+    }
+
+    @Test
+    void savesAnswerTimeAndStammer() throws Exception {
+        assertThat(client.send("PUT", "/api/me/settings", cookie,
+                "{\"buddySpeed\":\"normal\",\"captions\":true,\"answerTime\":\"relaxed\",\"stammer\":true}").status()).isEqualTo(204);
+        String me = client.send("GET", "/api/me", cookie, "").body();
+        assertThat((String) JsonPath.read(me, "$.settings.answerTime")).isEqualTo("relaxed");
+        assertThat((Boolean) JsonPath.read(me, "$.settings.stammer")).isTrue();
+    }
+
+    @Test
+    void aBadAnswerTimeIs422() throws Exception {
+        var r = client.send("PUT", "/api/me/settings", cookie, "{\"buddySpeed\":\"normal\",\"captions\":true,\"answerTime\":\"slow\"}");
+        assertThat(r.status()).isEqualTo(422);
+        assertThat(r.body()).contains("answer-time");
+    }
+
+    @Test
+    void leavingThemOutKeepsTheCurrentChoice() throws Exception {
+        client.send("PUT", "/api/me/settings", cookie, "{\"buddySpeed\":\"normal\",\"captions\":true,\"answerTime\":\"quick\",\"stammer\":true}");
+        client.send("PUT", "/api/me/settings", cookie, "{\"buddySpeed\":\"slower\",\"captions\":true}");
+        String me = client.send("GET", "/api/me", cookie, "").body();
+        assertThat((String) JsonPath.read(me, "$.settings.answerTime")).isEqualTo("quick");
+        assertThat((Boolean) JsonPath.read(me, "$.settings.stammer")).isTrue();
+    }
+
+    /** Review focus 3: only Bolo sets the automatic pick; a stale value in the learner's save is ignored. */
+    @Test
+    void theClientCannotSetTheAutomaticPick() throws Exception {
+        autoAnswerTime.record(learner(), "relaxed");
+        client.send("PUT", "/api/me/settings", cookie, "{\"buddySpeed\":\"normal\",\"captions\":true,\"answerTimeAuto\":\"quick\"}");
+        String me = client.send("GET", "/api/me", cookie, "").body();
+        assertThat((String) JsonPath.read(me, "$.settings.answerTimeAuto")).isEqualTo("relaxed");
+    }
+
+    @Test
+    void theAutomaticPickNeverChangesTheLearnersChoice() throws Exception {
+        client.send("PUT", "/api/me/settings", cookie, "{\"buddySpeed\":\"slower\",\"captions\":false,\"answerTime\":\"quick\"}");
+        autoAnswerTime.record(learner(), "relaxed");
+        String me = client.send("GET", "/api/me", cookie, "").body();
+        assertThat((String) JsonPath.read(me, "$.settings.answerTime")).isEqualTo("quick");
+        assertThat((String) JsonPath.read(me, "$.settings.answerTimeAuto")).isEqualTo("relaxed");
+        assertThat((String) JsonPath.read(me, "$.settings.buddySpeed")).isEqualTo("slower");
+        assertThat((Boolean) JsonPath.read(me, "$.settings.captions")).isFalse();
+    }
+
+    @Test
+    void theAutomaticPickBeforeAnySaveKeepsTheDefaults() throws Exception {
+        autoAnswerTime.record(learner(), "quick");
+        String me = client.send("GET", "/api/me", cookie, "").body();
+        assertThat((String) JsonPath.read(me, "$.settings.answerTimeAuto")).isEqualTo("quick");
+        assertThat((String) JsonPath.read(me, "$.settings.buddySpeed")).isEqualTo("normal");
+        assertThat((String) JsonPath.read(me, "$.settings.answerTime")).isEqualTo("auto");
+    }
+
+    @Test
+    void theAutomaticPickRefusesOtherValues() throws Exception {
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> autoAnswerTime.record(learner(), "auto"))
+                .isInstanceOf(app.bolo.common.error.RefusedException.class);
+    }
 }

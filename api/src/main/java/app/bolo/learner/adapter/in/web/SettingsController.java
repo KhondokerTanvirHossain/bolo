@@ -17,8 +17,10 @@ class SettingsController {
 
     private final UpdateSettingsUseCase settings;
 
-    /** talkView, voiceGender, voiceAccent and mood may be left out: the current choice stays. */
-    record SettingsRequest(String buddySpeed, boolean captions, String talkView, String voiceGender, String voiceAccent, String mood) {
+    /** talkView, voiceGender, voiceAccent, mood, answerTime and stammer may be left out: the current choice stays.
+     * answerTimeAuto is Bolo's to set and is ignored here. */
+    record SettingsRequest(String buddySpeed, boolean captions, String talkView, String voiceGender, String voiceAccent, String mood,
+                           String answerTime, Boolean stammer) {
     }
 
     @PutMapping("/api/me/settings")
@@ -26,6 +28,7 @@ class SettingsController {
     void update(@RequestAttribute(name = SessionCookie.LEARNER_ATTRIBUTE, required = false) LearnerId learner,
                 @RequestBody SettingsRequest body) {
         if (learner == null) throw new SignedOutException();
-        settings.update(learner, body.buddySpeed(), body.captions(), body.talkView(), body.voiceGender(), body.voiceAccent(), body.mood());
+        settings.update(learner, body.buddySpeed(), body.captions(), body.talkView(), body.voiceGender(), body.voiceAccent(), body.mood(),
+                body.answerTime(), body.stammer());
     }
 }

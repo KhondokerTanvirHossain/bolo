@@ -18,7 +18,8 @@ public record LearnerView(LearnerId learnerId, String kind, ConsentView consent,
     /** Stable keys, e.g. goal "job_interviews"; talkMinutes is 5 or 10. */
     /** buddySpeed: "normal" | "slower" (SET-1); captions on or off (SET-2). */
     /** P3c: voiceGender (female, male), voiceAccent (british, american, indian), mood (friendly, funny, professional, calm). */
-    public record SettingsView(String buddySpeed, boolean captions, String talkView, String voiceGender, String voiceAccent, String mood) {
+    public record SettingsView(String buddySpeed, boolean captions, String talkView, String voiceGender, String voiceAccent, String mood,
+                               String answerTime, String answerTimeAuto, boolean stammer) {
     }
 
     public record ProfileView(String goal, String fearedMoment, int talkMinutes) {
