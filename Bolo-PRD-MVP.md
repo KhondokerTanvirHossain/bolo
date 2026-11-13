@@ -154,11 +154,12 @@ The MVP has 77 functional requirements across 11 modules. **P0** is required for
 | TLK-8 | **Changed 2026-11-12 (founder):** the talk is shown as a live chat in the sky above the companion. The Buddy's turns appear word by word as it speaks; the learner's own words appear live while they speak (exactly as recognised) and settle into their bubble when the turn ends; earlier turns stay and the chat scrolls itself. A **Talk view** setting keeps the earlier style (Buddy caption only, learner's words not shown) for anyone who prefers it. *Was: a live caption of the Buddy's lines only; the learner's own words not shown live.* | P0 |
 | TLK-9 | End the session naturally when the chosen talk time (5 or 10 minutes) is reached; allow early end at any time. | P0 |
 | TLK-10 | Pause and resume within 30 minutes without losing the conversation. | P0 |
-| TLK-11 | Remember the previous session's topic and open the next session with a follow-up about it. | P0 |
+| TLK-11 | **Changed 2026-11-13 (founder):** Bolo keeps short notes about the learner (plans they mentioned, what's on their mind, how their practice is going, simple facts about them, their interests), updated after each talk. Each talk opens with one personal follow-up, picked on the server (a plan that's due, then a worry, then their practice); a follow-up that opened a talk rests for 2 talks and 3 days. The first talk opens from the setup answers with a real question about the learner's situation. The learner steers: if they change the subject, Bolo follows. Nothing sensitive is noted (health, religion, politics, money amounts, contact details) and a crisis talk is never used. *Was: remember the previous session's topic and open the next session with a follow-up about it.* | P0 |
 | TLK-12 | Steer the conversation to elicit the learner's current focus sounds and patterns. | P1 |
 | TLK-13 | Let the learner ask the Buddy to repeat or slow down ("Sorry?", "Slower please"). | P0 |
 | TLK-14 | Keep conversations safe: refuse harmful topics and redirect politely; crisis responses use approved local helpline content. | P0 |
 | TLK-15 | Barge-in (learner speaking over the Buddy stops it) works only when the learner says they use headphones (asked once in the mic picker, since a browser can't detect them); it is off otherwise, and switches off automatically if the Buddy's voice is heard in the mic. | P0 |
+| TLK-17 | **Added 2026-11-13 (founder):** talks are interesting, not routine. Bolo asks about stories, opinions, small what-ifs and choices, with light, real rehearsal of the learner's goal; it never asks what they ate, what they did today or about the weather unless they bring it up. It reacts with a short opinion or feeling of its own, but never invents a life of its own. Each talk gets 3 fresh ideas from a topic bank (20 per goal, plus 20 general), never a recent topic. | P0 |
 | TLK-16 | **Changed 2026-11-12 (founder):** the conversation screen shows the companion scene (unchanged), the chat (TLK-8), a countdown of the time left in numbers ("3:42 left", turning to a gentle "1 minute left" near the end), a mic level meter that moves with the learner's voice, Pause, Done and End. The Talk view setting's earlier style keeps the subtle time-remaining arc with no numbers. *Was: only the scene, the mic state, the Buddy's caption, a subtle time-remaining arc, Pause and End.* | P0 |
 
 ### 5.3 Silent assessment (ASM)
@@ -230,6 +231,7 @@ The MVP has 77 functional requirements across 11 modules. **P0** is required for
 | ACC-5 | Free plan: 7 talks in the first 7 days (counted from the first talk), then 2 talks a month, for everyone (a talk is one 5-minute conversation plus its Coach debrief). Paid monthly plans: Basic ৳300, Premium ৳500, Ultimate ৳1000. Plans differ only in how many talks they include; every plan has every feature, and every plan states its talk limit as a number (set after the cost test). No plan is called "Unlimited". | P1 |
 | ACC-6 | Payment via bKash and card; monthly billing; change plan or cancel anytime, cancelling in 2 taps. | P1 |
 | ACC-7 | Restore goals, history, patterns and the Day 1 clip on a new device or browser after sign-in. | P0 |
+| ACC-9 | **Added 2026-11-13 (founder):** Me → What Bolo remembers shows Bolo's notes (To follow up, About you, Your interests). The learner can remove any line, switch remembering off (which deletes the notes), or forget everything. Only the learner sees them; there is no admin view. Delete everything removes them. | P0 |
 | ACC-8 | In Bolo's first year only: a learner whose 3 invited friends each finish a first talk gets one month of Basic free. Invites are shared by hand through a link; Bolo never reads contacts or sends anything itself. | P1 |
 
 ### 5.9 Settings and accessibility (SET)
@@ -426,7 +428,7 @@ The 9 epics below cover the happy path and every edge case we can foresee for ea
 - **Given** I return within 30 minutes, **when** I open the app, **then** "Continue your chat" resumes it and the Buddy recaps the last question.
 - **Given** I return after 30 minutes, **when** I open the app, **then** the session is closed. If I'd spoken ≥ 60 s, its debrief is waiting for me.
 
-**US-2.11 · Continue yesterday's story** · P0 · TLK-11
+**US-2.11 · Continue yesterday's story** · P0 · TLK-11 · *Changed 2026-11-13 (founder): one personal follow-up from Bolo's notes; see TLK-11, TLK-17, ACC-9.*
 
 *As a* returning learner, *I want* the Buddy to remember what we talked about, *so that* it feels like a real friend.
 

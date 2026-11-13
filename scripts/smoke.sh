@@ -15,6 +15,7 @@ check "title is just Bolo" yes "$(curl -s --max-time 15 "$BOLO_URL/" | grep -q '
 check "api health" '{"status":"UP"}' "$(curl -s --max-time 15 "$BOLO_URL/api/actuator/health")"
 check "pricing page" 200 "$(code "$BOLO_URL/pricing")"
 check "invite status needs a session" 401 "$(code "$BOLO_URL/api/referral")"
+check "what Bolo remembers needs a session" 401 "$(code "$BOLO_URL/api/memory")"
 check "plans are public" yes "$(curl -s --max-time 15 "$BOLO_URL/api/plans" | grep -q '"plan":"basic"' && echo yes || echo no)"
 # Open sign-up (P1d): anyone gets in without an invite, but a guest signs in with Google before the first talk.
 # The live probes use their own unlimited probes invite (scripts/probe-invite.sh).

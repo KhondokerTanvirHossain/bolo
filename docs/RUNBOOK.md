@@ -387,3 +387,20 @@ The goal: someone who has never seen Bolo gets from opening it to talk to feedba
   - `turn_end` now carries `text`;
   - `caption` carries `repeatOf` for an R repeat;
   - `state`, `paused` and `resumed` carry `leftMs`.
+
+## What Bolo remembers (TLK-11 changed, TLK-17, ACC-9; 2026-11-13)
+
+Bolo keeps one short note per learner (table `learner_memory`) and uses it to open each talk with a personal follow-up.
+
+- **How the note is updated.** After a talk ends with at least 2 learner turns, one `claude-sonnet-5-5` call (`bolo.memory.model`) rewrites the note from the old note and the transcript. It runs off the talk's path, usually within about 15 seconds of the talk ending. It never runs for a talk that ended in crisis care, or for a learner with remembering off. If the call fails, the old note stays and the log says `memory update failed` (no learner words are logged).
+- **Caps** (enforced in code): 12 About lines, 8 follow-ups, 8 interests, 6 recent topics, 120 characters a line. A follow-up drops 30 days after it was last mentioned.
+- **The opener.** When a talk opens, the server picks one follow-up: a plan that's due, then a worry, then practice. That follow-up then rests for 2 talks and 3 days. Bolo also gets 3 ideas from the topic bank (`memory/domain/TopicBank.java`).
+- **Test it by clicking** on bolo.eliooo.org:
+  1. In a talk, mention a plan with a day ("I'm sending my CV to the bank on Thursday"), and talk for at least 2 turns.
+  2. End the talk and wait about 15 seconds.
+  3. Open Me → What Bolo remembers: the plan is under To follow up.
+  4. Start the next talk. Bolo's first line asks about it.
+  5. Remove the line (×), and the talk after that doesn't bring it up.
+- **Privacy.** There is no admin view of anyone's note. Delete everything removes it (database cascade). Turning remembering off deletes the note.
+- **Costs.** One Sonnet call per finished talk, on the `usage` table like the Coach's.
+
