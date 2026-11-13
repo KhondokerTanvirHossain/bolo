@@ -95,7 +95,7 @@ final class QueuedOutput implements TalkOutput {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         } catch (Exception e) {
-            log.debug("talk socket write failed: {}", e.getClass().getSimpleName());
+            log.warn("talk socket {} write failed: {}", session.getId(), e.getClass().getSimpleName());
             closeNow(CloseStatus.SESSION_NOT_RELIABLE);
         }
     }

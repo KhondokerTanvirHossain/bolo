@@ -63,6 +63,8 @@ class TalkSocketHandler extends AbstractWebSocketHandler {
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
+        // Diagnosis (2026-11-14, talks closing seconds in on a phone): how each talk socket closed.
+        log.info("talk socket {} closed: {}", session.getId(), status.getCode());
         TalkConnection c = (TalkConnection) session.getAttributes().get(CONNECTION);
         if (c != null) c.onClosed();
     }

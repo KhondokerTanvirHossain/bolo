@@ -45,4 +45,11 @@ class EventRulesTest {
         assertThat(EventRules.problem("onboarding_step_completed", Map.of("duration_s", 1711223344L))).isPresent();
         assertThat(EventRules.problem("first_word_spoken", Map.of("seconds_since_first_open", 86_400))).isEmpty();
     }
+
+    /** A talk that the browser had to close (mic or audio setup failed, playback threw, the socket dropped). */
+    @Test
+    void theBrowserMayReportWhyATalkStopped() {
+        assertThat(EventRules.problem("talk_client_error", Map.of("stage", "audio_setup", "error", "notallowederror"))).isEmpty();
+        assertThat(EventRules.problem("talk_client_error", Map.of("stage", "socket_closed", "code", 1006, "by_server", false))).isEmpty();
+    }
 }

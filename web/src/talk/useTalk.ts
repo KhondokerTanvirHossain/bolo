@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { levelOf } from "./level";
-import { firstWordSpoken } from "@/analytics/track";
+import { firstWordSpoken, track } from "@/analytics/track";
 import { keepSlower } from "@/settings/settings";
 import { api } from "@/api/browser";
 import { classifyMicError } from "@/audio/micErrors";
@@ -12,6 +12,8 @@ import { initialTalk, talk, type ServerMessage } from "./talkState";
 
 type Live = {
   ws: WebSocket | null;
+  /** Diagnosis: one playback error report per talk. */
+  playErrorSent?: boolean;
   ctx: AudioContext;
   mic: MediaStream | null;
   node: AudioWorkletNode | null;
@@ -42,6 +44,12 @@ function socketUrl(id: string): string {
  * voice started ("heard", NFR-1).
  */
 const LEVEL_EVERY_MS = 50;
+
+/** Diagnosis (2026-11-14): why the browser stopped a talk, as a short key (no text, PRD §10). */
+export function errorKey(e: unknown): string {
+  const name = e instanceof Error || (typeof e === "object" && e !== null && "name" in e) ? String((e as { name: unknown }).name) : "unknown";
+  return name.toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 40) || "unknown";
+}
 
 export function useTalk(deviceId: string | null) {
   const [state, dispatch] = useReducer(talk, initialTalk);
@@ -124,7 +132,16 @@ export function useTalk(deviceId: string | null) {
     l.ws = ws;
     ws.onmessage = (e: MessageEvent<string | ArrayBuffer>) => {
       if (typeof e.data !== "string") {
-        if (!l.paused) l.player.enqueue(e.data);
+        if (!l.paused) {
+          try {
+            l.player.enqueue(e.data);
+          } catch (err) {
+            if (!l.playErrorSent) {
+              l.playErrorSent = true;
+              void track("talk_client_error", { stage: "play", error: errorKey(err), bytes: e.data.byteLength });
+            }
+          }
+        }
         return;
       }
       let m: ServerMessage;
@@ -152,7 +169,8 @@ export function useTalk(deviceId: string | null) {
       // P3a: the countdown runs from when the server's time left arrived.
       dispatch("leftMs" in m ? { ...m, at: Date.now() } : m);
     };
-    ws.onclose = () => {
+    ws.onclose = (ev: CloseEvent) => {
+      if (!l.endedByServer && !l.ended) void track("talk_client_error", { stage: "socket_closed", code: ev.code, by_server: false });
       dispatch({ type: "socket_closed" });
       if (live.current !== l) return;
       // The server ends a crisis talk once the script is sent; let the learner hear all of it before closing audio.
@@ -191,7 +209,8 @@ export function useTalk(deviceId: string | null) {
               if (ws.readyState === WebSocket.OPEN) ws.send(frame.buffer);
             }
           };
-        } catch {
+        } catch (err) {
+          void track("talk_client_error", { stage: "audio_setup", error: errorKey(err) });
           ws.close();
         }
       })();

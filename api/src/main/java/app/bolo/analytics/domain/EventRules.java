@@ -12,7 +12,7 @@ import java.util.regex.Pattern;
 public final class EventRules {
 
     public static final Set<String> CLIENT = Set.of("app_first_open", "mic_permission_result", "onboarding_step_completed",
-            "first_word_spoken", "debrief_viewed");
+            "first_word_spoken", "debrief_viewed", "talk_client_error");
     public static final Set<String> SERVER = Set.of("session_started", "session_ended");
     static final int MAX_PROPS = 8;
     private static final Pattern KEY = Pattern.compile("[a-z0-9_]{1,40}");
