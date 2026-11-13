@@ -133,6 +133,24 @@ public class MemoryService implements MemoryUseCase {
         });
     }
 
+    @Override
+    public MemoryView view(LearnerId learner) {
+        MemoryPort.Row row = memory.find(learner).orElse(null);
+        if (row == null) return new MemoryView(true, List.of(), List.of(), List.of());
+        MemoryNote n = row.note();
+        return new MemoryView(row.enabled(),
+                n.threads().stream().map(t -> new FollowUp(t.id(), t.kind().json(), t.text(), t.said())).toList(),
+                n.about().stream().map(l -> new Item(l.id(), l.text())).toList(),
+                n.interests().stream().map(l -> new Item(l.id(), l.text())).toList());
+    }
+
+    /** A guest signed into an existing account: the guest's note joins the account's. */
+    @EventListener
+    public void onLearnerMerged(app.bolo.common.event.LearnerMerged e) {
+        memory.move(e.from(), e.to());
+    }
+
+    @Override
     public void remove(LearnerId learner, String lineId) {
         tx.executeWithoutResult(s -> {
             MemoryPort.Row row = memory.lockOrCreate(learner);
@@ -141,6 +159,7 @@ public class MemoryService implements MemoryUseCase {
     }
 
     /** Off deletes the note and stops new notes; on starts from an empty note. */
+    @Override
     public void setEnabled(LearnerId learner, boolean on) {
         tx.executeWithoutResult(s -> {
             MemoryPort.Row row = memory.lockOrCreate(learner);
@@ -150,6 +169,7 @@ public class MemoryService implements MemoryUseCase {
     }
 
     /** "Forget everything Bolo knows": empties the note; remembering stays as it was. */
+    @Override
     public void forget(LearnerId learner) {
         tx.executeWithoutResult(s -> {
             MemoryPort.Row row = memory.lockOrCreate(learner);
