@@ -25,6 +25,7 @@ import app.bolo.talk.application.port.out.TurnPort;
 import app.bolo.talk.domain.BuddyPrompt;
 import app.bolo.talk.domain.CrisisScreen;
 import app.bolo.talk.domain.CrisisScript;
+import app.bolo.talk.domain.Pace;
 import app.bolo.talk.domain.QuietClock;
 import app.bolo.talk.domain.TalkIntent;
 import app.bolo.talk.domain.EndReason;
@@ -146,6 +147,10 @@ final class TalkConversation implements TalkConnection {
     private Reply speculation;
     private Reply speaking;
     private QuietClock quiet;
+    /** AX-7: the quiet time before this learner turn's first speech (null until then), and quiet time carried over a
+     * pause, resume or replay that restarted the clock before the learner spoke. Guarded by lock. */
+    private Integer turnStartMs;
+    private long carriedQuietMs;
     private int shortStreak;
     private String lastBuddyText = "";
     /** P3a: the learner's live words this turn (TLK-8 changed 2026-11-12): sent at most every LIVE_EVERY_MS. */
@@ -195,8 +200,9 @@ final class TalkConversation implements TalkConnection {
         this.safety = safety;
         this.starters = starters;
         this.slow = talk.slowVoice();
-        this.quiet = new QuietClock(settings.quietEncourageMs(), settings.quietHintMs(), settings.quietPauseMs());
-        this.taker = new TurnTaker(settings.policy());
+        Pace pace = settings.pace(talk.answerTime(), talk.stammer());
+        this.quiet = new QuietClock(pace);
+        this.taker = new TurnTaker(pace.policy());
         this.system = BuddyPrompt.system(talk.goal(), talk.fearedMoment(), talk.minutes(), brief, opening, talk.mood());
     }
 
@@ -267,8 +273,10 @@ final class TalkConversation implements TalkConnection {
                 long frameMs = Math.max(1, frame.length / BYTES_PER_MS);
                 audioMs += frameMs;
                 boolean speech = vad.isSpeech(samples(frame));
-                if (speech) quiet.onSpeech();
-                else onQuiet(quiet.onQuiet(frameMs));
+                if (speech) {
+                    if (turnStartMs == null) turnStartMs = (int) Math.min(Integer.MAX_VALUE, carriedQuietMs + quiet.quietMs());
+                    quiet.onSpeech();
+                } else onQuiet(quiet.onQuiet(frameMs));
                 if (phase == Phase.YOUR_TURN) handle(taker.onFrame(speech, audioMs));
             }
             if (phase == Phase.YOUR_TURN && elapsedMs() >= limitMs() + settings.wrapGraceMs()) wrapUpNow();
@@ -391,7 +399,9 @@ final class TalkConversation implements TalkConnection {
         out.send(message("turn_end", "turn", learnerIdx, "text", said));
         youSent = false;
         out.send(message("state", "value", "thinking", "leftMs", leftMs()));
-        turns.saveLearner(talk.id(), learnerIdx, said, keepTurnAudio(learnerIdx), turnStreamStartMs, List.copyOf(turnWords));
+        turns.saveLearner(talk.id(), learnerIdx, said, keepTurnAudio(learnerIdx), turnStreamStartMs, List.copyOf(turnWords), turnStartMs);
+        turnStartMs = null;
+        carriedQuietMs = 0;
         lastLearnerIdx = learnerIdx;
         lastTurnStreamStartMs = turnStreamStartMs;
         lastTurnWords.clear();
@@ -661,6 +671,11 @@ final class TalkConversation implements TalkConnection {
         if (s != null) Thread.ofVirtual().start(s::close);
     }
 
+    /** AX-7: the clock restarts without speech (resume, replay); the quiet time so far still counts toward the start delay. */
+    private void carryQuiet() {
+        if (turnStartMs == null) carriedQuietMs += quiet.quietMs();
+    }
+
     /** Back from a pause: a fresh recogniser, then Bolo welcomes the learner back and asks its last question again. */
     private void resume() {
         int token;
@@ -689,6 +704,7 @@ final class TalkConversation implements TalkConnection {
                     }
                     sttBaseMs = streamMs;
                     stt = opened;
+                    carryQuiet();
                     quiet.onSpeech();
                     cue(BuddyPrompt.RESUME_CUE);
                 } finally {
@@ -706,6 +722,7 @@ final class TalkConversation implements TalkConnection {
         try {
             if (ended || phase != Phase.YOUR_TURN || lastBuddyText.isBlank()) return;
             phase = Phase.THINKING;
+            carryQuiet();
             quiet.onSpeech();
             history.add(new Exchange(Exchange.Speaker.LEARNER, "(asks you to repeat that)"));
             history.add(new Exchange(Exchange.Speaker.BUDDY, lastBuddyText));

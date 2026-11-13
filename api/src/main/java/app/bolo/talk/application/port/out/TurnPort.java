@@ -15,8 +15,10 @@ public interface TurnPort {
 
     void heard(TalkSessionId session, int idx, int ms);
 
-    /** A learner turn with its audio (key into the audio store, may be null), stream start and scored words. */
-    void saveLearner(TalkSessionId session, int idx, String text, String audioKey, long streamStartMs, List<ScoredWord> words);
+    /** A learner turn with its audio (key into the audio store, may be null), stream start and scored words.
+     * {@code startMs}: how long the learner was quiet before starting it (AX-7), null when unknown. */
+    void saveLearner(TalkSessionId session, int idx, String text, String audioKey, long streamStartMs, List<ScoredWord> words,
+                     Integer startMs);
 
     /** Scores that arrived after the turn was saved (the recogniser's last segment can lag the turn end). */
     void updateScored(TalkSessionId session, int idx, List<ScoredWord> words);

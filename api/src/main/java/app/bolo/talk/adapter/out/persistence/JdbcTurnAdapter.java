@@ -42,12 +42,14 @@ class JdbcTurnAdapter implements TurnPort {
     }
 
     @Override
-    public void saveLearner(TalkSessionId session, int idx, String text, String audioKey, long streamStartMs, List<ScoredWord> words) {
+    public void saveLearner(TalkSessionId session, int idx, String text, String audioKey, long streamStartMs, List<ScoredWord> words,
+                            Integer startMs) {
         jdbc.sql("""
-                insert into talk_turn (session_id, idx, speaker, text, audio_key, stream_start_ms, scored, at)
-                values (?, ?, 'learner', ?, ?, ?, cast(? as jsonb), ?)
+                insert into talk_turn (session_id, idx, speaker, text, audio_key, stream_start_ms, scored, at, start_ms)
+                values (?, ?, 'learner', ?, ?, ?, cast(? as jsonb), ?, ?)
                 on conflict (session_id, idx) do nothing""")
-                .params(session.value(), idx, text, audioKey, streamStartMs, JSON.writeValueAsString(words), Timestamp.from(clock.now()))
+                .params(session.value(), idx, text, audioKey, streamStartMs, JSON.writeValueAsString(words), Timestamp.from(clock.now()),
+                        startMs)
                 .update();
     }
 

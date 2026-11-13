@@ -149,8 +149,10 @@ public class TalkSessionService implements StartTalkUseCase, app.bolo.talk.appli
         boolean slow = view.settings() != null && "slower".equals(view.settings().buddySpeed());
         var set = view.settings();
         String voice = set == null || set.voiceAccent() == null || set.voiceGender() == null ? null : set.voiceAccent() + "-" + set.voiceGender();
+        String answerTime = set == null || set.answerTime() == null ? "normal"
+                : "auto".equals(set.answerTime()) ? set.answerTimeAuto() : set.answerTime();
         return new TalkView(s.id(), s.minutes(), p == null ? null : p.goal(), p == null ? null : p.fearedMoment(), slow, voice,
-                set == null ? null : set.mood());
+                set == null ? null : set.mood(), answerTime == null ? "normal" : answerTime, set != null && set.stammer());
     }
 
     /** A guest joined an account (US-8.1, US-8.4): its talks move with it, in the sign-in transaction. */
