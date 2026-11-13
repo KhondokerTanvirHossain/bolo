@@ -17,7 +17,7 @@ import { fetchMemory, meRowLine, type MemoryView } from "@/memory/memory";
 const LABEL: Record<string, string> = Object.fromEntries(QUESTIONS.flatMap((q) => q.chips.map((c) => [c.value, c.label] as const)));
 
 /** ScreenMe: who you are, your goals, Speaking, Privacy, and sign in or out. Nothing nested more than 2 levels. */
-export function MeScreen({ me, onPrivacy, onSignedIn, onInvite, onMemory }: { me: LearnerView | null; onPrivacy: () => void; onSignedIn: (l: LearnerView) => void; onInvite?: () => void; onMemory?: () => void }) {
+export function MeScreen({ me, onPrivacy, onSignedIn, onInvite, onMemory, onVoice, onMood }: { me: LearnerView | null; onPrivacy: () => void; onSignedIn: (l: LearnerView) => void; onInvite?: () => void; onMemory?: () => void; onVoice?: () => void; onMood?: () => void }) {
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const account = me?.account ?? null;
@@ -74,7 +74,7 @@ export function MeScreen({ me, onPrivacy, onSignedIn, onInvite, onMemory }: { me
         ) : <div className="bo-row"><div className="bo-row__body"><div className="bo-row__sub">No goals yet.</div></div></div>}
       </div>
       <h2 className="dk-h2" style={{ marginTop: 28 }}>Speaking</h2>
-      <SpeakingSettings />
+      <SpeakingSettings onVoice={onVoice} onMood={onMood} />
       <h2 className="dk-h2" style={{ marginTop: 28 }}>Privacy</h2>
       <div className="bo-group">
         {onMemory && (

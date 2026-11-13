@@ -1,12 +1,17 @@
 "use client";
 import { useEffect, useState } from "react";
 import { fetchSettings, saveSettings, type Settings } from "@/settings/settings";
+import { Icon } from "@/scene/Scene";
+import { MoodPicker } from "@/voice/MoodPicker";
+import { VoicePicker } from "@/voice/VoicePicker";
+import { moodLabel, voiceSummary } from "@/voice/voices";
 
 /**
  * US-9.5 Speaking group (P0 rows): Bolo's speed, captions and the talk view (P3a), as chips. Each change saves at once,
- * for the next talk.
+ * for the next talk. P3c (SET-5, SET-6; design system v38): Bolo's voice and mood come first. On a phone they are rows
+ * that open their pickers; on desktop (DesktopVoiceMood) the pickers sit here, side by side.
  */
-export function SpeakingSettings() {
+export function SpeakingSettings({ onVoice, onMood }: { onVoice?: () => void; onMood?: () => void } = {}) {
   const [s, setS] = useState<Settings | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "unreadable" | "failed">("loading");
   useEffect(() => { void fetchSettings().then((v) => { if (v) { setS(v); setState("ready"); } else setState("unreadable"); }); }, []);
@@ -17,8 +22,34 @@ export function SpeakingSettings() {
   const chip = (label: string, on: boolean, pick: () => void) => (
     <button className="bo-chip" style={{ justifyContent: "center" }} aria-pressed={on} onClick={pick} disabled={!s}>{label}</button>
   );
+  const open = (title: string, value: string, go?: () => void) => (
+    <button className="bo-row" style={{ width: "100%", border: 0, background: "transparent", textAlign: "left", color: "inherit", font: "inherit" }}
+      onClick={go} disabled={!go}>
+      <span className="bo-row__body"><span className="bo-row__title" style={{ display: "block" }}>{title}</span></span>
+      <span className="bo-row__value">{value}</span>
+      <Icon name="chevron_right" />
+    </button>
+  );
   return (
+    <>
+    {s && (
+      <div className="bo-speak__inline">
+        <div>
+          <h3 className="bo-group__title">Bolo&apos;s voice</h3>
+          <VoicePicker settings={s} onChange={(n) => void change(n)} />
+          <p className="bo-row__sub" style={{ margin: "10px 0 0" }}>Your Coach keeps its own voice.</p>
+        </div>
+        <div>
+          <h3 className="bo-group__title">Bolo&apos;s mood</h3>
+          <MoodPicker settings={s} onChange={(n) => void change(n)} />
+        </div>
+      </div>
+    )}
     <div className="bo-group">
+      <div className="bo-speak__rows">
+        {open("Bolo's voice", s ? voiceSummary(s) : "", onVoice)}
+        {open("Bolo's mood", s ? moodLabel(s) : "", onMood)}
+      </div>
       <div className="bo-row">
         <div className="bo-row__body"><div className="bo-row__title">Bolo&apos;s speed</div><div className="bo-row__sub">From your next talk</div></div>
         <div style={{ display: "flex", gap: 8 }}>
@@ -43,5 +74,6 @@ export function SpeakingSettings() {
       {state === "unreadable" && <p className="bo-footnote" role="alert" style={{ padding: "0 20px 12px" }}>Settings can&apos;t load right now. Check your connection.</p>}
       {state === "failed" && <p className="bo-footnote" role="alert" style={{ padding: "0 20px 12px" }}>That didn&apos;t save. Try again.</p>}
     </div>
+    </>
   );
 }

@@ -1,8 +1,15 @@
 import { api, type LearnerView } from "@/api/browser";
 
 /** talkView (P3a): "chat" shows the talk as a live chat (the default); "classic" shows Bolo's caption only. */
-export type Settings = { buddySpeed: "normal" | "slower"; captions: boolean; talkView?: "chat" | "classic" };
-export const DEFAULT_SETTINGS: Settings = { buddySpeed: "normal", captions: true, talkView: "chat" };
+/** P3c (SET-5, SET-6): Bolo's voice (gender, accent) and mood; missing means today's Bolo (British, female, friendly). */
+export type VoiceGender = "female" | "male";
+export type VoiceAccent = "british" | "american" | "indian";
+export type Mood = "friendly" | "funny" | "professional" | "calm";
+export type Settings = {
+  buddySpeed: "normal" | "slower"; captions: boolean; talkView?: "chat" | "classic";
+  voiceGender?: VoiceGender; voiceAccent?: VoiceAccent; mood?: Mood;
+};
+export const DEFAULT_SETTINGS: Settings = { buddySpeed: "normal", captions: true, talkView: "chat", voiceGender: "female", voiceAccent: "british", mood: "friendly" };
 export const CAPTIONS_KEY = "bolo.captions";
 
 /** null when they can't be read: callers must not save defaults over what the learner chose. */
