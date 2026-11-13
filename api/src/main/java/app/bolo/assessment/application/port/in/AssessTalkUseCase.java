@@ -27,7 +27,12 @@ public interface AssessTalkUseCase {
     record FixSlot(String kind, int index) {
     }
 
-    TalkAssessment assess(List<TurnInput> turns);
+    default TalkAssessment assess(List<TurnInput> turns) {
+        return assess(turns, false);
+    }
+
+    /** AX-8: with {@code stammer}, repeats and broken-off words aren't judged for sounds and blocks don't lower fluency. */
+    TalkAssessment assess(List<TurnInput> turns, boolean stammer);
 
     List<FixSlot> plan(TalkAssessment assessment, int upgrades);
 }

@@ -78,6 +78,7 @@ public class CoachService implements DebriefUseCase, LatestDebriefUseCase, app.b
     private final long minSpeechMs;
     private final long backoffMs;
     private final app.bolo.assessment.application.port.in.MinimalPairsUseCase minimalPairs;
+    private final app.bolo.learner.application.port.in.CurrentLearnerUseCase learners;
 
     public CoachService(TalkQueryUseCase talks, AssessTalkUseCase assessment, DebriefPort debriefs, LlmClient llm, SynthesizeUseCase voice,
                         AudioStoreUseCase audio, BoloClock clock,
@@ -85,8 +86,10 @@ public class CoachService implements DebriefUseCase, LatestDebriefUseCase, app.b
                         @Value("${bolo.coaching.max-tokens}") int maxTokens,
                         @Value("${bolo.coaching.min-speech-ms}") long minSpeechMs,
                         @Value("${bolo.coaching.retry-backoff-ms}") long backoffMs,
-                        app.bolo.assessment.application.port.in.MinimalPairsUseCase minimalPairs) {
+                        app.bolo.assessment.application.port.in.MinimalPairsUseCase minimalPairs,
+                        app.bolo.learner.application.port.in.CurrentLearnerUseCase learners) {
         this.minimalPairs = minimalPairs;
+        this.learners = learners;
         this.talks = talks;
         this.assessment = assessment;
         this.debriefs = debriefs;
@@ -164,11 +167,12 @@ public class CoachService implements DebriefUseCase, LatestDebriefUseCase, app.b
         List<TalkRecord.Turn> learnerTurns = record.turns().stream().filter(TalkRecord.Turn::learner).toList();
         Map<Integer, TalkRecord.Turn> byIdx = new LinkedHashMap<>();
         learnerTurns.forEach(t -> byIdx.put(t.idx(), t));
+        boolean stammer = stammers(learner);
         TalkAssessment scored = assessment.assess(learnerTurns.stream()
-                .map(t -> new AssessTalkUseCase.TurnInput(t.idx(), t.text(), t.words())).toList());
+                .map(t -> new AssessTalkUseCase.TurnInput(t.idx(), t.text(), t.words())).toList(), stammer);
         if (scored.speechMs() < minSpeechMs) return new Built("too_short", "{\"status\":\"too_short\"}");
 
-        CoachReply reply = askCoach(id, learner, record);
+        CoachReply reply = askCoach(id, learner, record, stammer);
         List<CoachReply.Upgrade> upgrades = (reply.upgrades() == null ? List.<CoachReply.Upgrade>of() : reply.upgrades()).stream()
                 .filter(u -> byIdx.containsKey(u.turn()) && ReplyCheck.quoteIn(byIdx.get(u.turn()).text(), u.said())
                         && ReplyCheck.upgradeOk(u.said(), u.better()))
@@ -220,10 +224,20 @@ public class CoachService implements DebriefUseCase, LatestDebriefUseCase, app.b
 
     // ---- the Coach model ------------------------------------------------------------------------------------------
 
-    private CoachReply askCoach(TalkSessionId id, LearnerId learner, TalkRecord record) {
+    /** AX-8: the learner's I stammer setting when the feedback is built; unreadable counts as off. */
+    private boolean stammers(LearnerId learner) {
+        try {
+            var settings = learners.view(learner).settings();
+            return settings != null && settings.stammer();
+        } catch (RuntimeException e) {
+            return false;
+        }
+    }
+
+    private CoachReply askCoach(TalkSessionId id, LearnerId learner, TalkRecord record, boolean stammer) {
         List<CoachPrompt.Line> lines = record.turns().stream()
                 .map(t -> new CoachPrompt.Line(t.learner(), t.idx(), t.text())).toList();
-        var request = new LlmRequest(model, CoachPrompt.system(),
+        var request = new LlmRequest(model, CoachPrompt.system(stammer),
                 List.of(LlmMessage.user(CoachPrompt.transcript(lines))), maxTokens, CoachPrompt.schema(), false);
         try {
             String text = llm.stream(new TalkContext(learner, id), request, d -> { }).done().get(60, TimeUnit.SECONDS).text();

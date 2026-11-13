@@ -17,7 +17,16 @@ public record FluencyStats(long speechMs, int words, int wordsPerMinute, int lon
     static final List<String> SINGLE_FILLERS = List.of("um", "uh", "erm", "actually", "basically");
 
     public static FluencyStats of(List<TurnScore> turns) {
+        return of(turns, false);
+    }
+
+    /**
+     * AX-8: with {@code stammer}, gaps between words longer than the long-pause cutoff (blocks) are left out of the
+     * words-per-minute time and no long pauses are counted; the speech time itself is unchanged.
+     */
+    public static FluencyStats of(List<TurnScore> turns, boolean stammer) {
         long speech = 0;
+        long blocks = 0;
         int words = 0;
         int pauses = 0;
         Map<String, Integer> fillers = new LinkedHashMap<>();
@@ -28,7 +37,11 @@ public record FluencyStats(long speechMs, int words, int wordsPerMinute, int lon
             if (!t.words().isEmpty()) {
                 speech += t.words().getLast().endMs() - t.words().getFirst().startMs();
                 for (int i = 1; i < t.words().size(); i++) {
-                    if (t.words().get(i).startMs() - t.words().get(i - 1).endMs() > LONG_PAUSE_MS) pauses++;
+                    long gap = t.words().get(i).startMs() - t.words().get(i - 1).endMs();
+                    if (gap > LONG_PAUSE_MS) {
+                        if (stammer) blocks += gap;
+                        else pauses++;
+                    }
                 }
             } else {
                 speech += count * ESTIMATED_MS_PER_WORD;
@@ -38,7 +51,8 @@ public record FluencyStats(long speechMs, int words, int wordsPerMinute, int lon
                 if (tokens[i].equals("you") && i + 1 < count && tokens[i + 1].equals("know")) fillers.merge("you know", 1, Integer::sum);
             }
         }
-        int wpm = speech <= 0 ? 0 : (int) Math.round(words / (speech / 60_000.0));
+        long timed = speech - blocks;
+        int wpm = timed <= 0 ? 0 : (int) Math.round(words / (timed / 60_000.0));
         double average = turns.isEmpty() ? 0 : (double) words / turns.size();
         return new FluencyStats(speech, words, wpm, pauses, Map.copyOf(fillers), average);
     }

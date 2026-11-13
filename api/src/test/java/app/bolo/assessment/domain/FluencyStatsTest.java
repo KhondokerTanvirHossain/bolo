@@ -30,4 +30,17 @@ class FluencyStatsTest {
         assertThat(s.speechMs()).isEqualTo(4 * 350);
         assertThat(s.averageWordsPerTurn()).isEqualTo(4.0);
     }
+
+    /** AX-8: with I stammer, blocks (gaps over 1.2 s between words) don't pull words per minute down or count as pauses. */
+    @Test
+    void withStammerLongGapsLeaveWordsPerMinuteAndPausesAlone() {
+        var t = turn(1, "I want", word("I", 0, 300, 90), word("want", 3300, 3600, 90));
+        FluencyStats plain = FluencyStats.of(List.of(t));
+        FluencyStats stammer = FluencyStats.of(List.of(t), true);
+        assertThat(plain.wordsPerMinute()).isEqualTo(33);
+        assertThat(plain.longPauses()).isEqualTo(1);
+        assertThat(stammer.wordsPerMinute()).isEqualTo(200);
+        assertThat(stammer.longPauses()).isZero();
+        assertThat(stammer.speechMs()).isEqualTo(3600);
+    }
 }

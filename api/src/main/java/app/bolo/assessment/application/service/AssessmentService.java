@@ -4,6 +4,7 @@ import app.bolo.assessment.application.port.in.AssessTalkUseCase;
 import app.bolo.assessment.domain.DebriefPlan;
 import app.bolo.assessment.domain.FixChoice;
 import app.bolo.assessment.domain.FluencyStats;
+import app.bolo.assessment.domain.StammerFilter;
 import app.bolo.assessment.domain.Habit;
 import app.bolo.assessment.domain.PatternDetector;
 import app.bolo.assessment.domain.SkillLevels;
@@ -23,11 +24,11 @@ import java.util.Optional;
 public class AssessmentService implements AssessTalkUseCase {
 
     @Override
-    public TalkAssessment assess(List<TurnInput> turns) {
+    public TalkAssessment assess(List<TurnInput> turns, boolean stammer) {
         List<TurnScore> scores = turns.stream().map(t -> new TurnScore(t.idx(), t.text(), spoken(t.words()))).toList();
-        FluencyStats stats = FluencyStats.of(scores);
+        FluencyStats stats = FluencyStats.of(scores, stammer);
         List<SoundCandidate> sounds = new ArrayList<>();
-        for (SoundIssue issue : PatternDetector.candidates(scores)) {
+        for (SoundIssue issue : PatternDetector.candidates(stammer ? StammerFilter.drop(scores) : scores)) {
             WordAt at = issue.examples().getFirst();
             sounds.add(new SoundCandidate(issue.pattern().name(), issue.pattern().title(), issue.pattern().example(), issue.pattern().tip(),
                     issue.count(), at.turnIdx(), at.word(), at.startMs(), at.endMs()));

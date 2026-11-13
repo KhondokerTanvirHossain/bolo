@@ -13,7 +13,18 @@ public final class CoachPrompt {
     }
 
     public static String system() {
-        return """
+        return system(false);
+    }
+
+    /** AX-8: with {@code stammer}, the Coach never picks or "fixes" a sentence for its repeats, blocks or pauses. */
+    public static String system(boolean stammer) {
+        return stammer ? BASE + STAMMER + "\n" : BASE;
+    }
+
+    static final String STAMMER = "This learner stammers. Never choose a sentence, or suggest a better version, because of "
+            + "repeated sounds or words, blocks or pauses, and never mention them.";
+
+    private static final String BASE = """
                 You are the learner's English speaking coach. The learner is a Bangladeshi adult who just had a casual \
                 spoken conversation with Bolo, a friendly buddy. You read the transcript afterwards. The transcript \
                 comes from speech recognition, so ignore small recognition glitches.
@@ -29,7 +40,6 @@ public final class CoachPrompt {
                 - topic: name the talk in 2 to 5 plain words, the way the learner would say it, e.g. "The payment bug demo".
                 Judge clarity, not accent. Never use the words: mistake, wrong, error, bad, fail, incorrect, poor, accent.
                 """;
-    }
 
     public static String transcript(List<Line> lines) {
         StringBuilder b = new StringBuilder("The talk, in order. Learner turns are numbered.\n");

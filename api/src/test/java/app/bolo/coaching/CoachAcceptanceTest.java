@@ -29,6 +29,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
         "bolo.talk.max-live-sessions=1", "bolo.speech.vendor=fake", "bolo.llm.vendor=fake",
         "bolo.talk.speculate-after-ms=100", "bolo.talk.end-after-ms=300", "bolo.talk.unfinished-end-after-ms=500",
+        "bolo.talk.stammer.speculate-after-ms=100", "bolo.talk.stammer.end-after-ms=300", "bolo.talk.stammer.unfinished-end-after-ms=500",
         "bolo.coaching.min-speech-ms=500", "bolo.coaching.retry-backoff-ms=100", "bolo.coaching.say-per-minute=1"})
 class CoachAcceptanceTest extends PostgresTestBase {
 
@@ -93,6 +94,24 @@ class CoachAcceptanceTest extends PostgresTestBase {
             Thread.sleep(150);
         }
         throw new AssertionError("debrief not settled in 10 s");
+    }
+
+    /** AX-8: with I stammer on, the Coach is told not to pick or fix repeats, blocks or pauses. */
+    @Test
+    void theCoachIsToldAboutAStammerOnlyWhenItIsOn() throws Exception {
+        llm.structuredSystems().clear();
+        client.send("PUT", "/api/me/settings", cookie, "{\"buddySpeed\":\"normal\",\"captions\":true,\"stammer\":true}");
+        talk(3);
+        debriefWhenSettled();
+        assertThat(llm.structuredSystems()).anyMatch(sys -> sys.contains("This learner stammers."));
+    }
+
+    @Test
+    void theCoachHearsNothingAboutAStammerByDefault() throws Exception {
+        llm.structuredSystems().clear();
+        talk(3);
+        debriefWhenSettled();
+        assertThat(llm.structuredSystems()).isNotEmpty().noneMatch(sys -> sys.contains("stammer"));
     }
 
     @Test

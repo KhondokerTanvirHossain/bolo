@@ -38,6 +38,8 @@ public class FakeLlm implements LlmPort {
     private volatile String memoryReply = MEMORY_REPLY;
     private volatile boolean failMemory;
     private volatile String lastStructuredRequest = "";
+    /** Every structured request's system prompt (Coach, memory), for assertions that must not race each other. */
+    private final java.util.List<String> structuredSystems = new java.util.concurrent.CopyOnWriteArrayList<>();
 
     public void memoryReply(String json) {
         this.memoryReply = json == null ? MEMORY_REPLY : json;
@@ -50,6 +52,10 @@ public class FakeLlm implements LlmPort {
     /** The system prompt and messages of the last structured request (Coach, memory), for assertions. */
     public String lastStructuredRequest() {
         return lastStructuredRequest;
+    }
+
+    public java.util.List<String> structuredSystems() {
+        return structuredSystems;
     }
     private final java.util.concurrent.atomic.AtomicInteger replyCalls = new java.util.concurrent.atomic.AtomicInteger();
     private volatile String lastReplyRequest = "";
@@ -109,7 +115,10 @@ public class FakeLlm implements LlmPort {
         boolean safety = props instanceof java.util.Map<?, ?> m && m.containsKey("crisis");
         boolean starters = props instanceof java.util.Map<?, ?> m2 && m2.containsKey("starters");
         boolean memory = props instanceof java.util.Map<?, ?> m3 && m3.containsKey("threads");
-        if (structured && !safety && !starters) lastStructuredRequest = request.system() + "\n" + request.messages();
+        if (structured && !safety && !starters) {
+            lastStructuredRequest = request.system() + "\n" + request.messages();
+            structuredSystems.add(request.system());
+        }
         if (!structured) {
             replyCalls.incrementAndGet();
             lastReplyRequest = request.system() + "\n" + request.messages();
