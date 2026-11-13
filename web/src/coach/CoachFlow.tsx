@@ -11,6 +11,8 @@ import { track } from "@/analytics/track";
 import { fetchChat, type Chat } from "./chat";
 import { ChatScreen } from "./ChatScreen";
 import { DialogCard } from "@/ui/DialogCard";
+import { RatingSheet } from "./RatingSheet";
+import { fetchAsk } from "./rating";
 
 type Props = {
   talkId: string; deviceId?: string | null; onTalkAgain: () => void; onDone: () => void; onNoDebrief?: () => void;
@@ -20,6 +22,8 @@ type Props = {
   onPractise?: (pattern?: string, talkId?: string) => void;
   /** ScreenHistorySession: a past talk — Practise these (3 min) / Back, and a quiet Delete recording (US-8.6). */
   history?: boolean;
+  /** DBF-8: right after a talk (never History), may ask "How was today?" on the last card. */
+  askRating?: boolean;
 };
 
 const LEVEL_WORD: Record<Level, string> = { BUILDING: "Building", GOOD: "Good", STRONG: "Strong" };
@@ -30,7 +34,7 @@ function seconds(ms: number): string {
 }
 
 /** After a talk: "Your coach is listening back", then the debrief (DBF-1..5), or the too-short / failed states. */
-export function CoachFlow({ talkId, deviceId = null, onTalkAgain, onDone, onNoDebrief, onReady, onPractise, history = false }: Props) {
+export function CoachFlow({ talkId, deviceId = null, onTalkAgain, onDone, onNoDebrief, onReady, onPractise, history = false, askRating = false }: Props) {
   const [debrief, setDebrief] = useState<Debrief | null>({ status: "scoring" });
 
   useEffect(() => {
@@ -69,6 +73,7 @@ export function CoachFlow({ talkId, deviceId = null, onTalkAgain, onDone, onNoDe
   }
   return <DebriefScreen key={String(debrief.recordingDeleted ?? false)} talkId={talkId} deviceId={deviceId} debrief={debrief}
     onTalkAgain={onTalkAgain} onDone={onDone} onPractise={onPractise ? (p) => onPractise(p, talkId) : undefined} history={history}
+    askRating={askRating && !history}
     onRecordingDeleted={() => void fetchDebrief(talkId).then((d) => { if (d) setDebrief(d); })} />;
 }
 
@@ -104,7 +109,7 @@ function Notice({ title, body, primary, onPrimary, onDone }: { title: string; bo
   );
 }
 
-function DebriefScreen({ talkId, deviceId, debrief, onTalkAgain, onDone, onPractise, history = false, onRecordingDeleted }:
+function DebriefScreen({ talkId, deviceId, debrief, onTalkAgain, onDone, onPractise, history = false, onRecordingDeleted, askRating = false }:
   { talkId: string; debrief: Debrief; onRecordingDeleted?: () => void } & Omit<Props, "talkId">) {
   const [askDelete, setAskDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -142,6 +147,16 @@ function DebriefScreen({ talkId, deviceId, debrief, onTalkAgain, onDone, onPract
   // The current card's "play my clip" (Space). A ref, not state: registering it must not re-render the screen.
   const playMine = useRef<(() => void) | null>(null);
   const cards = 1 + fixes.length + 1;
+  // DBF-8: on reaching the last card, ask the server once whether to show "How was today?".
+  const [rating, setRating] = useState(false);
+  const askedRating = useRef(false);
+  useEffect(() => {
+    if (!askRating || at !== cards - 1 || askedRating.current) return;
+    askedRating.current = true;
+    let live = true;
+    void fetchAsk(talkId).then((ask) => { if (live && ask) setRating(true); });
+    return () => { live = false; };
+  }, [askRating, at, cards, talkId]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -153,7 +168,7 @@ function DebriefScreen({ talkId, deviceId, debrief, onTalkAgain, onDone, onPract
         else onDone();
         return;
       }
-      if (askDelete) return;
+      if (askDelete || rating) return;
       // While the full chat shows, the keys belong to it (scrolling), not to the hidden cards.
       if (chat) return;
       if (e.key === "ArrowDown") { e.preventDefault(); setAt((a) => Math.min(cards - 1, a + 1)); setNote(null); }
@@ -162,7 +177,7 @@ function DebriefScreen({ talkId, deviceId, debrief, onTalkAgain, onDone, onPract
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [cards, chat, askDelete, onDone]);
+  }, [cards, chat, askDelete, rating, onDone]);
 
   /** By the fix's stable id, once: a double tap can't remove a second card. */
   const dispute = async (fix: Fix) => {
@@ -220,6 +235,7 @@ function DebriefScreen({ talkId, deviceId, debrief, onTalkAgain, onDone, onPract
           </>)}
         </div>
       </div>
+      {rating && <RatingSheet talkId={talkId} onClose={() => setRating(false)} />}
       {askDelete && (
         <>
           <div className="dk-dim" />

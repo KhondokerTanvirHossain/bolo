@@ -943,3 +943,19 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #0b0816; }
 .bo-chip[role="radio"][aria-checked="true"] { background: var(--sun-soft); color: var(--ink); border-color: var(--sun-ink); }
 .bo-voicemood { max-width: 560px; }
 .bo-voicemood .bo-group__title, .bo-speak__inline .bo-group__title { padding-left: 0; margin: var(--space-2) 0 var(--space-2); }
+
+/* DBF-8 (design system v40 ScreenRating): "How was today?" — a bottom sheet on a phone, a centred dialog on desktop. */
+.bo-faces { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--space-2); margin: var(--space-2) 0 var(--space-3); }
+.bo-face { appearance: none; border: 0; background: transparent; border-radius: var(--radius-lg); min-height: 76px; padding: var(--space-2) 0; display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--ink-secondary); font: 600 13px/16px var(--font-sans); cursor: pointer; transition: transform 160ms cubic-bezier(.25,1,.5,1), background-color 160ms ease; }
+.bo-face .bo-icon { font-size: 36px; color: var(--ink); }
+.bo-face:active { transform: scale(.96); }
+.bo-face[aria-checked="true"] { background: var(--sun-soft); color: var(--ink); }
+.bo-face[aria-checked="true"] .bo-icon { color: var(--sun-ink); font-variation-settings: "FILL" 1; }
+.bo-face:focus-visible { outline: 2px solid var(--sun-ink); outline-offset: 2px; }
+.bo-note { width: 100%; min-height: 84px; resize: none; border: 0; border-radius: var(--radius-md); box-shadow: inset 0 0 0 1.5px var(--line-strong); background: var(--surface); padding: var(--space-3) var(--space-4); font: 500 16px/22px var(--font-sans); color: var(--ink); }
+.bo-note:focus { outline: none; box-shadow: inset 0 0 0 2px var(--focus-ring); }
+.bo-rate { position: absolute; left: 0; right: 0; bottom: 0; z-index: 4; background: var(--surface); color: var(--ink); border-radius: var(--radius-xl) var(--radius-xl) 0 0; box-shadow: var(--shadow-sheet); padding: var(--space-3) var(--space-6) var(--space-6); display: flex; flex-direction: column; gap: var(--space-2); max-height: calc(100% - 32px); overflow: auto; }
+@media (min-width: 900px) {
+  .bo-rate { left: 50%; right: auto; top: 50%; bottom: auto; transform: translate(-50%, -50%); width: 480px; border-radius: var(--radius-xl); padding: var(--space-6); }
+  .bo-rate .bo-sheet__grabber { display: none; }
+}

@@ -130,7 +130,7 @@ export function TalkScreen({ state, deviceId = null, onDone, onEnd, onTalkAgain,
   // A talk with at least one turn goes to the Coach's debrief (DBF); an empty one keeps the plain summary.
   if (state.phase === "ended" && state.talkId && (state.summary?.turns ?? 0) > 0 && !noDebrief) {
     return <CoachFlow talkId={state.talkId} deviceId={deviceId} onTalkAgain={onTalkAgain} onDone={onLeave}
-      onNoDebrief={() => setNoDebrief(true)} onReady={onCoachReady} onPractise={onPractise} />;
+      onNoDebrief={() => setNoDebrief(true)} onReady={onCoachReady} onPractise={onPractise} askRating />;
   }
   if (state.phase === "crisis" && state.crisis) {
     return <CrisisCard crisis={state.crisis} onClose={onLeave} />;
