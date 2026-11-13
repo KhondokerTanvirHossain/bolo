@@ -59,7 +59,8 @@ public class TalkRelayService implements TalkRelayUseCase {
                             @Value("${bolo.talk.quiet-pause-ms}") long quietPauseMs,
                             @Value("${bolo.talk.paused-max-ms}") long pausedMaxMs,
                             @Value("${bolo.llm.buddy-model}") String model,
-                            @Value("${bolo.llm.max-tokens}") int maxTokens) {
+                            @Value("${bolo.llm.max-tokens}") int maxTokens,
+                            org.springframework.core.env.Environment env) {
         this.recogniser = recogniser;
         this.voice = voice;
         this.llm = llm;
@@ -74,7 +75,16 @@ public class TalkRelayService implements TalkRelayUseCase {
                 .filter(w -> !w.isEmpty()).collect(Collectors.toUnmodifiableSet());
         this.settings = new TalkSettings(new TurnPolicy(speculateAfterMs, endAfterMs, unfinishedEndAfterMs, words),
                 model, maxTokens, minuteMs, wrapGraceMs, replyTimeoutMs,
-                noAudioTimeoutMs, burstAllowanceMs, quietEncourageMs, quietHintMs, quietPauseMs, pausedMaxMs);
+                noAudioTimeoutMs, burstAllowanceMs, quietEncourageMs, quietHintMs, quietPauseMs, pausedMaxMs,
+                pace(env, "bolo.talk.speeds.quick", words), pace(env, "bolo.talk.speeds.relaxed", words),
+                pace(env, "bolo.talk.stammer", words));
+    }
+
+    /** AX-7, AX-8: one pace from config (bolo.talk.speeds.quick.*, bolo.talk.speeds.relaxed.*, bolo.talk.stammer.*). */
+    private static app.bolo.talk.domain.Pace pace(org.springframework.core.env.Environment env, String prefix, java.util.Set<String> words) {
+        java.util.function.ToLongFunction<String> v = k -> Long.parseLong(env.getRequiredProperty(prefix + "." + k));
+        return new app.bolo.talk.domain.Pace(v.applyAsLong("encourage-ms"), v.applyAsLong("hint-ms"), v.applyAsLong("pause-ms"),
+                new TurnPolicy(v.applyAsLong("speculate-after-ms"), v.applyAsLong("end-after-ms"), v.applyAsLong("unfinished-end-after-ms"), words));
     }
 
     @Override

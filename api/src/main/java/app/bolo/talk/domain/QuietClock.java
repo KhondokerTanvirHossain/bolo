@@ -20,6 +20,15 @@ public class QuietClock {
         this.pauseMs = pauseMs;
     }
 
+    public QuietClock(Pace pace) {
+        this(pace.encourageMs(), pace.hintMs(), pace.pauseMs());
+    }
+
+    /** The silent turn time counted since the learner last spoke (or since the clock started). */
+    public long quietMs() {
+        return quietMs;
+    }
+
     public Stage onQuiet(long ms) {
         quietMs += ms;
         Stage next = quietMs >= pauseMs ? Stage.PAUSE : quietMs >= hintMs ? Stage.HINT : quietMs >= encourageMs ? Stage.ENCOURAGE : Stage.NONE;

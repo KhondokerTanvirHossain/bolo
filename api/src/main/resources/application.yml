@@ -61,6 +61,12 @@ bolo:
     quiet-encourage-ms: 8000
     quiet-hint-ms: 15000
     quiet-pause-ms: 45000
+    # AX-7 (changed 2026-11-14): the values above are the normal speed; Time to answer can make a talk quick or
+    # relaxed. AX-8: with "I stammer" every value is at least the stammer floor.
+    speeds:
+      quick: { encourage-ms: 5000, hint-ms: 10000, pause-ms: 30000, speculate-after-ms: 700, end-after-ms: 1500, unfinished-end-after-ms: 3000 }
+      relaxed: { encourage-ms: 30000, hint-ms: 45000, pause-ms: 120000, speculate-after-ms: 1500, end-after-ms: 3500, unfinished-end-after-ms: 5500 }
+    stammer: { encourage-ms: 16000, hint-ms: 30000, pause-ms: 90000, speculate-after-ms: 1500, end-after-ms: 4500, unfinished-end-after-ms: 6500 }
     # TLK-10: a paused talk is kept this long.
     paused-max-ms: 1800000
     # A socket that sends no audio for this long (a half-open phone connection) is ended.
