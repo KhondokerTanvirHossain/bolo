@@ -68,4 +68,39 @@ public final class MemoryPrompt {
                         "threads", Map.of("type", "array", "items", thread),
                         "interests", Map.of("type", "array", "items", line), "topic", str));
     }
+
+    private static final java.time.format.DateTimeFormatter DAY = java.time.format.DateTimeFormatter.ofPattern("d MMM", java.util.Locale.ENGLISH);
+
+    /**
+     * The block added to Bolo's instructions when a talk opens (TLK-11 changed 2026-11-13): what Bolo remembers, the one
+     * follow-up to open with (if any), recent topics to avoid, and fresh ideas. {@code note} null: remembering is off.
+     */
+    public static String brief(MemoryNote note, MemoryThread opener, List<String> seeds) {
+        StringBuilder b = new StringBuilder();
+        if (note != null && !note.isEmpty()) {
+            b.append("What you remember about them from earlier talks (use it naturally, like a friend; never list it back):\n");
+            note.about().forEach(l -> b.append("- ").append(l.text()).append('\n'));
+            note.threads().forEach(t -> b.append("- ").append(switch (t.kind()) {
+                case PLAN -> "Plan";
+                case WORRY -> "On their mind";
+                case PREP -> "Their practice";
+            }).append(": ").append(t.text()).append(" (they said this on ").append(DAY.format(t.said()))
+                    .append(t.due() == null ? "" : "; for " + DAY.format(t.due())).append(")\n"));
+            if (!note.interests().isEmpty()) {
+                b.append("- They enjoy: ").append(String.join(", ", note.interests().stream().map(Line::text).toList())).append('\n');
+            }
+        }
+        if (opener != null) {
+            b.append("Open the talk with a short hello and one follow-up about: ").append(opener.text())
+                    .append(" (they said this on ").append(DAY.format(opener.said())).append("). Ask it once. ")
+                    .append("If they move on, follow them and don't bring it back.\n");
+        }
+        if (note != null && !note.recent().isEmpty()) {
+            b.append("Topics you've talked about recently (pick something else): ").append(String.join("; ", note.recent())).append('\n');
+        }
+        if (!seeds.isEmpty()) {
+            b.append("Ideas if the talk needs a new direction: ").append(String.join("; ", seeds)).append('\n');
+        }
+        return b.toString();
+    }
 }

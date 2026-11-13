@@ -7,7 +7,10 @@ import app.bolo.common.time.BoloClock;
 import app.bolo.llm.application.port.in.LlmClient;
 import app.bolo.llm.application.port.in.LlmMessage;
 import app.bolo.llm.application.port.in.LlmRequest;
+import app.bolo.memory.application.port.in.MemoryUseCase;
+import app.bolo.memory.application.port.in.TalkBrief;
 import app.bolo.memory.application.port.out.MemoryPort;
+import app.bolo.memory.domain.TopicBank;
 import app.bolo.memory.domain.Line;
 import app.bolo.memory.domain.MemoryNote;
 import app.bolo.memory.domain.MemoryPrompt;
@@ -44,7 +47,7 @@ import java.util.function.Function;
  * while an update runs is respected when it saves.
  */
 @Service
-public class MemoryService {
+public class MemoryService implements MemoryUseCase {
 
     private static final Logger log = LoggerFactory.getLogger(MemoryService.class);
     private static final JsonMapper JSON = JsonMapper.builder().build();
@@ -97,7 +100,7 @@ public class MemoryService {
             tx.executeWithoutResult(s -> {
                 MemoryPort.Row now = memory.lockOrCreate(learner);
                 if (!now.enabled()) return;
-                MemoryNote saved = fresh.keepOnly(now.note().ids(), sent).capped(today);
+                MemoryNote saved = fresh.keepOnly(now.note().ids(), sent).withMarksFrom(now.note()).capped(today);
                 memory.save(learner, true, saved, now.talks(), now.lastTalkId());
             });
         } catch (RuntimeException e) {
@@ -105,6 +108,29 @@ public class MemoryService {
         } finally {
             lock.unlock();
         }
+    }
+
+    @Override
+    public TalkBrief brief(LearnerId learner, TalkSessionId talk, String goal) {
+        return tx.execute(s -> {
+            MemoryPort.Row row = memory.lockOrCreate(learner);
+            if (!row.enabled()) {
+                return new TalkBrief(MemoryPrompt.brief(null, null, TopicBank.seeds(goal, Set.of(), ThreadLocalRandom.current(), 3)), false);
+            }
+            MemoryNote note = row.note();
+            MemoryThread opener;
+            if (talk.value().equals(row.lastTalkId())) {
+                int number = row.talks();
+                opener = note.threads().stream().filter(t -> t.openedTalk() != null && t.openedTalk() == number).findFirst().orElse(null);
+            } else {
+                int number = row.talks() + 1;
+                opener = note.opener(clock.today(), clock.now(), number).orElse(null);
+                if (opener != null) note = note.withOpened(opener.id(), clock.now(), number);
+                memory.save(learner, true, note, number, talk.value());
+            }
+            List<String> seeds = TopicBank.seeds(goal, Set.copyOf(note.recent()), ThreadLocalRandom.current(), 3);
+            return new TalkBrief(MemoryPrompt.brief(note, opener, seeds), opener != null);
+        });
     }
 
     public void remove(LearnerId learner, String lineId) {

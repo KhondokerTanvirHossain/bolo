@@ -93,6 +93,16 @@ public record MemoryNote(List<Line> about, List<MemoryThread> threads, List<Line
                 interests.stream().filter(l -> keep.test(l.id())).toList(), recent);
     }
 
+    /** Opener marks as they are in {@code current} (a talk may have opened with a thread while this note was made). */
+    public MemoryNote withMarksFrom(MemoryNote current) {
+        java.util.Map<String, MemoryThread> byId = new java.util.HashMap<>();
+        current.threads().forEach(t -> byId.put(t.id(), t));
+        return new MemoryNote(about, threads.stream().map(t -> {
+            MemoryThread c = byId.get(t.id());
+            return c == null || c.openedTalk() == null ? t : t.opened(c.openedAt(), c.openedTalk());
+        }).toList(), interests, recent);
+    }
+
     static boolean resting(MemoryThread t, Instant now, int talkNumber) {
         if (t.openedTalk() == null) return false;
         if (talkNumber - t.openedTalk() <= REST_TALKS) return true;

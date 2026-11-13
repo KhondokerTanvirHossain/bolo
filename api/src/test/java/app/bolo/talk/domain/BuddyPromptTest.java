@@ -42,4 +42,28 @@ class BuddyPromptTest {
         String system = BuddyPrompt.wrapUpSystem(BuddyPrompt.system(null, null, 5));
         assertThat(system).contains("time is up").contains("no new question");
     }
+
+    /** P3b (spec 2026-11-13): interesting talks, always; no routine chatter; Bolo has opinions but no invented life. */
+    @Test
+    void theRulesForInterestingTalksAreAlwaysThere() {
+        String system = BuddyPrompt.system("work_meetings", "speaking_up", 5);
+        assertThat(system).contains("stories, opinions, small what-ifs and choices").contains("Never ask what they ate")
+                .contains("never invent a life of your own").contains("follow them fully");
+        assertThat(system.toLowerCase()).doesNotContain("wrong").doesNotContain("error").doesNotContain("fail");
+    }
+
+    @Test
+    void theBriefIsAppended() {
+        String system = BuddyPrompt.system("job_interviews", "interviews", 5, "What you remember about them:\n- Lives in Mirpur", true);
+        assertThat(system).contains("Lives in Mirpur");
+        assertThat(system).doesNotContain("a real question about their situation");
+    }
+
+    @Test
+    void noBriefMeansOpeningFromTheGoal() {
+        assertThat(BuddyPrompt.system("job_interviews", "interviews", 5, null, false)).contains("a real question about their situation")
+                .contains("what kind of job they're going for");
+        assertThat(BuddyPrompt.system("job_interviews", "interviews", 5, "Ideas if the talk needs a new direction: x", false))
+                .contains("a real question about their situation");
+    }
 }

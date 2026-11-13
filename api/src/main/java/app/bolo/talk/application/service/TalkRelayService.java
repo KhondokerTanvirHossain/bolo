@@ -3,6 +3,8 @@ package app.bolo.talk.application.service;
 import app.bolo.common.id.LearnerId;
 import app.bolo.common.id.TalkContext;
 import app.bolo.llm.application.port.in.LlmClient;
+import app.bolo.memory.application.port.in.MemoryUseCase;
+import app.bolo.memory.application.port.in.TalkBrief;
 import app.bolo.media.application.port.in.AudioStoreUseCase;
 import app.bolo.speech.application.port.in.StreamTranscriptionUseCase;
 import app.bolo.speech.application.port.in.SynthesizeUseCase;
@@ -25,6 +27,8 @@ import java.util.stream.Collectors;
 @Service
 public class TalkRelayService implements TalkRelayUseCase {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(TalkRelayService.class);
+
     private final StreamTranscriptionUseCase recogniser;
     private final SynthesizeUseCase voice;
     private final LlmClient llm;
@@ -35,10 +39,11 @@ public class TalkRelayService implements TalkRelayUseCase {
     private final SafetyGuard safety;
     private final Starters starters;
     private final TalkSettings settings;
+    private final MemoryUseCase memory;
 
     public TalkRelayService(StreamTranscriptionUseCase recogniser, SynthesizeUseCase voice, LlmClient llm,
                             StartTalkUseCase talks, TurnPort turns, AudioStoreUseCase audioStore,
-                            ApplicationEventPublisher events, SafetyGuard safety, Starters starters,
+                            ApplicationEventPublisher events, SafetyGuard safety, Starters starters, MemoryUseCase memory,
                             @Value("${bolo.talk.speculate-after-ms}") long speculateAfterMs,
                             @Value("${bolo.talk.end-after-ms}") long endAfterMs,
                             @Value("${bolo.talk.unfinished-end-after-ms}") long unfinishedEndAfterMs,
@@ -63,6 +68,7 @@ public class TalkRelayService implements TalkRelayUseCase {
         this.events = events;
         this.safety = safety;
         this.starters = starters;
+        this.memory = memory;
         var words = Arrays.stream(unfinishedWords.split(",")).map(w -> w.trim().toLowerCase(Locale.ROOT))
                 .filter(w -> !w.isEmpty()).collect(Collectors.toUnmodifiableSet());
         this.settings = new TalkSettings(new TurnPolicy(speculateAfterMs, endAfterMs, unfinishedEndAfterMs, words),
@@ -72,10 +78,22 @@ public class TalkRelayService implements TalkRelayUseCase {
 
     @Override
     public TalkConnection open(TalkView talk, LearnerId learner, TalkOutput out) {
+        TalkBrief brief = brief(learner, talk);
         TalkConversation c = new TalkConversation(talk, new TalkContext(learner, talk.id()), out, recogniser, voice, llm,
-                talks, turns, audioStore, settings, () -> System.nanoTime() / 1_000_000, events::publishEvent, safety, starters);
+                talks, turns, audioStore, settings, () -> System.nanoTime() / 1_000_000, events::publishEvent, safety, starters,
+                brief.text(), brief.followUp());
         c.start();
         events.publishEvent(new TalkStarted(talk.id(), learner));
         return c;
+    }
+
+    /** P3b: what Bolo remembers. A failure here never stops a talk: it opens without the brief. */
+    private TalkBrief brief(LearnerId learner, TalkView talk) {
+        try {
+            return memory.brief(learner, talk.id(), talk.goal());
+        } catch (RuntimeException e) {
+            log.warn("memory brief failed for talk {}: {}", talk.id(), e.getClass().getSimpleName());
+            return TalkBrief.NONE;
+        }
     }
 }
