@@ -15,7 +15,8 @@ public final class MemoryPrompt {
     }
 
     /** What the model returns. Empty strings stand for "none" (a new line has id "", a plan with no date has due ""). */
-    public record Reply(List<ReplyLine> about, List<ReplyThread> threads, List<ReplyLine> interests, String topic) {
+    /** {@code drop}: ids of about/interest lines to remove; about and interest lines left out are kept (review, P3b). */
+    public record Reply(List<ReplyLine> about, List<ReplyThread> threads, List<ReplyLine> interests, List<String> drop, String topic) {
     }
 
     public record ReplyLine(String id, String text) {
@@ -38,7 +39,9 @@ public final class MemoryPrompt {
                 thread is mentioned again, set its said to today. Keep said as it was for threads not mentioned.
                 - interests: things they enjoy talking about. At most 8.
                 - topic: name this talk in 2 to 5 plain words, the way the learner would say it.
-                Keep the id of every line you keep, even if you reword it. A new line has id "". Write each line in plain \
+                About and interest lines you leave out are kept as they are; to remove one (it's no longer true, or they \
+                asked you to forget it), put its id in drop. Threads you leave out are removed.
+                Keep the id of every line you return, even if you reword it. A new line has id "". Write each line in plain \
                 words the way the learner would say it, at most 120 characters, without labels like "user prefers".
                 Never write down: health or mental health, religion, politics, sexuality, exact money amounts, phone \
                 numbers, addresses, ID numbers, or anything about self-harm or a crisis. About other people, keep at \
@@ -63,10 +66,11 @@ public final class MemoryPrompt {
                 "properties", Map.of("id", str, "kind", Map.of("type", "string", "enum", List.of("plan", "worry", "prep")),
                         "text", str, "said", str, "due", str));
         return Map.of("type", "object", "additionalProperties", false,
-                "required", List.of("about", "threads", "interests", "topic"),
+                "required", List.of("about", "threads", "interests", "drop", "topic"),
                 "properties", Map.of("about", Map.of("type", "array", "items", line),
                         "threads", Map.of("type", "array", "items", thread),
-                        "interests", Map.of("type", "array", "items", line), "topic", str));
+                        "interests", Map.of("type", "array", "items", line), "drop", Map.of("type", "array", "items", str),
+                        "topic", str));
     }
 
     private static final java.time.format.DateTimeFormatter DAY = java.time.format.DateTimeFormatter.ofPattern("d MMM", java.util.Locale.ENGLISH);

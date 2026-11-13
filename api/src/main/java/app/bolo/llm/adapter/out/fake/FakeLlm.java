@@ -26,7 +26,7 @@ public class FakeLlm implements LlmPort {
     public static final String MEMORY_REPLY = """
             {"about":[{"id":"","text":"Works as a software tester in Dhaka"}],
              "threads":[{"id":"","kind":"plan","text":"Sending the CV to the bank job","said":"2000-01-01","due":""}],
-             "interests":[{"id":"","text":"Cricket"}],"topic":"The bank job CV"}""";
+             "interests":[{"id":"","text":"Cricket"}],"drop":[],"topic":"The bank job CV"}""";
 
     public static final String SAFE = "{\"crisis\":false}";
     public static final String STARTERS = "{\"starters\":[\"I think that...\",\"For example, ...\"]}";

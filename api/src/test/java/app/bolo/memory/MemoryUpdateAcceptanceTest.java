@@ -197,4 +197,52 @@ class MemoryUpdateAcceptanceTest extends PostgresTestBase {
         assertThat(llm.lastStructuredRequest()).contains("health").contains("religion")
                 .contains("Only what the learner said about themselves").contains("I am sending my CV to a bank job");
     }
+
+    /** Review (P3b, Critical): the safety check can say "crisis" after the talk ended; the note must not keep that talk. */
+    @Test
+    void aCrisisFoundAfterTheEndWithdrawsTheTalk() throws Exception {
+        llm.deltaMs(60);
+        events.publishEvent(new TalkEnded(talk, learner, 2, "learner_ended"));
+        Thread.sleep(150);
+        events.publishEvent(new TalkEnded(talk, learner, 2, "crisis"));
+        // The fake answers in about 6 s at this pace: wait until the update would have saved.
+        Thread.sleep(8000);
+        assertThat(note().isEmpty()).isTrue();
+    }
+
+    /** Review (P3b, Critical): even when the update had already saved, a late crisis puts the note back as it was. */
+    @Test
+    void aCrisisFoundAfterTheSaveRestoresTheNote() {
+        MemoryNote old = new MemoryNote(List.of(new Line("a1", "Lives in Mirpur")), List.of(), List.of(), List.of());
+        seed(old);
+        memory.update(talk, learner);
+        assertThat(note().threads()).isNotEmpty();
+        events.publishEvent(new TalkEnded(talk, learner, 2, "crisis"));
+        assertThat(note()).isEqualTo(old);
+    }
+
+    /** Review (P3b, Important): "Forget everything" while an update runs: nothing from that talk comes back. */
+    @Test
+    void forgetDuringAnUpdateWins() throws Exception {
+        llm.deltaMs(60);
+        CompletableFuture<Void> running = CompletableFuture.runAsync(() -> memory.update(talk, learner));
+        Thread.sleep(250);
+        memory.forget(learner);
+        running.get();
+        assertThat(note().isEmpty()).isTrue();
+    }
+
+    /** Review (P3b, Important): a reply that leaves facts out doesn't erase them; only an explicit drop does. */
+    @Test
+    void aLossyReplyKeepsAboutAndInterests() {
+        seed(new MemoryNote(List.of(new Line("a1", "Lives in Mirpur"), new Line("a2", "Has two sisters")), List.of(),
+                List.of(new Line("i1", "Cricket")), List.of()));
+        llm.memoryReply("{\"about\":[],\"threads\":[],\"interests\":[],\"drop\":[],\"topic\":\"Short talk\"}");
+        memory.update(talk, learner);
+        assertThat(note().ids()).containsExactlyInAnyOrder("a1", "a2", "i1");
+        llm.memoryReply("{\"about\":[{\"id\":\"a1\",\"text\":\"Lives in Mirpur 10\"}],\"threads\":[],\"interests\":[],\"drop\":[\"a2\"],\"topic\":\"Family\"}");
+        memory.update(talk, learner);
+        assertThat(note().about()).extracting(Line::text).containsExactly("Lives in Mirpur 10");
+        assertThat(note().interests()).extracting(Line::id).containsExactly("i1");
+    }
 }

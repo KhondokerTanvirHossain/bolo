@@ -100,7 +100,8 @@ bolo:
   memory:
     # P3b "Bolo knows you": one call after each talk updates the learner's short note (off the talk's path).
     model: claude-sonnet-5-5
-    max-tokens: 1500
+    # Thinking shares this budget; a full note is about 1500 tokens of JSON.
+    max-tokens: 4000
   coaching:
     model: claude-sonnet-5-5
     max-tokens: 1500

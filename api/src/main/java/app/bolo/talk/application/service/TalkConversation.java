@@ -171,14 +171,15 @@ final class TalkConversation implements TalkConnection {
                      SynthesizeUseCase voice, LlmClient llm, StartTalkUseCase talks, TurnPort turns,
                      AudioStoreUseCase audioStore, TalkSettings settings, LongSupplier nowMs, Consumer<TalkEnded> onEnded,
                      SafetyGuard safety, Starters starters) {
-        this(talk, ctx, out, recogniser, voice, llm, talks, turns, audioStore, settings, nowMs, onEnded, safety, starters, null, false);
+        this(talk, ctx, out, recogniser, voice, llm, talks, turns, audioStore, settings, nowMs, onEnded, safety, starters, null,
+                BuddyPrompt.Opening.FROM_GOAL);
     }
 
-    /** P3b: {@code brief} is what Bolo remembers and fresh ideas (TLK-11 changed 2026-11-13); {@code followUp}: it opens with one. */
+    /** P3b: {@code brief} is what Bolo remembers and fresh ideas (TLK-11 changed 2026-11-13); {@code opening}: how Bolo opens. */
     TalkConversation(TalkView talk, TalkContext ctx, TalkOutput out, StreamTranscriptionUseCase recogniser,
                      SynthesizeUseCase voice, LlmClient llm, StartTalkUseCase talks, TurnPort turns,
                      AudioStoreUseCase audioStore, TalkSettings settings, LongSupplier nowMs, Consumer<TalkEnded> onEnded,
-                     SafetyGuard safety, Starters starters, String brief, boolean followUp) {
+                     SafetyGuard safety, Starters starters, String brief, BuddyPrompt.Opening opening) {
         this.talk = talk;
         this.ctx = ctx;
         this.out = out;
@@ -196,7 +197,7 @@ final class TalkConversation implements TalkConnection {
         this.slow = talk.slowVoice();
         this.quiet = new QuietClock(settings.quietEncourageMs(), settings.quietHintMs(), settings.quietPauseMs());
         this.taker = new TurnTaker(settings.policy());
-        this.system = BuddyPrompt.system(talk.goal(), talk.fearedMoment(), talk.minutes(), brief, followUp);
+        this.system = BuddyPrompt.system(talk.goal(), talk.fearedMoment(), talk.minutes(), brief, opening);
     }
 
     /** Opens the recogniser and starts Bolo's opening line, off the socket thread, and starts the watchdog. */

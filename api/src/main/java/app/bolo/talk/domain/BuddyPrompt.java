@@ -20,15 +20,21 @@ public final class BuddyPrompt {
     }
 
     public static String system(String goal, String fearedMoment, int minutes) {
-        return system(goal, fearedMoment, minutes, null, false);
+        return system(goal, fearedMoment, minutes, null, Opening.FROM_GOAL);
     }
 
     /**
      * P3b (TLK-11 changed 2026-11-13, spec "Bolo knows you"): {@code brief} is what Bolo remembers and fresh ideas, added
      * as its own block. {@code followUp}: the brief opens the talk with a personal follow-up; otherwise Bolo opens from the
-     * learner's goal with a real question, never a routine one.
+     * learner's goal with a real question, never a routine one. See {@link Opening}.
      */
-    public static String system(String goal, String fearedMoment, int minutes, String brief, boolean followUp) {
+    /**
+     * How the talk opens (review, P3b): with the brief's follow-up; from what Bolo remembers (it knows them, but every
+     * follow-up is resting); or, on a first talk or with remembering off, from the learner's goal.
+     */
+    public enum Opening { FOLLOW_UP, FROM_NOTES, FROM_GOAL }
+
+    public static String system(String goal, String fearedMoment, int minutes, String brief, Opening opening) {
         String focus = goal == null
                 ? "Talk about everyday life in an interesting way: their work or studies, plans, people and opinions."
                 : "Their goal is " + human(goal) + (fearedMoment == null ? "" : ", and the moment they dread most is "
@@ -53,8 +59,13 @@ public final class BuddyPrompt {
                 invent a life of your own: no trips, meals or family.
                 - If they want to talk about something else, follow them fully.
                 - The talk lasts %d minutes.
-                """.formatted(focus, minutes) + (followUp ? "" : "- Open with a short hello and a real question about their situation "
-                + "for their goal" + (goal == null ? "" : " (" + opening(goal) + ")") + ", never a routine question.\n")
+                """.formatted(focus, minutes) + switch (opening) {
+                    case FOLLOW_UP -> "";
+                    case FROM_NOTES -> "- Open with a short hello and a question built on what you remember (one of their "
+                            + "interests, or how their goal is going). Never ask what you already know, and never a routine question.\n";
+                    case FROM_GOAL -> "- Open with a short hello and a real question about their situation for their goal"
+                            + (goal == null ? "" : " (" + opening(goal) + ")") + ", never a routine question.\n";
+                }
                 + (brief == null || brief.isBlank() ? "" : "\n" + brief.strip() + "\n");
     }
 

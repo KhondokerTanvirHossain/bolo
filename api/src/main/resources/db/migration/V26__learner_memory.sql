@@ -1,6 +1,7 @@
 -- P3b "Bolo knows you" (docs/superpowers/specs/2026-11-13-bolo-knows-you-design.md; TLK-11 changed 2026-11-13):
 -- one short note per learner, updated after each talk. enabled = "Let Bolo remember our talks". talks counts talks that
 -- asked for a brief; last_talk_id is the latest of them (a second brief for the same talk keeps its opener).
+-- epoch goes up on Forget and on switching remembering off or on: an update that started before it doesn't save.
 -- Delete everything removes it through the cascade.
 create table learner_memory (
     learner_id   uuid        primary key references learner (id) on delete cascade,
@@ -8,5 +9,6 @@ create table learner_memory (
     note         jsonb       not null default '{}',
     talks        int         not null default 0,
     last_talk_id uuid,
+    epoch        int         not null default 0,
     updated_at   timestamptz not null default now()
 );

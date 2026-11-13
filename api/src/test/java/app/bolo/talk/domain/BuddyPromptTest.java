@@ -54,16 +54,25 @@ class BuddyPromptTest {
 
     @Test
     void theBriefIsAppended() {
-        String system = BuddyPrompt.system("job_interviews", "interviews", 5, "What you remember about them:\n- Lives in Mirpur", true);
+        String system = BuddyPrompt.system("job_interviews", "interviews", 5, "What you remember about them:\n- Lives in Mirpur", BuddyPrompt.Opening.FOLLOW_UP);
         assertThat(system).contains("Lives in Mirpur");
         assertThat(system).doesNotContain("a real question about their situation");
     }
 
     @Test
     void noBriefMeansOpeningFromTheGoal() {
-        assertThat(BuddyPrompt.system("job_interviews", "interviews", 5, null, false)).contains("a real question about their situation")
+        assertThat(BuddyPrompt.system("job_interviews", "interviews", 5, null, BuddyPrompt.Opening.FROM_GOAL)).contains("a real question about their situation")
                 .contains("what kind of job they're going for");
-        assertThat(BuddyPrompt.system("job_interviews", "interviews", 5, "Ideas if the talk needs a new direction: x", false))
+        assertThat(BuddyPrompt.system("job_interviews", "interviews", 5, "Ideas if the talk needs a new direction: x", BuddyPrompt.Opening.FROM_GOAL))
                 .contains("a real question about their situation");
+    }
+
+    /** Review (P3b, Important): Bolo knows them but every follow-up is resting: no first-talk question. */
+    @Test
+    void knownButNoFollowUpOpensFromWhatBoloKnows() {
+        String system = BuddyPrompt.system("job_interviews", "interviews", 5, "What you remember about them:\n- Applying for bank jobs",
+                BuddyPrompt.Opening.FROM_NOTES);
+        assertThat(system).contains("built on what you remember").doesNotContain("what kind of job they're going for")
+                .doesNotContain("a real question about their situation");
     }
 }

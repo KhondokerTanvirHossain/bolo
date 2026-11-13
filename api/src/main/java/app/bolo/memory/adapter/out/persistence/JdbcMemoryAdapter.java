@@ -25,14 +25,14 @@ class JdbcMemoryAdapter implements MemoryPort {
 
     @Override
     public Optional<Row> find(LearnerId learner) {
-        return jdbc.sql("select enabled, note::text as note, talks, last_talk_id from learner_memory where learner_id = ?")
+        return jdbc.sql("select enabled, note::text as note, talks, last_talk_id, epoch from learner_memory where learner_id = ?")
                 .param(learner.value()).query(JdbcMemoryAdapter::row).optional();
     }
 
     @Override
     public Row lockOrCreate(LearnerId learner) {
         jdbc.sql("insert into learner_memory (learner_id) values (?) on conflict (learner_id) do nothing").param(learner.value()).update();
-        return jdbc.sql("select enabled, note::text as note, talks, last_talk_id from learner_memory where learner_id = ? for update")
+        return jdbc.sql("select enabled, note::text as note, talks, last_talk_id, epoch from learner_memory where learner_id = ? for update")
                 .param(learner.value()).query(JdbcMemoryAdapter::row).single();
     }
 
@@ -44,6 +44,12 @@ class JdbcMemoryAdapter implements MemoryPort {
                 on conflict (learner_id) do update set enabled = excluded.enabled, note = excluded.note,
                     talks = excluded.talks, last_talk_id = excluded.last_talk_id, updated_at = now()""")
                 .params(learner.value(), enabled, JSON.writeValueAsString(note), talks, lastTalkId).update();
+    }
+
+    @Override
+    public void reset(LearnerId learner, boolean enabled) {
+        jdbc.sql("update learner_memory set note = '{}', enabled = ?, epoch = epoch + 1, updated_at = now() where learner_id = ?")
+                .params(enabled, learner.value()).update();
     }
 
     @Override
@@ -72,6 +78,6 @@ class JdbcMemoryAdapter implements MemoryPort {
     private static Row row(ResultSet rs, int n) throws SQLException {
         String json = rs.getString("note");
         MemoryNote note = json == null || json.equals("{}") ? MemoryNote.empty() : JSON.readValue(json, MemoryNote.class);
-        return new Row(rs.getBoolean("enabled"), note, rs.getInt("talks"), rs.getObject("last_talk_id", UUID.class));
+        return new Row(rs.getBoolean("enabled"), note, rs.getInt("talks"), rs.getObject("last_talk_id", UUID.class), rs.getInt("epoch"));
     }
 }

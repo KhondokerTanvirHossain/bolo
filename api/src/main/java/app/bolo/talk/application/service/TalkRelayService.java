@@ -15,6 +15,7 @@ import app.bolo.talk.application.port.in.TalkRelayUseCase;
 import app.bolo.talk.application.port.in.TalkStarted;
 import app.bolo.talk.application.port.in.TalkView;
 import app.bolo.talk.application.port.out.TurnPort;
+import app.bolo.talk.domain.BuddyPrompt;
 import app.bolo.talk.domain.TurnPolicy;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
@@ -81,7 +82,8 @@ public class TalkRelayService implements TalkRelayUseCase {
         TalkBrief brief = brief(learner, talk);
         TalkConversation c = new TalkConversation(talk, new TalkContext(learner, talk.id()), out, recogniser, voice, llm,
                 talks, turns, audioStore, settings, () -> System.nanoTime() / 1_000_000, events::publishEvent, safety, starters,
-                brief.text(), brief.followUp());
+                brief.text(), brief.followUp() ? BuddyPrompt.Opening.FOLLOW_UP : brief.known() ? BuddyPrompt.Opening.FROM_NOTES
+                        : BuddyPrompt.Opening.FROM_GOAL);
         c.start();
         events.publishEvent(new TalkStarted(talk.id(), learner));
         return c;

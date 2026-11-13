@@ -39,7 +39,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.Function;
 
 /**
  * What Bolo remembers (spec 2026-11-13 "Bolo knows you"). After a talk, one structured call rewrites the learner's short
@@ -62,6 +61,15 @@ public class MemoryService implements MemoryUseCase {
     private final String model;
     private final int maxTokens;
     private final Map<LearnerId, ReentrantLock> locks = new ConcurrentHashMap<>();
+    /** Review (P3b, Critical): talks the safety check called a crisis after they ended; they're never noted. */
+    private final Map<TalkSessionId, java.time.Instant> withdrawn = new ConcurrentHashMap<>();
+    /** The note before each recent update, so a crisis found after the save can put it back. */
+    private final Map<TalkSessionId, Restore> restorable = new ConcurrentHashMap<>();
+    /** How long a talk stays withdrawable / restorable: far longer than any safety check takes. */
+    private static final java.time.Duration KEEP = java.time.Duration.ofMinutes(30);
+
+    private record Restore(LearnerId learner, MemoryNote before, Set<String> savedIds, int epoch, java.time.Instant at) {
+    }
 
     public MemoryService(MemoryPort memory, TalkQueryUseCase talks, LlmClient llm, BoloClock clock,
                          PlatformTransactionManager transactions,
@@ -78,7 +86,13 @@ public class MemoryService implements MemoryUseCase {
     @EventListener
     public void onTalkEnded(TalkEnded e) {
         // Never from a talk that ended in crisis care, never from a talk too short to say anything (spec: Constraints).
-        if ("crisis".equals(e.reason()) || e.learnerTurns() < MIN_TURNS) return;
+        // A crisis can also be found after the talk ended (a second TalkEnded): the talk is withdrawn, and if its update
+        // already saved, the note goes back to how it was.
+        if ("crisis".equals(e.reason())) {
+            withdraw(e.id(), e.learner());
+            return;
+        }
+        if (e.learnerTurns() < MIN_TURNS) return;
         Thread.ofVirtual().name("memory-" + e.id()).start(() -> update(e.id(), e.learner()));
     }
 
@@ -87,8 +101,10 @@ public class MemoryService implements MemoryUseCase {
         ReentrantLock lock = locks.computeIfAbsent(learner, k -> new ReentrantLock());
         lock.lock();
         try {
+            if (withdrawn.containsKey(talk)) return;
             MemoryPort.Row before = memory.find(learner).orElse(null);
             if (before != null && !before.enabled()) return;
+            int epoch = before == null ? 0 : before.epoch();
             MemoryNote old = before == null ? MemoryNote.empty() : before.note();
             TalkRecord record = talks.record(talk).orElse(null);
             if (record == null || !record.learner().equals(learner)) return;
@@ -99,9 +115,12 @@ public class MemoryService implements MemoryUseCase {
             Set<String> sent = old.ids();
             tx.executeWithoutResult(s -> {
                 MemoryPort.Row now = memory.lockOrCreate(learner);
-                if (!now.enabled()) return;
+                // Withdrawn for a crisis, switched off, or Forget/off/on since this update read the note: don't save.
+                if (withdrawn.containsKey(talk) || !now.enabled() || now.epoch() != epoch) return;
                 MemoryNote saved = fresh.keepOnly(now.note().ids(), sent).withMarksFrom(now.note()).capped(today);
                 memory.save(learner, true, saved, now.talks(), now.lastTalkId());
+                prune();
+                restorable.put(talk, new Restore(learner, now.note(), saved.ids(), now.epoch(), clock.now()));
             });
         } catch (RuntimeException e) {
             log.warn("memory update failed for talk {}: {}", talk, where(e));
@@ -115,7 +134,7 @@ public class MemoryService implements MemoryUseCase {
         return tx.execute(s -> {
             MemoryPort.Row row = memory.lockOrCreate(learner);
             if (!row.enabled()) {
-                return new TalkBrief(MemoryPrompt.brief(null, null, TopicBank.seeds(goal, Set.of(), ThreadLocalRandom.current(), 3)), false);
+                return new TalkBrief(MemoryPrompt.brief(null, null, TopicBank.seeds(goal, Set.of(), ThreadLocalRandom.current(), 3)), false, false);
             }
             MemoryNote note = row.note();
             MemoryThread opener;
@@ -129,8 +148,39 @@ public class MemoryService implements MemoryUseCase {
                 memory.save(learner, true, note, number, talk.value());
             }
             List<String> seeds = TopicBank.seeds(goal, Set.copyOf(note.recent()), ThreadLocalRandom.current(), 3);
-            return new TalkBrief(MemoryPrompt.brief(note, opener, seeds), opener != null);
+            return new TalkBrief(MemoryPrompt.brief(note, opener, seeds), opener != null, !note.isEmpty());
         });
+    }
+
+    /** A late crisis: never note this talk; if it was noted, put the note back (keeping what the learner did since). */
+    private void withdraw(TalkSessionId talk, LearnerId learner) {
+        withdrawn.put(talk, clock.now());
+        ReentrantLock lock = locks.computeIfAbsent(learner, k -> new ReentrantLock());
+        lock.lock();
+        try {
+            Restore r = restorable.remove(talk);
+            if (r == null) return;
+            tx.executeWithoutResult(s -> {
+                MemoryPort.Row now = memory.lockOrCreate(learner);
+                if (!now.enabled() || now.epoch() != r.epoch()) return;
+                // Lines the update removed come back; lines the learner removed since stay removed.
+                Set<String> existing = new java.util.HashSet<>(now.note().ids());
+                r.before().ids().stream().filter(id -> !r.savedIds().contains(id)).forEach(existing::add);
+                MemoryNote back = new MemoryNote(r.before().about(), r.before().threads(), r.before().interests(), r.before().recent())
+                        .keepOnly(existing, r.before().ids()).withMarksFrom(now.note());
+                memory.save(learner, true, back, now.talks(), now.lastTalkId());
+            });
+        } catch (RuntimeException e) {
+            log.warn("memory withdraw failed for talk {}: {}", talk, where(e));
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    private void prune() {
+        java.time.Instant oldest = clock.now().minus(KEEP);
+        withdrawn.values().removeIf(at -> at.isBefore(oldest));
+        restorable.values().removeIf(r -> r.at().isBefore(oldest));
     }
 
     @Override
@@ -163,8 +213,8 @@ public class MemoryService implements MemoryUseCase {
     public void setEnabled(LearnerId learner, boolean on) {
         tx.executeWithoutResult(s -> {
             MemoryPort.Row row = memory.lockOrCreate(learner);
-            MemoryNote note = on && row.enabled() ? row.note() : MemoryNote.empty();
-            memory.save(learner, on, note, row.talks(), row.lastTalkId());
+            if (on && row.enabled()) return;
+            memory.reset(learner, on);
         });
     }
 
@@ -173,7 +223,7 @@ public class MemoryService implements MemoryUseCase {
     public void forget(LearnerId learner) {
         tx.executeWithoutResult(s -> {
             MemoryPort.Row row = memory.lockOrCreate(learner);
-            memory.save(learner, row.enabled(), MemoryNote.empty(), row.talks(), row.lastTalkId());
+            memory.reset(learner, row.enabled());
         });
     }
 
@@ -229,14 +279,12 @@ public class MemoryService implements MemoryUseCase {
     static MemoryNote apply(MemoryPrompt.Reply r, MemoryNote old, LocalDate today) {
         Map<String, MemoryThread> oldThreads = new LinkedHashMap<>();
         old.threads().forEach(t -> oldThreads.put(t.id(), t));
-        Set<String> oldIds = old.ids();
-        Function<String, String> id = given -> given != null && oldIds.contains(given) ? given : newId();
         List<MemoryThread> threads = new ArrayList<>();
         for (MemoryPrompt.ReplyThread t : r.threads()) {
-            if (t == null || t.text() == null) continue;
+            if (t == null || t.text() == null || t.text().isBlank()) continue;
             MemoryThread.Kind kind = kind(t.kind());
             if (kind == null) continue;
-            MemoryThread prev = t.id() == null ? null : oldThreads.get(t.id());
+            MemoryThread prev = t.id() == null ? null : oldThreads.remove(t.id());
             LocalDate said = prev == null ? today : date(t.said(), prev.said());
             if (said == null || said.isAfter(today)) said = today;
             threads.add(new MemoryThread(prev == null ? newId() : prev.id(), kind, t.text(), said, date(t.due(), null),
@@ -245,11 +293,31 @@ public class MemoryService implements MemoryUseCase {
         List<String> recent = new ArrayList<>();
         if (r.topic() != null && !r.topic().isBlank()) recent.add(r.topic().strip());
         recent.addAll(old.recent());
-        return new MemoryNote(lines(r.about(), id), threads, lines(r.interests(), id), recent);
+        Set<String> drop = r.drop() == null ? Set.of() : Set.copyOf(r.drop());
+        return new MemoryNote(merge(old.about(), r.about(), drop), threads, merge(old.interests(), r.interests(), drop), recent);
     }
 
-    private static List<Line> lines(List<MemoryPrompt.ReplyLine> in, Function<String, String> id) {
-        return in.stream().filter(l -> l != null && l.text() != null).map(l -> new Line(id.apply(l.id()), l.text())).toList();
+    /**
+     * Review (P3b, Important): about and interest lines the model left out are kept; only {@code drop} removes one. A
+     * returned line with a known id rewords it; any other returned line is new. Each id appears once.
+     */
+    static List<Line> merge(List<Line> old, List<MemoryPrompt.ReplyLine> reply, Set<String> drop) {
+        Map<String, String> reworded = new LinkedHashMap<>();
+        Set<String> oldIds = new java.util.HashSet<>();
+        old.forEach(l -> oldIds.add(l.id()));
+        List<Line> added = new ArrayList<>();
+        for (MemoryPrompt.ReplyLine l : reply) {
+            if (l == null || l.text() == null || l.text().isBlank()) continue;
+            if (l.id() != null && oldIds.contains(l.id())) reworded.putIfAbsent(l.id(), l.text());
+            else added.add(new Line(newId(), l.text()));
+        }
+        List<Line> out = new ArrayList<>();
+        for (Line l : old) {
+            if (drop.contains(l.id())) continue;
+            out.add(new Line(l.id(), reworded.getOrDefault(l.id(), l.text())));
+        }
+        out.addAll(added);
+        return out;
     }
 
     private static MemoryThread.Kind kind(String k) {

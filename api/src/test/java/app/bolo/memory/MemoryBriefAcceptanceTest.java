@@ -90,7 +90,8 @@ class MemoryBriefAcceptanceTest extends PostgresTestBase {
         String first = startTalk();
         seedPlan(learnerOf(first));
         assertThat(opening(first)).contains("one follow-up about: " + PLAN);
-        assertThat(opening(startTalk())).doesNotContain("one follow-up about").contains(PLAN);
+        assertThat(opening(startTalk())).doesNotContain("one follow-up about").contains(PLAN)
+                .contains("built on what you remember").doesNotContain("a real question about their situation");
         assertThat(opening(startTalk())).doesNotContain("one follow-up about");
     }
 
@@ -103,6 +104,7 @@ class MemoryBriefAcceptanceTest extends PostgresTestBase {
         TalkBrief a = briefs.brief(learner, id, "work_meetings");
         TalkBrief b = briefs.brief(learner, id, "work_meetings");
         assertThat(a.followUp()).isTrue();
+        assertThat(a.known()).isTrue();
         assertThat(b.text()).contains("one follow-up about: " + PLAN);
         assertThat(memory.find(learner).orElseThrow().talks()).isEqualTo(1);
     }
