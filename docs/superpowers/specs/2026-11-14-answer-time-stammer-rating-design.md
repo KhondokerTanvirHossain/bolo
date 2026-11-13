@@ -151,3 +151,30 @@ and "Ratings". Design system: ScreenSettings README + preview (v41).
 ## Left to the builder
 
 File layout inside each module, test names, exact CSS, the PRD wording, the admin layout within the existing style.
+
+## Builder check (2026-11-14) — settled
+
+Calls made by Claude (flagged to the founder):
+1. **Stammer and words per minute.** With stammer on, words per minute is computed over speech time minus the gaps
+   between words longer than 1.2 s (the long-pause cutoff), so blocks don't pull fluency down; long pauses aren't counted.
+2. **Stammer and sound cards.** With stammer on, a word is left out of sound detection when it is repeated straight
+   after itself ("I I", "to to") or is a broken start of the next word ("w- want", "wa want": a 1–3 letter prefix of
+   the next word). The other words are judged as usual.
+3. **Stammer at feedback time** uses the learner's setting when the feedback is built (right after the talk).
+
+Settled by the builder:
+- Start delay: `QuietClock.quietMs()` getter; captured once per learner turn at its first speech frame; survives
+  Bolo's encourage line and an UNCLEAR re-ask; reset when a turn is committed. When the silence pause fires before
+  any speech, the quiet time counted up to the pause is kept and used as that turn's start delay (resume resets the
+  clock, so otherwise slow starters would look quick).
+- `answer_time_auto` is written by its own single-column upsert, never by the learner's settings save (no lost update).
+- Config: `bolo.talk.speeds.{quick,normal,relaxed}.{encourage-ms,hint-ms,pause-ms,speculate-after-ms,end-after-ms,unfinished-end-after-ms}`
+  and `bolo.talk.stammer.*` floors; tests that override the old flat keys move to `speeds.normal.*`.
+- `TalkSettings` holds all speeds and the floors; `TalkConversation` picks per talk from `TalkView`.
+- Talk number for the rating: a new `DebriefPort.readyCountBefore(learner, talk)` (ready debriefs of talks started
+  before this one).
+- A rating PUT with `score: null` never clears a score already saved.
+- `CoachFlow` gets an explicit `askRating` prop; only the after-talk path sets it (not History, not FirstTalkScreen's
+  first talk — talk 1 never asks anyway).
+- Admin: `average30` null with no ratings; "latest" is the 20 newest notes of all time.
+- `DesktopMe` preview in the design system loses the old "More time to answer" switch too.
