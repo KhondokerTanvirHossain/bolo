@@ -97,6 +97,10 @@ bolo:
   assessment:
     # "Try it" / practice attempts per learner per minute (each is a billed vendor call).
     attempts-per-minute: 20
+  memory:
+    # P3b "Bolo knows you": one call after each talk updates the learner's short note (off the talk's path).
+    model: claude-sonnet-5-5
+    max-tokens: 1500
   coaching:
     model: claude-sonnet-5-5
     max-tokens: 1500

@@ -22,6 +22,12 @@ public class FakeLlm implements LlmPort {
                          {"turn":3,"said":"hello bolo","better":"Hello again, Bolo, I have more to tell you."}],
              "sentenceLevel":"GOOD","vocabularyLevel":"BUILDING","topic":"Saying hello to Bolo"}""";
 
+    /** P3b: what the fake updater answers to the memory request (schema with "threads"). */
+    public static final String MEMORY_REPLY = """
+            {"about":[{"id":"","text":"Works as a software tester in Dhaka"}],
+             "threads":[{"id":"","kind":"plan","text":"Sending the CV to the bank job","said":"2000-01-01","due":""}],
+             "interests":[{"id":"","text":"Cricket"}],"topic":"The bank job CV"}""";
+
     public static final String SAFE = "{\"crisis\":false}";
     public static final String STARTERS = "{\"starters\":[\"I think that...\",\"For example, ...\"]}";
 
@@ -29,6 +35,22 @@ public class FakeLlm implements LlmPort {
     private volatile String structuredReply = STRUCTURED_REPLY;
     private volatile String safetyReply = SAFE;
     private volatile boolean failStructured;
+    private volatile String memoryReply = MEMORY_REPLY;
+    private volatile boolean failMemory;
+    private volatile String lastStructuredRequest = "";
+
+    public void memoryReply(String json) {
+        this.memoryReply = json == null ? MEMORY_REPLY : json;
+    }
+
+    public void failMemory(boolean fail) {
+        this.failMemory = fail;
+    }
+
+    /** The system prompt and messages of the last structured request (Coach, memory), for assertions. */
+    public String lastStructuredRequest() {
+        return lastStructuredRequest;
+    }
     private final java.util.concurrent.atomic.AtomicInteger replyCalls = new java.util.concurrent.atomic.AtomicInteger();
     private volatile String lastReplyRequest = "";
 
@@ -86,13 +108,15 @@ public class FakeLlm implements LlmPort {
         Object props = structured ? request.jsonSchema().get("properties") : null;
         boolean safety = props instanceof java.util.Map<?, ?> m && m.containsKey("crisis");
         boolean starters = props instanceof java.util.Map<?, ?> m2 && m2.containsKey("starters");
+        boolean memory = props instanceof java.util.Map<?, ?> m3 && m3.containsKey("threads");
+        if (structured && !safety && !starters) lastStructuredRequest = request.system() + "\n" + request.messages();
         if (!structured) {
             replyCalls.incrementAndGet();
             lastReplyRequest = request.system() + "\n" + request.messages();
         }
-        String text = safety ? safetyReply : starters ? STARTERS : structured ? structuredReply : reply;
+        String text = safety ? safetyReply : starters ? STARTERS : memory ? memoryReply : structured ? structuredReply : reply;
         RuntimeException fail = safety ? (failSafety ? new IllegalStateException("classifier down") : null)
-                : starters ? null : structured ? (failStructured ? new IllegalStateException("coach down") : null) : failWith;
+                : starters ? null : memory ? (failMemory ? new IllegalStateException("memory down") : null) : structured ? (failStructured ? new IllegalStateException("coach down") : null) : failWith;
         long pause = deltaMs;
         Thread worker = Thread.ofVirtual().start(() -> {
             try {
