@@ -883,7 +883,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #0b0816; }
   background: rgba(255, 248, 239, .14); color: var(--on-scene); font: 650 15px/20px var(--font-sans); font-variant-numeric: tabular-nums; }
 .bo-timeleft__what { color: var(--on-scene-secondary); font-weight: 500; }
 .bo-talklevel { display: inline-flex; align-items: center; gap: 3px; height: 32px; }
-.bo-talklevel i { display: block; width: 4px; border-radius: 2px; background: var(--scene-sun); height: calc(var(--l, .15) * 32px); min-height: 4px; transition: height 60ms linear; }
+.bo-talklevel i { display: block; width: 4px; border-radius: 2px; background: var(--scene-sun); height: 32px; transform: scaleY(max(.125, var(--l, .15))); transition: transform 60ms linear; }
 .bo-talklevel--rest i { background: rgba(255, 248, 239, .35); }
 .bo-mic--noarc .arc { display: none; }
 .dk-talk__chat { position: absolute; top: 92px; left: 50%; transform: translateX(-50%); width: min(760px, calc(100% - 64px)); height: 35%; z-index: 2; }
