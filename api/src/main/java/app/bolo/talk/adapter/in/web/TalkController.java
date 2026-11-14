@@ -18,7 +18,8 @@ class TalkController {
 
     private final StartTalkUseCase talks;
 
-    record Started(TalkSessionId id, int minutes) {
+    /** SCN-1: the scenario and difficulty the talk started with (the web's talk label). */
+    record Started(TalkSessionId id, int minutes, String scenario, String difficulty) {
     }
 
     /** TLK-1. The browser then opens /ws/talk/{id}. */
@@ -27,6 +28,6 @@ class TalkController {
     Started start(@RequestAttribute(name = CurrentLearner.ATTRIBUTE, required = false) LearnerId learner) {
         if (learner == null) throw new SignedOutException();
         var view = talks.start(learner);
-        return new Started(view.id(), view.minutes());
+        return new Started(view.id(), view.minutes(), view.scenario(), view.difficulty());
     }
 }

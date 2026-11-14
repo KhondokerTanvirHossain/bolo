@@ -95,7 +95,7 @@ public class TalkRelayService implements TalkRelayUseCase {
                 brief.text(), brief.followUp() ? BuddyPrompt.Opening.FOLLOW_UP : brief.known() ? BuddyPrompt.Opening.FROM_NOTES
                         : BuddyPrompt.Opening.FROM_GOAL);
         c.start();
-        events.publishEvent(new TalkStarted(talk.id(), learner));
+        events.publishEvent(new TalkStarted(talk.id(), learner, talk.scenario(), talk.difficulty()));
         return c;
     }
 

@@ -16,21 +16,29 @@ public class SettingsService implements UpdateSettingsUseCase, AutoAnswerTimeUse
 
     private final SettingsPort settings;
     private final BoloClock clock;
+    private final org.springframework.context.ApplicationEventPublisher events;
 
     @Override
     public void update(LearnerId learner, String buddySpeed, boolean captions, String talkView, String voiceGender, String voiceAccent,
-                       String mood, String answerTime, Boolean stammer) {
+                       String mood, String answerTime, Boolean stammer, String scenario, String difficulty) {
         if (!Settings.validSpeed(buddySpeed)) throw new RefusedException("buddy-speed");
         if (talkView != null && !Settings.validTalkView(talkView)) throw new RefusedException("talk-view");
         if (voiceGender != null && !Settings.validGender(voiceGender)) throw new RefusedException("voice-gender");
         if (voiceAccent != null && !Settings.validAccent(voiceAccent)) throw new RefusedException("voice-accent");
         if (mood != null && !Settings.validMood(mood)) throw new RefusedException("mood");
         if (answerTime != null && !Settings.validAnswerTime(answerTime)) throw new RefusedException("answer-time");
+        if (scenario != null && !Settings.validScenario(scenario)) throw new RefusedException("scenario");
+        if (difficulty != null && !Settings.validDifficulty(difficulty)) throw new RefusedException("difficulty");
         Settings now = settings.find(learner).orElse(Settings.DEFAULTS);
         settings.upsert(learner, new Settings(buddySpeed, captions, talkView != null ? talkView : now.talkView(),
                 voiceGender != null ? voiceGender : now.voiceGender(), voiceAccent != null ? voiceAccent : now.voiceAccent(),
                 mood != null ? mood : now.mood(), answerTime != null ? answerTime : now.answerTime(), now.answerTimeAuto(),
-                stammer != null ? stammer : now.stammer()), clock.now());
+                stammer != null ? stammer : now.stammer(), scenario != null ? scenario : now.scenario(),
+                difficulty != null ? difficulty : now.difficulty()), clock.now());
+        if (scenario != null && !scenario.equals(now.scenario())) {
+            events.publishEvent(new app.bolo.common.event.ScenarioChanged(learner, now.scenario(), scenario,
+                    difficulty != null ? difficulty : now.difficulty()));
+        }
     }
 
     @Override

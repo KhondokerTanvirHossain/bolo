@@ -46,7 +46,16 @@ public class AnalyticsService implements RecordEventUseCase {
     /** Runs inside the talk's own path; analytics must never break a talk (or the Coach's clean-up listening after it). */
     @EventListener
     public void onTalkStarted(TalkStarted e) {
-        quietly(() -> events.insert(e.learner(), "session_started", Map.of(), clock.now()));
+        // SCN-1: which scenario (and a standup's difficulty) the talk started with.
+        Map<String, Object> props = e.difficulty() == null ? Map.of("scenario", e.scenario() == null ? "free" : e.scenario())
+                : Map.of("scenario", e.scenario(), "difficulty", e.difficulty());
+        quietly(() -> events.insert(e.learner(), "session_started", props, clock.now()));
+    }
+
+    @EventListener
+    public void onScenarioChanged(app.bolo.common.event.ScenarioChanged e) {
+        quietly(() -> events.insert(e.learner(), "scenario_changed", Map.of("from", e.from(), "to", e.to(), "difficulty", e.difficulty()),
+                clock.now()));
     }
 
     @EventListener

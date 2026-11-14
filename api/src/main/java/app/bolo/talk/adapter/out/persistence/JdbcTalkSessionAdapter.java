@@ -51,12 +51,12 @@ class JdbcTalkSessionAdapter implements TalkSessionPort {
     public boolean insertIfBelowCap(TalkSession s, int cap, Instant liveSince, Instant unattachedSince) {
         jdbc.sql("select pg_advisory_xact_lock(?)").param(START_LOCK).query().singleRow();
         return jdbc.sql("""
-                insert into talk_session (id, learner_id, minutes, started_at)
-                select ?, ?, ?, ?
+                insert into talk_session (id, learner_id, minutes, started_at, scenario, difficulty)
+                select ?, ?, ?, ?, ?, ?
                 where (select count(*) from talk_session
                        where ended_at is null and started_at > ?
                          and (attached_at is not null or started_at > ?)) < ?""")
-                .params(s.id().value(), s.learnerId().value(), s.minutes(), Timestamp.from(s.startedAt()),
+                .params(s.id().value(), s.learnerId().value(), s.minutes(), Timestamp.from(s.startedAt()), s.scenario(), s.difficulty(),
                         Timestamp.from(liveSince), Timestamp.from(unattachedSince), cap)
                 .update() == 1;
     }
@@ -93,12 +93,12 @@ class JdbcTalkSessionAdapter implements TalkSessionPort {
     @Override
     public Optional<TalkSession> findLive(TalkSessionId id, LearnerId learner) {
         return jdbc.sql("""
-                select id, learner_id, minutes, started_at from talk_session
+                select id, learner_id, minutes, started_at, scenario, difficulty from talk_session
                 where id = ? and learner_id = ? and ended_at is null""")
                 .params(id.value(), learner.value())
                 .query((rs, n) -> new TalkSession(new TalkSessionId(rs.getObject("id", UUID.class)),
                         new LearnerId(rs.getObject("learner_id", UUID.class)), rs.getInt("minutes"),
-                        rs.getTimestamp("started_at").toInstant(), null))
+                        rs.getTimestamp("started_at").toInstant(), null, rs.getString("scenario"), rs.getString("difficulty")))
                 .optional();
     }
 

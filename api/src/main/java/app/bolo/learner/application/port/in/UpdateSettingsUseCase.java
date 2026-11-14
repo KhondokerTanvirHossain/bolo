@@ -11,7 +11,9 @@ public interface UpdateSettingsUseCase {
      * "voice-accent" or "mood".
      * AX-7, AX-8 (2026-11-14): Time to answer ("auto" | "quick" | "normal" | "relaxed") and I stammer; null keeps the
      * current one. Refuses with "answer-time". Bolo's automatic pick is never set here.
+     * SCN-1 (2026-11-15): scenario ("free" | "standup") and difficulty ("friendly" | "realistic"); null keeps the
+     * current one. Refuses with "scenario" or "difficulty".
      */
     void update(LearnerId learner, String buddySpeed, boolean captions, String talkView, String voiceGender, String voiceAccent,
-                String mood, String answerTime, Boolean stammer);
+                String mood, String answerTime, Boolean stammer, String scenario, String difficulty);
 }

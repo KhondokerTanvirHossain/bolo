@@ -8,7 +8,12 @@ import app.bolo.common.id.TalkSessionId;
 /** AX-7, AX-8 (2026-11-14): {@code answerTime} the resolved pace ("quick" | "normal" | "relaxed", never "auto") and
  * {@code stammer}; fixed for this talk. */
 public record TalkView(TalkSessionId id, int minutes, String goal, String fearedMoment, boolean slowVoice, String voice, String mood,
-                       String answerTime, boolean stammer) {
+                       String answerTime, boolean stammer, String scenario, String difficulty) {
+
+    public TalkView(TalkSessionId id, int minutes, String goal, String fearedMoment, boolean slowVoice, String voice, String mood,
+                    String answerTime, boolean stammer) {
+        this(id, minutes, goal, fearedMoment, slowVoice, voice, mood, answerTime, stammer, "free", null);
+    }
 
     public TalkView(TalkSessionId id, int minutes, String goal, String fearedMoment, boolean slowVoice) {
         this(id, minutes, goal, fearedMoment, slowVoice, null, null);

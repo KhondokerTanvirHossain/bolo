@@ -76,7 +76,11 @@ public class TalkSessionService implements StartTalkUseCase, app.bolo.talk.appli
         int minutes = onFreePlan ? FreePlan.FREE_MINUTES : chosen;
         var now = clock.now();
         sessions.endOpenFor(learner, EndReason.DISCONNECTED, now);
-        TalkSession session = new TalkSession(TalkSessionId.newId(), learner, minutes, now, null);
+        var set = view.settings();
+        String scenario = set == null || set.scenario() == null ? "free" : set.scenario();
+        // SCN-1: copied onto the talk, so a change during it applies from the next talk.
+        TalkSession session = new TalkSession(TalkSessionId.newId(), learner, minutes, now, null, scenario,
+                "standup".equals(scenario) ? (set.difficulty() == null ? "realistic" : set.difficulty()) : null);
         if (!sessions.insertIfBelowCap(session, maxLive, now.minus(SLOT_HOLD), now.minus(attachWithin))) {
             throw new RefusedException("busy");
         }
@@ -157,7 +161,8 @@ public class TalkSessionService implements StartTalkUseCase, app.bolo.talk.appli
         String answerTime = set == null || set.answerTime() == null ? "normal"
                 : "auto".equals(set.answerTime()) ? set.answerTimeAuto() : set.answerTime();
         return new TalkView(s.id(), s.minutes(), p == null ? null : p.goal(), p == null ? null : p.fearedMoment(), slow, voice,
-                set == null ? null : set.mood(), answerTime == null ? "normal" : answerTime, set != null && set.stammer());
+                set == null ? null : set.mood(), answerTime == null ? "normal" : answerTime, set != null && set.stammer(),
+                s.scenario() == null ? "free" : s.scenario(), s.difficulty());
     }
 
     /** A guest joined an account (US-8.1, US-8.4): its talks move with it, in the sign-in transaction. */

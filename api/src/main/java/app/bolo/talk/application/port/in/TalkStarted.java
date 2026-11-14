@@ -4,5 +4,9 @@ import app.bolo.common.id.LearnerId;
 import app.bolo.common.id.TalkSessionId;
 
 /** Published when a talk's socket attaches and Bolo starts (analytics: session_started). */
-public record TalkStarted(TalkSessionId id, LearnerId learner) {
+public record TalkStarted(TalkSessionId id, LearnerId learner, String scenario, String difficulty) {
+
+    public TalkStarted(TalkSessionId id, LearnerId learner) {
+        this(id, learner, "free", null);
+    }
 }
