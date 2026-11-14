@@ -3,8 +3,14 @@ import "../styles/bolo.css";
 import "../styles/app.css";
 
 // Discretion at work: the tab title is always just "Bolo" (design system, Desktop and web).
-export const metadata: Metadata = { title: "Bolo", description: "Talk first. Get better after." };
-export const viewport: Viewport = { width: "device-width", initialScale: 1 };
+// Installable for reminders on iPhone (PRG-5): the Home Screen icon and name.
+export const metadata: Metadata = {
+  title: "Bolo",
+  description: "Talk first. Get better after.",
+  appleWebApp: { capable: true, title: "Bolo", statusBarStyle: "default" },
+  icons: { icon: "/icons/icon-192.png", apple: "/icons/apple-touch-icon.png" },
+};
+export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#1D1236" };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
