@@ -140,6 +140,34 @@ class TalkSessionAcceptanceTest extends PostgresTestBase {
         assertThat(res.statusCode()).isEqualTo(403);
     }
 
+    /**
+     * 2026-11-14: Chrome on an iPhone (WebKit) closed talks seconds in with 1002 protocol error. WebKit's
+     * permessage-deflate is the suspect; PCM audio barely compresses, so the talk socket never agrees to it.
+     */
+    @Test
+    void theTalkSocketRefusesCompression() throws Exception {
+        String cookie = client.consentedGuest(5);
+        String id = TalkTestClient.id(client.startTalk(cookie));
+        try (var socket = new java.net.Socket("localhost", port)) {
+            socket.setSoTimeout(5000);
+            String request = "GET /ws/talk/" + id + " HTTP/1.1\r\n"
+                    + "Host: localhost:" + port + "\r\n"
+                    + "Upgrade: websocket\r\nConnection: Upgrade\r\n"
+                    + "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n"
+                    + "Sec-WebSocket-Extensions: permessage-deflate; client_max_window_bits\r\n"
+                    + "Origin: " + TalkTestClient.ORIGIN + "\r\nCookie: " + cookie + "\r\n\r\n";
+            socket.getOutputStream().write(request.getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+            var in = new java.io.BufferedReader(new java.io.InputStreamReader(socket.getInputStream(),
+                    java.nio.charset.StandardCharsets.US_ASCII));
+            StringBuilder head = new StringBuilder();
+            for (String line = in.readLine(); line != null && !line.isEmpty(); line = in.readLine()) {
+                head.append(line).append('\n');
+            }
+            assertThat(head.toString()).startsWith("HTTP/1.1 101");
+            assertThat(head.toString().toLowerCase()).doesNotContain("sec-websocket-extensions");
+        }
+    }
+
     WebSocketSession connect(String id, String cookie, String origin) throws Exception {
         WebSocketHttpHeaders headers = new WebSocketHttpHeaders();
         headers.setOrigin(origin);
