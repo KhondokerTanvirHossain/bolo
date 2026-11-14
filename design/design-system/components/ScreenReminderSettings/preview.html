@@ -1,0 +1,30 @@
+<!-- @dsCard group="Screens" height=900 subtitle="Me → Daily reminder: on or off, the time, and Keep it private" page -->
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>ScreenReminderSettings — Bolo</title></head>
+<body>
+<div class="bo-stage bo-stage--center" style="padding:24px 0">
+<div class="bo-phone" style="height:860px">
+<div class="bo-statusbar"><span>9:52</span><span><span class="bo-icon bo-icon--sm" aria-hidden="true">signal_cellular_alt</span> <span class="bo-icon bo-icon--sm" aria-hidden="true">battery_5_bar</span></span></div>
+<div style="flex:1;min-height:0;overflow:hidden;padding:0 var(--space-5) var(--space-6);display:flex;flex-direction:column">
+    <div class="bo-flow__top"><button class="bo-back"><span class="bo-icon" aria-hidden="true">arrow_back</span>Me</button></div>
+    <h1 class="large-title" style="margin:var(--space-2) 0 var(--space-3)">Daily reminder</h1>
+    <div class="bo-group"><div class="bo-row"><div class="bo-row__body"><div class="bo-row__title">Remind me</div><div class="bo-row__sub">One a day, only if you haven't talked yet</div></div><button class="bo-toggle" role="switch" aria-checked="true" aria-label="Remind me"></button></div></div>
+    <div style="height:var(--space-4)"></div>
+    <div class="bo-slots" role="radiogroup" aria-label="Reminder time">
+      <button class="bo-slot" role="radio" aria-checked="false"><span class="bo-icon" aria-hidden="true">wb_twilight</span><span class="bo-slot__name">Morning commute</span><span class="bo-slot__time">8:00 am</span></button>
+      <button class="bo-slot" role="radio" aria-checked="false"><span class="bo-icon" aria-hidden="true">lunch_dining</span><span class="bo-slot__name">Lunch</span><span class="bo-slot__time">1:30 pm</span></button>
+      <button class="bo-slot" role="radio" aria-checked="true"><span class="bo-icon bo-icon--fill" aria-hidden="true">directions_bus</span><span class="bo-slot__name">Evening commute</span><span class="bo-slot__time">6:30 pm</span></button>
+      <button class="bo-slot" role="radio" aria-checked="false"><span class="bo-icon" aria-hidden="true">bedtime</span><span class="bo-slot__name">Night</span><span class="bo-slot__time">10:00 pm</span></button>
+    </div>
+    <div class="bo-exact"><span class="bo-icon" aria-hidden="true">schedule</span>Pick an exact time</div>
+    <div style="height:var(--space-3)"></div>
+    <div class="bo-group"><div class="bo-row"><div class="bo-row__body"><div class="bo-row__title">Keep it private</div><div class="bo-row__sub">Show only "Time for today's talk", never what you talked about</div></div><button class="bo-toggle" role="switch" aria-checked="false" aria-label="Keep it private"></button></div></div>
+    <div style="height:var(--space-4)"></div>
+    <div class="bo-notif" aria-label="Example reminder"><span class="bo-notif__app">B</span><div><div class="bo-notif__meta">Bolo · 6:30 pm</div><p class="bo-notif__text">Bolo wants to know how the demo went.</p></div></div>
+    <p class="bo-memnote" style="margin-top:var(--space-4)">On for this phone. Turn it on in each browser where you want reminders.</p>
+  </div>
+</div>
+</div>
+</body>
+</html>
