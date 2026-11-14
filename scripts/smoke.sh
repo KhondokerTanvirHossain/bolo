@@ -19,6 +19,7 @@ check "what Bolo remembers needs a session" 401 "$(code "$BOLO_URL/api/memory")"
 check "voice samples need a session" 401 "$(code "$BOLO_URL/api/voices/british-female/sample")"
 check "a talk's rating needs a session" 401 "$(code "$BOLO_URL/api/talk/00000000-0000-0000-0000-000000000000/rating")"
 check "admin ratings are hidden without an admin session" 404 "$(code "$BOLO_URL/api/admin/ratings")"
+check "the daily reminder needs a session"          401 "$(code "$BOLO_URL/api/reminder")"
 check "plans are public" yes "$(curl -s --max-time 15 "$BOLO_URL/api/plans" | grep -q '"plan":"basic"' && echo yes || echo no)"
 # Open sign-up (P1d): anyone gets in without an invite, but a guest signs in with Google before the first talk.
 # The live probes use their own unlimited probes invite (scripts/probe-invite.sh).

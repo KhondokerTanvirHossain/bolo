@@ -46,4 +46,20 @@ class HomePlanTest {
         assertThat(HomePlan.card(last("ready", true, "V_BH"), 7)).contains(new HomePlan.Card("intro", null, null, null, 7));
         assertThat(HomePlan.card(Optional.empty(), 14)).contains(new HomePlan.Card("intro", null, null, null, 14));
     }
+
+    /** Daily reminders (spec 2026-11-14): Get a daily reminder ranks after the intro, before practice. */
+    @Test
+    void reminderCardRanksAfterIntroBeforePractice() {
+        assertThat(HomePlan.card(last("ready", false, "V_BH"), null, () -> true)).contains(new HomePlan.Card("feedback", "t1", null, null, null));
+        assertThat(HomePlan.card(last("ready", true, "V_BH"), 7, () -> true)).contains(new HomePlan.Card("intro", null, null, null, 7));
+        assertThat(HomePlan.card(last("ready", true, "V_BH"), null, () -> true)).contains(new HomePlan.Card("reminder", null, null, null, null));
+        assertThat(HomePlan.card(last("ready", true, "V_BH"), null, () -> false)).contains(new HomePlan.Card("practice", "t1", "V_BH", "The v sound", null));
+    }
+
+    @Test
+    void reminderCardOnlyAfterAReadyFeedbackAndOnlyAskedWhenItWouldShow() {
+        assertThat(HomePlan.card(Optional.empty(), null, () -> true)).isEmpty();
+        assertThat(HomePlan.card(last("scoring", false, null), null, () -> true)).isEmpty();
+        assertThat(HomePlan.card(last("ready", false, null), null, () -> { throw new AssertionError("asked too early"); })).isPresent();
+    }
 }

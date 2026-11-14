@@ -10,7 +10,7 @@ public interface HomeUseCase {
                     String lastTopic, app.bolo.home.domain.Streak.Week week) {
     }
 
-    /** kind: feedback (talkId), intro (day) or practice (pattern, title). */
+    /** kind: feedback (talkId), intro (day), reminder (Get a daily reminder) or practice (pattern, title). */
     record Card(String kind, String talkId, String pattern, String title, Integer day) {
     }
 
