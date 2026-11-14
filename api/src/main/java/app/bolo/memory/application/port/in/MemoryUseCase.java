@@ -13,7 +13,12 @@ public interface MemoryUseCase {
      * The brief for a talk that's opening: the note, the one follow-up to open with (it then rests), recent topics and 3
      * fresh ideas. Asked twice for the same talk, it returns the same follow-up and counts the talk once.
      */
-    TalkBrief brief(LearnerId learner, TalkSessionId talk, String goal);
+    default TalkBrief brief(LearnerId learner, TalkSessionId talk, String goal) {
+        return brief(learner, talk, goal, true);
+    }
+
+    /** SCN-2: {@code withOpener} false (a standup) opens with no follow-up and leaves it for a later talk. */
+    TalkBrief brief(LearnerId learner, TalkSessionId talk, String goal, boolean withOpener);
 
     /** The follow-up the next talk would open with, without marking it (daily reminders); empty when none or remembering is off. */
     java.util.Optional<String> nextFollowUp(LearnerId learner);

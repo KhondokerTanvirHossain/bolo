@@ -110,6 +110,8 @@ final class TalkConversation implements TalkConnection {
     private final Consumer<TalkEnded> onEnded;
     private final SafetyGuard safety;
     private final Starters starters;
+    /** SCN-2: a Standup rehearsal (Bolo is the manager). */
+    private final boolean standup;
 
     private final ReentrantLock lock = new ReentrantLock();
     private final EnergyVad vad = new EnergyVad();
@@ -209,7 +211,8 @@ final class TalkConversation implements TalkConnection {
         Pace pace = settings.pace(talk.answerTime(), talk.stammer());
         this.quiet = new QuietClock(pace);
         this.taker = new TurnTaker(pace.policy());
-        this.system = BuddyPrompt.system(talk.goal(), talk.fearedMoment(), talk.minutes(), brief, opening, talk.mood());
+        this.system = BuddyPrompt.system(talk.goal(), talk.fearedMoment(), talk.minutes(), brief, opening, talk.mood(), talk.scenario());
+        this.standup = "standup".equals(talk.scenario());
     }
 
     /** Opens the recogniser and starts Bolo's opening line, off the socket thread, and starts the watchdog. */
@@ -534,7 +537,7 @@ final class TalkConversation implements TalkConnection {
     private void sendStartersAsync() {
         String line = lastBuddyText;
         Thread.ofVirtual().start(() -> {
-            List<String> s = starters.forLine(ctx, line);
+            List<String> s = starters.forLine(ctx, line, standup);
             if (!ended) out.send(message("hint", "starters", s));
         });
     }

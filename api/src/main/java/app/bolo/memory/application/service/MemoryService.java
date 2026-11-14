@@ -135,7 +135,7 @@ public class MemoryService implements MemoryUseCase {
     }
 
     @Override
-    public TalkBrief brief(LearnerId learner, TalkSessionId talk, String goal) {
+    public TalkBrief brief(LearnerId learner, TalkSessionId talk, String goal, boolean withOpener) {
         return tx.execute(s -> {
             MemoryPort.Row row = memory.lockOrCreate(learner);
             if (!row.enabled()) {
@@ -145,10 +145,11 @@ public class MemoryService implements MemoryUseCase {
             MemoryThread opener;
             if (talk.value().equals(row.lastTalkId())) {
                 int number = row.talks();
-                opener = note.threads().stream().filter(t -> t.openedTalk() != null && t.openedTalk() == number).findFirst().orElse(null);
+                opener = !withOpener ? null
+                        : note.threads().stream().filter(t -> t.openedTalk() != null && t.openedTalk() == number).findFirst().orElse(null);
             } else {
                 int number = row.talks() + 1;
-                opener = note.opener(clock.today(), clock.now(), number).orElse(null);
+                opener = withOpener ? note.opener(clock.today(), clock.now(), number).orElse(null) : null;
                 if (opener != null) note = note.withOpened(opener.id(), clock.now(), number);
                 memory.save(learner, true, note, number, talk.value());
             }

@@ -56,6 +56,12 @@ public final class BuddyPrompt {
     }
 
     public static String system(String goal, String fearedMoment, int minutes, String brief, Opening opening, String mood) {
+        return system(goal, fearedMoment, minutes, brief, opening, mood, "free");
+    }
+
+    /** SCN-2 (2026-11-15): {@code scenario} "standup" makes Bolo the learner's warm manager at a daily standup. */
+    public static String system(String goal, String fearedMoment, int minutes, String brief, Opening opening, String mood, String scenario) {
+        if ("standup".equals(scenario)) return standup(minutes, brief, mood);
         String focus = goal == null
                 ? "Talk about everyday life in an interesting way: their work or studies, plans, people and opinions."
                 : "Their goal is " + human(goal) + (fearedMoment == null ? "" : ", and the moment they dread most is "
@@ -89,6 +95,42 @@ public final class BuddyPrompt {
                 }
                 + moodStyle(mood)
                 + (brief == null || brief.isBlank() ? "" : "\n" + brief.strip() + "\n");
+    }
+
+    /** The rules both scenarios share: short replies, never correct, simple words, safety, Banglish. */
+    private static final String SHARED = """
+            - Reply in one or two short spoken sentences, at most 35 words.
+            - Never correct their pronunciation, grammar or word choice, and never mention mistakes. If you didn't \
+            catch something, ask a friendly question about it.
+            - Use simple, everyday words. Plain spoken text only: no lists, no markdown, no emoji, no stage directions.
+            - If they bring up something harmful, kindly say you'd rather not talk about that and change the subject.
+            - If their words look like Bangla written in English letters, or don't make sense, kindly ask them to try \
+            saying it in English and offer a short sentence starter.
+            """;
+
+    private static String standup(int minutes, String brief, String mood) {
+        boolean knows = brief != null && !brief.isBlank();
+        return """
+                You are Bolo, playing the learner's friendly manager at a quick daily standup on a voice call. The \
+                learner is a Bangladeshi adult who reads English well but freezes when speaking it, and this is a safe \
+                rehearsal for their real meetings. Your only job is to keep them talking. Don't invent a setting.
+                """ + SHARED + """
+                - Ask one question at a time, and follow up on what they just said.
+                - Ask for their update: what they finished yesterday, what's on today, and any blockers. Follow up like \
+                a manager would: when it will be done, who is waiting on it, what they need.
+                - Stay warm and curious, never impatient or harsh. It is a rehearsal, never a test.
+                - After they answer one of your follow-ups, say a few words like "Got it, carry on." and let them \
+                continue their update.
+                - Use only what they tell you and what you remember about their work. Never invent projects, people or \
+                deadlines of your own.
+                - If they want to talk about something else, follow them kindly, then bring it back to the update.
+                - The talk lasts %d minutes.
+                """.formatted(minutes)
+                + (knows ? "- Open with a short, friendly good morning and ask for their update, using what you remember about their work.\n"
+                        : "- Open with a short, friendly good morning. You don't know their work yet, so first ask in one short question "
+                        + "what they work on, then ask for their update.\n")
+                + moodStyle(mood)
+                + (knows ? "\n" + brief.strip() + "\n" : "");
     }
 
     /** An example first question for each goal, so the first talk is about the learner's real situation. */

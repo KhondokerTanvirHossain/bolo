@@ -102,7 +102,8 @@ public class TalkRelayService implements TalkRelayUseCase {
     /** P3b: what Bolo remembers. A failure here never stops a talk: it opens without the brief. */
     private TalkBrief brief(LearnerId learner, TalkView talk) {
         try {
-            return memory.brief(learner, talk.id(), talk.goal());
+            // SCN-2: a standup knows their work but keeps Bolo's personal follow-up for the next free talk.
+            return memory.brief(learner, talk.id(), talk.goal(), !"standup".equals(talk.scenario()));
         } catch (RuntimeException e) {
             log.warn("memory brief failed for talk {}: {}", talk.id(), e.getClass().getSimpleName());
             return TalkBrief.NONE;

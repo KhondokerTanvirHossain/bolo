@@ -125,4 +125,18 @@ class MemoryBriefAcceptanceTest extends PostgresTestBase {
         String asked = opening(startTalk());
         assertThat(asked).doesNotContain("What you remember").contains("a real question about their situation");
     }
+
+    /** SCN-2 (2026-11-15): a Standup rehearsal knows their work but keeps the follow-up for the next free talk. */
+    @Test
+    void aStandupKeepsTheFollowUpForTheNextFreeTalk() throws Exception {
+        assertThat(client.send("PUT", "/api/me/settings", cookie,
+                "{\"buddySpeed\":\"normal\",\"captions\":true,\"scenario\":\"standup\"}").status()).isEqualTo(204);
+        String standup = startTalk();
+        seedPlan(learnerOf(standup));
+        assertThat(opening(standup)).doesNotContain("one follow-up about").contains("Works as a software tester in Dhaka")
+                .contains("manager");
+        assertThat(client.send("PUT", "/api/me/settings", cookie,
+                "{\"buddySpeed\":\"normal\",\"captions\":true,\"scenario\":\"free\"}").status()).isEqualTo(204);
+        assertThat(opening(startTalk())).contains("one follow-up about: " + PLAN);
+    }
 }

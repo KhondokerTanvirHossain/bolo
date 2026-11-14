@@ -106,4 +106,40 @@ class BuddyPromptTest {
     void professionalLeansTowardTheirGoal() {
         assertThat(BuddyPrompt.moodStyle("professional")).contains("toward their goal").doesNotContain("their work");
     }
+
+    // SCN-2 (2026-11-15): the Standup rehearsal.
+    static String standup(String brief) {
+        return BuddyPrompt.system("work_meetings", null, 5, brief, BuddyPrompt.Opening.FROM_GOAL, null, "standup");
+    }
+
+    @Test
+    void standupMakesBoloAWarmManager() {
+        String s = standup(null);
+        assertThat(s).contains("manager").contains("yesterday").contains("today").contains("blockers").contains("Got it, carry on");
+        assertThat(s).doesNotContain("what they did today").doesNotContain("loves a relaxed chat");
+    }
+
+    @Test
+    void standupKeepsTheSafetyAndNoCorrectionRules() {
+        assertThat(standup(null)).contains("Never correct their pronunciation").contains("If they bring up something harmful");
+    }
+
+    @Test
+    void standupWithNoNotesAsksWhatTheyWorkOn() {
+        assertThat(standup(null)).contains("what they work on");
+        assertThat(standup("What you remember: they are a backend developer.")).doesNotContain("what they work on")
+                .contains("backend developer");
+    }
+
+    @Test
+    void freeTalkIsUnchanged() {
+        assertThat(BuddyPrompt.system("job_interviews", "talking_to_my_boss", 5, "brief", BuddyPrompt.Opening.FROM_NOTES, "calm", "free"))
+                .isEqualTo(BuddyPrompt.system("job_interviews", "talking_to_my_boss", 5, "brief", BuddyPrompt.Opening.FROM_NOTES, "calm"));
+    }
+
+    @Test
+    void standupStartersAreForAStatusUpdate() {
+        assertThat(app.bolo.talk.application.service.Starters.system(true)).contains("status update to a manager");
+        assertThat(app.bolo.talk.application.service.Starters.system(false)).doesNotContain("manager");
+    }
 }

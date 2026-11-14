@@ -34,9 +34,18 @@ public class Starters {
         this.model = model;
     }
 
+    /** SCN-2: in a Standup rehearsal the starters help answer a manager. */
+    public static String system(boolean standup) {
+        return standup ? SYSTEM + " These are for a status update to a manager." : SYSTEM;
+    }
+
     public List<String> forLine(TalkContext ctx, String buddyLine) {
+        return forLine(ctx, buddyLine, false);
+    }
+
+    public List<String> forLine(TalkContext ctx, String buddyLine, boolean standup) {
         try {
-            var request = new LlmRequest(model, SYSTEM, List.of(LlmMessage.user(buddyLine == null ? "Tell me about your day." : buddyLine)),
+            var request = new LlmRequest(model, system(standup), List.of(LlmMessage.user(buddyLine == null ? "Tell me about your day." : buddyLine)),
                     120, SCHEMA, true);
             JsonNode node = JSON.readTree(llm.stream(ctx, request, d -> { }).done().get(5, TimeUnit.SECONDS).text()).path("starters");
             List<String> out = new ArrayList<>();
