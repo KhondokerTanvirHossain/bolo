@@ -207,8 +207,8 @@ The MVP has 77 functional requirements across 11 modules. **P0** is required for
 | PRG-2 | Play the Day 1 clip side by side with a fresh recording of the same intro, unlocked at Day 7, 14, 21 and every 30 days after. | P0 |
 | PRG-3 | Show a personal error profile: the learner's top patterns, each marked improving, steady or new. | P0 |
 | PRG-4 | Track a gentle streak that allows 1 rest day per week without breaking it. | P1 |
-| PRG-5 | Send a daily reminder at the learner's chosen time, with a Buddy-story hook. Maximum 1 per day. On the free plan after the first week, remind only when free talks are available. | P0 |
-| PRG-6 | Stop reminders after 3 ignored in a row; send one "we're here when you're ready" message after 7 days. | P0 |
+| PRG-5 | Send a daily reminder at the learner's chosen time, with a Buddy-story hook. Maximum 1 per day. Remind only when a talk is available (any plan). **Changed 2026-11-14 (founder approved the design):** Web Push; on iPhone, reminders need Bolo on the Home Screen (the step explains how); **Keep it private** shows only "Time for today's talk."; on a computer, "Add to my calendar instead"; Me → Daily reminder; the "Remind me on my phone" code is P1. *Was: on the free plan after the first week, remind only when free talks are available.* | P0 |
+| PRG-6 | Stop reminders after 3 ignored in a row; send one "we're here when you're ready" message after 7 days. Opening Bolo starts them again (2026-11-14). | P0 |
 | PRG-7 | End the first loop in a fixed order: drills offer → reminder time with notification permission. No rating in session 1. *Changed 2026-11-13 (founder): sign-in stays before the first talk, so the save-progress step is dropped.* | P0 |
 | PRG-8 | History lists past sessions newest first, each with date, topic and its fixes. | P0 |
 
@@ -705,18 +705,20 @@ The learner never sees this epic directly; it powers the debrief. Its stories ar
 
 *As a* learner, *I want* a daily reminder at a time I choose, *so that* practice fits my routine.
 
-- **Given** I reach the reminder step at the end of my first loop (after saving progress, PRG-7), **when** the app asks "When should Bolo check in?", **then** I can pick Morning commute, Lunch, Evening commute or Night, or set an exact time. The system notification prompt follows on the same step.
+- **Given** I reach the reminder step at the end of my first loop (after the drills offer, PRG-7), **when** the app asks "When should Bolo check in?", **then** I can pick Morning commute, Lunch, Evening commute or Night, or set an exact time. The system notification prompt follows on the same step. *Changed 2026-11-14: the save step was dropped (sign-in comes before the first talk).*
+- **Given** I'm on an iPhone in a browser tab, **when** I choose my time, **then** it's saved and Bolo shows how to add it to the Home Screen (Share → Add to Home Screen → open from there); the first time I open Bolo from the Home Screen, it asks once to turn the reminder on.
+- **Given** I finished my first talk before reminders existed, **when** I open Home, **then** a "Get a daily reminder" card offers the same step (on at most 3 days, until I answer).
 - **Given** my reminder time arrives, **when** I haven't practised today, **then** I get one notification that continues the Buddy's story ("Bolo wants to know how the demo went").
 - **Given** I've already practised today, **when** the reminder time arrives, **then** no notification is sent.
-- **Given** I'm on the free plan after my first week and have no free talks left, **when** my reminder time arrives, **then** no notification is sent; on the 1st I get one message, "Your 2 free talks are back."
-- **Given** I deny notification permission, **when** I finish a loop, **then** Home shows my next suggested time and I'm not asked again for 14 days.
+- **Given** I'm on the free plan after my first week and have no free talks left, **when** my reminder time arrives, **then** no notification is sent; on the day my monthly free talks come back (the 1st) the reminder says "Your 2 free talks are back."
+- **Given** I deny notification permission, **when** I land on Home, **then** it says "Come back around 6:30 pm" (my time). Bolo doesn't ask again on its own; Me → Daily reminder can turn it on.
 
 **US-6.6 · Don't nag me** · P0 · PRG-6 · edge case
 
 *As a* learner going through a busy week, *I want* reminders to back off, *so that* I don't start to resent the app.
 
 - **Given** I ignore 3 reminders in a row, **when** the 4th day comes, **then** reminders stop.
-- **Given** reminders have stopped for 7 days, **when** day 7 arrives, **then** I get one message, "We're here whenever you're ready," and nothing more until I open the app.
+- **Given** reminders have stopped for 7 days, **when** day 7 arrives, **then** I get one message, "We're here whenever you're ready," and nothing more until I open the app. Opening Bolo starts the daily reminders again.
 - **Given** I return after a break, **when** I open the app, **then** the Buddy welcomes me back warmly and doesn't mention how long I was away.
 
 **US-6.7 · Browse past sessions (PRG-8)** · P0
@@ -731,8 +733,7 @@ The learner never sees this epic directly; it powers the debrief. Its stories ar
 *As a* first-time learner, *I want* the end of my first session to feel calm, *so that* I leave feeling good, not interrupted.
 
 - **Given** my first debrief ends, **when** the next screen shows, **then** it offers only "Practise (3 min)" (primary) and "Later".
-- **Given** I finish or skip the drills, **when** the next screen shows, **then** it's "Save your progress" (US-8.1).
-- **Given** I've signed in or tapped "Not now", **when** the next screen shows, **then** it's the reminder time picker, with the notification permission on the same step (US-6.5).
+- **Given** I finish or skip the drills, **when** the next screen shows, **then** it's the reminder time picker, with the notification permission on the same step (US-6.5). *Changed 2026-11-14: the "Save your progress" step was dropped (PRG-7, 2026-11-13).*
 - **Given** that step is done, **when** I land on Home, **then** I see a short "See you tomorrow" message. No rating, plan offer or other prompt appears in session 1.
 - **Given** I close the app at any of these steps, **when** I next open it, **then** only the steps I missed are shown, once, before Home.
 

@@ -446,3 +446,31 @@ Me → Speaking → **Time to answer** (Automatic, Quick, Normal, Relaxed) and *
 - **API:** `GET /api/talk/{id}/rating` → `{ask}`; `PUT /api/talk/{id}/rating` `{score, note}`. A skip never clears a saved score.
 - **Admin → Ratings:** the 30-day average, the share of 4–5 (the PRD goal is at least 70%), the count, and the 20 newest notes.
 - **Test it by clicking:** finish the feedback of your 2nd talk (go to the last card). The sheet asks "How was today?"; tap a face, write a note, Send. Then check Admin → Ratings.
+
+## Reminders (PRG-5, PRG-6, PRG-7; 2026-11-14)
+
+- **How it works.** Web Push. Every minute the API sends the reminders whose time has come (local time + 2 h window, once
+  a local day, never on a day the learner started a talk or has no talk available). After 3 ignored in a row they stop;
+  7 days later one "We're here whenever you're ready."; opening Bolo starts them again. The line comes from Bolo's notes
+  (written after each talk that changes them), else a plain line; Keep it private → "Time for today's talk."
+- **Keys.** `BOLO_VAPID_PUBLIC_KEY` / `BOLO_VAPID_PRIVATE_KEY` live only in `~/bolo/bolo.env`, made on the box, never
+  printed or copied off it:
+  ```
+  cd ~/bolo && umask 077 && openssl ecparam -name prime256v1 -genkey -noout -out /tmp/vapid.pem \
+    && echo "BOLO_VAPID_PUBLIC_KEY=$(openssl ec -in /tmp/vapid.pem -pubout -outform DER 2>/dev/null | tail -c 65 | base64 | tr '+/' '-_' | tr -d '=\n')" >> bolo.env \
+    && echo "BOLO_VAPID_PRIVATE_KEY=$(openssl pkcs8 -topk8 -nocrypt -in /tmp/vapid.pem -outform DER | base64 | tr -d '\n')" >> bolo.env \
+    && rm /tmp/vapid.pem && grep -c BOLO_VAPID_ bolo.env
+  ```
+  Without them the API logs an error at start and sends nothing (talks keep working). A new key pair means every
+  browser must turn reminders on again (old subscriptions answer 403/410 and are removed).
+- **Test it.** Admin portal → **Send me a test reminder** (sends the next line now to your browsers). For the real path:
+  Me → Daily reminder, a time 2 minutes ahead.
+- **Read it.**
+  ```
+  select date(at at time zone 'Asia/Dhaka') d, count(*) filter (where name='reminder_sent') sent,
+         count(*) filter (where name='reminder_opened') opened
+  from event where name in ('reminder_sent','reminder_opened') group by 1 order by 1 desc limit 14;
+  select props->>'hook_type' hook, count(*) from event where name='reminder_sent' group by 1;
+  ```
+- **Stop every reminder now.** `update reminder_settings set enabled = false;` (learners can turn theirs back on).
+
