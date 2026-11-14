@@ -207,4 +207,21 @@ class ReminderSettingsAcceptanceTest extends PostgresTestBase {
         assertThat((String) JsonPath.read(view(back), "$.time")).isEqualTo("08:00");
         assertThat(account).isNotNull();
     }
+
+    /** Review (reminders, I4): only real push services, and at most 5 browsers per learner. */
+    @Test
+    void endpointFromAnUnknownHostIs422() throws Exception {
+        var r = client.send("POST", "/api/reminder/subscriptions", me, sub("https://evil.example/" + UUID.randomUUID()));
+        assertThat(r.status()).isEqualTo(422);
+        assertThat(r.body()).contains("subscription");
+    }
+
+    @Test
+    void aSixthBrowserReplacesTheOldest() throws Exception {
+        String first = "https://push.example/" + UUID.randomUUID();
+        client.send("POST", "/api/reminder/subscriptions", me, sub(first));
+        for (int i = 0; i < 5; i++) client.send("POST", "/api/reminder/subscriptions", me, sub("https://push.example/" + UUID.randomUUID()));
+        assertThat((Integer) JsonPath.read(view(me), "$.devices")).isEqualTo(5);
+        assertThat(jdbc.sql("select count(*) from push_subscription where endpoint = ?").param(first).query(Integer.class).single()).isZero();
+    }
 }

@@ -232,7 +232,7 @@ export function FirstTalkScreen({ deviceId }: { deviceId: string | null }) {
     }
   }
   // PRG-7: after the first talk and its drills offer, the reminder time, once, before "See you tomorrow" (accounts).
-  if (loop.askReminder && account) return <ReminderStep onDone={reminderDone} />;
+  if (loop.askReminder && account) return <ReminderStep firstLoop onDone={reminderDone} />;
   return homePage(turnOn ? <ReminderTurnOn reminder={turnOn} onClose={(r) => {
     closeTurnOn();
     if (r === "denied") setReminderNote(`Come back around ${formatTime(turnOn.time)}`);

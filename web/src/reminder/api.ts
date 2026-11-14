@@ -9,7 +9,8 @@ export type Reminder = {
   keepPrivate: boolean;
   preview: string;
   devices: number;
-  publicKey: string;
+  /** null when the server can't send reminders (no keys). */
+  publicKey: string | null;
 };
 
 export const zone = () => {

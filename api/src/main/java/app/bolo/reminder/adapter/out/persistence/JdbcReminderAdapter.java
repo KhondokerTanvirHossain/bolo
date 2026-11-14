@@ -32,7 +32,8 @@ class JdbcReminderAdapter implements ReminderPort {
         return new Settings(rs.getBoolean("enabled"), rs.getString("local_time"), rs.getString("time_zone"), rs.getBoolean("keep_private"),
                 instant(rs, "asked_at"), rs.getInt("ignored"), instant(rs, "stopped_at"), rs.getBoolean("comeback_sent"),
                 date(rs, "last_sent_on"), instant(rs, "last_sent_at"), rs.getObject("last_sent_id", UUID.class), rs.getBoolean("tapped"),
-                rs.getInt("card_days"), date(rs, "card_last_on"), rs.getBoolean("card_dismissed"), rs.getString("line"), rs.getString("line_source"));
+                rs.getInt("card_days"), date(rs, "card_last_on"), rs.getBoolean("card_dismissed"), rs.getString("line"), rs.getString("line_source"),
+                rs.getBoolean("delivered"));
     }
 
     private static Instant instant(ResultSet rs, String col) throws SQLException {
@@ -133,7 +134,7 @@ class JdbcReminderAdapter implements ReminderPort {
     @Override
     public boolean claim(LearnerId learner, LocalDate day, UUID id, Instant at, int ignored, boolean comeback) {
         return jdbc.sql("""
-                update reminder_settings set last_sent_on = ?, last_sent_at = ?, last_sent_id = ?, tapped = false, ignored = ?,
+                update reminder_settings set last_sent_on = ?, last_sent_at = ?, last_sent_id = ?, tapped = false, delivered = false, ignored = ?,
                     comeback_sent = comeback_sent or ?
                 where learner_id = ? and enabled and last_sent_on is distinct from ?""")
                 .params(Date.valueOf(day), Timestamp.from(at), id, ignored, comeback, learner.value(), Date.valueOf(day)).update() > 0;
@@ -143,6 +144,19 @@ class JdbcReminderAdapter implements ReminderPort {
     public void stop(LearnerId learner, int ignored, Instant at) {
         jdbc.sql("update reminder_settings set stopped_at = coalesce(stopped_at, ?), ignored = ? where learner_id = ?")
                 .params(Timestamp.from(at), ignored, learner.value()).update();
+    }
+
+    @Override
+    public void markDelivered(LearnerId learner, UUID id) {
+        jdbc.sql("update reminder_settings set delivered = true where learner_id = ? and last_sent_id = ?").params(learner.value(), id).update();
+    }
+
+    @Override
+    public void keepNewest(LearnerId learner, int max) {
+        jdbc.sql("""
+                delete from push_subscription where learner_id = ? and id not in
+                    (select id from push_subscription where learner_id = ? order by id desc limit ?)""")
+                .params(learner.value(), learner.value(), max).update();
     }
 
     @Override

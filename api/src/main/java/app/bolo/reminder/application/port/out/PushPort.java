@@ -13,6 +13,11 @@ public interface PushPort {
     /** Never throws. */
     Outcome send(Subscription subscription, byte[] payload);
 
-    /** The VAPID public key browsers subscribe with (base64url). */
+    /** The VAPID public key browsers subscribe with (base64url); null when reminders are unavailable. */
     String publicKey();
+
+    /** False when Web Push is on but its keys are missing or broken: nothing is subscribed, claimed or counted. */
+    default boolean available() {
+        return publicKey() != null;
+    }
 }

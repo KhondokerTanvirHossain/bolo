@@ -118,4 +118,32 @@ class ReminderLineAcceptanceTest extends PostgresTestBase {
         sender.sendDue(java.time.Instant.now().truncatedTo(java.time.temporal.ChronoUnit.MINUTES));
         assertThat(sentBody()).isNotEqualTo("Bolo wants to know how the demo went.");
     }
+
+    @MockitoSpyBean app.bolo.reminder.application.port.out.ReminderPort reminderPort;
+
+    /** Review (reminders, I3): a pass works from fresh settings, so opening Bolo mid-pass is never undone by a stop. */
+    @Test
+    void openingBoloMidPassIsNeverUndoneByAStop() throws Exception {
+        dueNowWithADevice();
+        java.time.Instant now = java.time.Instant.now().truncatedTo(java.time.temporal.ChronoUnit.MINUTES);
+        // Yesterday's reminder went out untapped; the learner had 2 ignored, then opened Bolo (ignored back to 0).
+        jdbc.sql("""
+                update reminder_settings set last_sent_on = current_date - 1, last_sent_at = ?, last_sent_id = gen_random_uuid(),
+                    tapped = false, delivered = true, ignored = 0 where learner_id = ?""")
+                .params(java.sql.Timestamp.from(now.minus(1, java.time.temporal.ChronoUnit.DAYS)), learner.value()).update();
+        // The pass's list was read before the open: it still says ignored = 2.
+        org.mockito.Mockito.doAnswer(inv -> {
+            @SuppressWarnings("unchecked")
+            var real = (java.util.List<app.bolo.reminder.application.port.out.ReminderPort.Due>) inv.callRealMethod();
+            return real.stream().map(d -> {
+                var s = d.settings();
+                return new app.bolo.reminder.application.port.out.ReminderPort.Due(d.learner(), new app.bolo.reminder.application.port.out.ReminderPort.Settings(
+                        s.enabled(), s.localTime(), s.timeZone(), s.keepPrivate(), s.askedAt(), 2, s.stoppedAt(), s.comebackSent(), s.lastSentOn(),
+                        s.lastSentAt(), s.lastSentId(), s.tapped(), s.cardDays(), s.cardLastOn(), s.cardDismissed(), s.line(), s.lineSource(), s.delivered()));
+            }).toList();
+        }).when(reminderPort).candidates();
+        sender.sendDue(now);
+        assertThat(jdbc.sql("select stopped_at from reminder_settings where learner_id = ?").param(learner.value()).query().singleRow().get("stopped_at")).isNull();
+        assertThat(sentBody()).isNotBlank();
+    }
 }

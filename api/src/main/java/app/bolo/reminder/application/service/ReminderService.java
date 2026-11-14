@@ -8,7 +8,6 @@ import app.bolo.learner.application.port.in.CurrentLearnerUseCase;
 import app.bolo.reminder.application.port.in.ReminderUseCase;
 import app.bolo.reminder.application.port.out.PushPort;
 import app.bolo.reminder.application.port.out.ReminderPort;
-import lombok.RequiredArgsConstructor;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
@@ -19,7 +18,6 @@ import java.util.UUID;
 import java.util.regex.Pattern;
 
 @Service
-@RequiredArgsConstructor
 public class ReminderService implements ReminderUseCase {
 
     static final String DEFAULT_TIME = "18:30";
@@ -33,6 +31,21 @@ public class ReminderService implements ReminderUseCase {
     private final BoloClock clock;
     private final ReminderSendService sender;
     private final org.springframework.context.ApplicationEventPublisher events;
+    /** Push services a browser subscription may point at; ".x.com" means any host under x.com. */
+    private final java.util.List<String> hosts;
+    static final int MAX_DEVICES = 5;
+
+    public ReminderService(ReminderPort reminders, PushPort push, CurrentLearnerUseCase learners, BoloClock clock, ReminderSendService sender,
+                           org.springframework.context.ApplicationEventPublisher events,
+                           @org.springframework.beans.factory.annotation.Value("${bolo.push.hosts}") java.util.List<String> hosts) {
+        this.reminders = reminders;
+        this.push = push;
+        this.learners = learners;
+        this.clock = clock;
+        this.sender = sender;
+        this.events = events;
+        this.hosts = hosts;
+    }
 
     @Override
     public boolean account(LearnerId learner) {
@@ -87,10 +100,25 @@ public class ReminderService implements ReminderUseCase {
 
     @Override
     public void subscribe(LearnerId learner, String endpoint, String p256dh, String auth, String userAgent) {
-        if (endpoint == null || !endpoint.startsWith("https://") || endpoint.length() > 2048
+        if (!push.available()) throw new RefusedException("unavailable");
+        if (endpoint == null || !endpoint.startsWith("https://") || endpoint.length() > 2048 || !knownHost(endpoint)
                 || blankOrLong(p256dh) || blankOrLong(auth)) throw new RefusedException("subscription");
         String ua = userAgent == null ? null : userAgent.substring(0, Math.min(userAgent.length(), 300));
         reminders.upsertDevice(learner, endpoint, p256dh, auth, ua, clock.now());
+        reminders.keepNewest(learner, MAX_DEVICES);
+    }
+
+    /** Only real push services (review, reminders I4): the API never calls hosts a learner names. */
+    private boolean knownHost(String endpoint) {
+        String host;
+        try {
+            host = java.net.URI.create(endpoint).getHost();
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
+        if (host == null) return false;
+        String h = host.toLowerCase(java.util.Locale.ROOT);
+        return hosts.stream().map(String::trim).anyMatch(k -> k.startsWith(".") ? h.endsWith(k) : h.equals(k));
     }
 
     private static boolean blankOrLong(String s) {

@@ -163,4 +163,25 @@ class ReminderSendAcceptanceTest extends PostgresTestBase {
         assertThat((Integer) JsonPath.read(r.body(), "$.devices")).isEqualTo(1);
         assertThat(client.send("POST", "/api/admin/reminder-test", me, "").status()).isEqualTo(404);
     }
+
+    /** Review (reminders, I2): a reminder that reached no browser never counts as ignored, and isn't reported as sent. */
+    @Test
+    void undeliveredRemindersNeverStopReminders() throws Exception {
+        String a = device(me);
+        fake().failing(a);
+        for (int day = 0; day < 4; day++) assertThat(sender.sendDue(now.plus(day, ChronoUnit.DAYS))).isZero();
+        var row = jdbc.sql("select ignored, stopped_at from reminder_settings where learner_id = ?").param(learner).query().singleRow();
+        assertThat(row.get("stopped_at")).isNull();
+        assertThat(row.get("ignored")).isEqualTo(0);
+        assertThat(jdbc.sql("select count(*) from event where learner_id = ? and name = 'reminder_sent'").param(learner).query(Integer.class).single()).isZero();
+    }
+
+    /** Delivered but never tapped, three days running: the fourth day stops (PRG-6). */
+    @Test
+    void deliveredAndIgnoredThreeTimesStops() throws Exception {
+        device(me);
+        for (int day = 0; day < 3; day++) assertThat(sender.sendDue(now.plus(day, ChronoUnit.DAYS))).isEqualTo(1);
+        assertThat(sender.sendDue(now.plus(3, ChronoUnit.DAYS))).isZero();
+        assertThat(jdbc.sql("select stopped_at from reminder_settings where learner_id = ?").param(learner).query().singleRow().get("stopped_at")).isNotNull();
+    }
 }

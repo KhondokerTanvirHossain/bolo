@@ -12,7 +12,8 @@ public interface ReminderPort {
 
     record Settings(boolean enabled, String localTime, String timeZone, boolean keepPrivate, Instant askedAt, int ignored,
                     Instant stoppedAt, boolean comebackSent, LocalDate lastSentOn, Instant lastSentAt, UUID lastSentId,
-                    boolean tapped, int cardDays, LocalDate cardLastOn, boolean cardDismissed, String line, String lineSource) {
+                    boolean tapped, int cardDays, LocalDate cardLastOn, boolean cardDismissed, String line, String lineSource,
+                    boolean delivered) {
     }
 
     record Device(String endpoint, String p256dh, String auth) {
@@ -57,6 +58,12 @@ public interface ReminderPort {
     boolean claim(LearnerId learner, LocalDate day, UUID id, Instant at, int ignored, boolean comeback);
 
     void stop(LearnerId learner, int ignored, Instant at);
+
+    /** The claimed reminder reached at least one browser. */
+    void markDelivered(LearnerId learner, UUID id);
+
+    /** Keeps the learner's newest {@code max} browsers. */
+    void keepNewest(LearnerId learner, int max);
 
     /** Stores the next story line (creating the row if missing); null clears it. */
     void saveLine(LearnerId learner, String line, String source, Instant now);

@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Icon, Scene } from "@/scene/Scene";
 import { fetchReminder, notNow, saveReminder, type Reminder } from "./api";
-import { currentSupport, enablePush, type PushSupport } from "./push";
+import { askPermission, currentSupport, enablePush, type PushSupport } from "./push";
 import { Preview } from "./Preview";
 import { formatTime, icsFor, nearestSlot, SLOTS } from "./slots";
 import { TimeChoice } from "./TimeChoice";
@@ -14,7 +14,7 @@ export type ReminderResult = { kind: "on" | "off" | "denied" | "iphone" | "calen
  * learner's time. The browser's own permission box comes only after the tap. On an iPhone tab the time is saved and
  * ScreenReminderIphone explains Add to Home Screen instead.
  */
-export function ReminderStep({ onDone }: { onDone: (r: ReminderResult) => void }) {
+export function ReminderStep({ onDone, firstLoop = false }: { onDone: (r: ReminderResult) => void; firstLoop?: boolean }) {
   const [reminder, setReminder] = useState<Reminder | null>(null);
   const [time, setTime] = useState(() => SLOTS.find((s) => s.id === nearestSlot(new Date()))!.time);
   const [keepPrivate, setKeepPrivate] = useState(false);
@@ -35,13 +35,20 @@ export function ReminderStep({ onDone }: { onDone: (r: ReminderResult) => void }
     setSupport(currentSupport());
     setDesk(window.matchMedia?.("(min-width: 900px)").matches === true);
     setTouch((navigator.maxTouchPoints ?? 0) > 0);
-    void fetchReminder().then((r) => (r ? setReminder(r) : finish({ kind: "skip" })));
+    void fetchReminder().then((r) => {
+      // Reminders are the account's: answered on another browser, a new browser's first talk doesn't ask again (review, I7).
+      if (!r || (firstLoop && r.asked)) return finish({ kind: "skip" });
+      if (r.asked) setTime(r.time);
+      setReminder(r);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (!reminder) return <section className="dk-screen on" data-screen="reminder"><Scene /><div className="dk-dim" /></section>;
 
   const remind = async () => {
+    // The browser's box opens from the tap itself, before any await (Safari, review I8).
+    const asked = support === "ok" ? askPermission() : null;
     setBusy(true);
     setProblem(null);
     const saved = await saveReminder({ on: true, time, keepPrivate });
@@ -55,8 +62,8 @@ export function ReminderStep({ onDone }: { onDone: (r: ReminderResult) => void }
       setPhase("iphone");
       return;
     }
-    if (support !== "ok") return finish({ kind: "denied", time });
-    const r = await enablePush(saved.publicKey);
+    if (support !== "ok" || !saved.publicKey) return finish({ kind: "denied", time });
+    const r = await enablePush(saved.publicKey, asked);
     finish(r === "on" ? { kind: "on", time } : { kind: "denied", time });
   };
   const later = async () => {

@@ -13,6 +13,7 @@ create table reminder_settings (
     last_sent_at   timestamptz,
     last_sent_id   uuid,
     tapped         boolean     not null default false,
+    delivered      boolean     not null default false, -- the last reminder reached at least one browser
     card_days      int         not null default 0,
     card_last_on   date,
     card_dismissed boolean     not null default false,

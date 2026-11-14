@@ -34,3 +34,18 @@ self.addEventListener("notificationclick", (event) => {
     await self.clients.openWindow(url);
   })());
 });
+
+// The browser replaced its subscription: subscribe again with the same key and tell Bolo (review, reminders I6).
+self.addEventListener("pushsubscriptionchange", (event) => {
+  event.waitUntil((async () => {
+    const key = event.oldSubscription && event.oldSubscription.options && event.oldSubscription.options.applicationServerKey;
+    const sub = event.newSubscription || (key ? await self.registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key }) : null);
+    if (!sub) return;
+    const json = sub.toJSON();
+    await fetch("/api/reminder/subscriptions", {
+      method: "POST", credentials: "same-origin",
+      headers: { "Content-Type": "application/json", "X-Bolo": "1" },
+      body: JSON.stringify({ endpoint: json.endpoint, keys: json.keys }),
+    });
+  })());
+});

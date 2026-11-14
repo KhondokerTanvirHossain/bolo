@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { Icon } from "@/scene/Scene";
 import { fetchReminder, saveReminder, type Reminder } from "./api";
-import { currentSupport, enablePush, pushState, type PushSupport } from "./push";
+import { askPermission, currentSupport, enablePush, pushState, type PushSupport } from "./push";
 import { Preview } from "./Preview";
 import { IphoneSteps } from "./ReminderStep";
 import { TimeChoice } from "./TimeChoice";
@@ -36,14 +36,16 @@ export function ReminderSettings({ onBack }: { onBack: () => void }) {
     setR(saved);
     return saved;
   };
-  const turnOnHere = async (key: string) => {
-    const res = await enablePush(key);
-    setHere(res === "on" ? "here" : res === "denied" ? "blocked" : "not-here");
+  const turnOnHere = async (key: string | null, asked?: Promise<NotificationPermission> | null) => {
+    const res = await enablePush(key, asked);
+    // "Blocked" only when the browser says so: a closed box is not a refusal (review I8).
+    setHere(res === "on" ? "here" : typeof Notification !== "undefined" && Notification.permission === "denied" ? "blocked" : "not-here");
   };
   const toggle = async () => {
     if (!r) return;
+    const asked = !r.on && support === "ok" && here === "not-here" ? askPermission() : null;
     const saved = await save({ on: !r.on });
-    if (saved?.on && support === "ok" && here === "not-here") await turnOnHere(saved.publicKey);
+    if (saved?.on && asked) await turnOnHere(saved.publicKey, asked);
   };
 
   const status = () => {

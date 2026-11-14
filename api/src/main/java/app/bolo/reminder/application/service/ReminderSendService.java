@@ -47,10 +47,13 @@ public class ReminderSendService {
 
     /** One pass: returns how many learners got a reminder. Never throws. */
     public int sendDue(Instant now) {
+        if (!push.available()) return 0;
         int sent = 0;
         for (ReminderPort.Due due : reminders.candidates()) {
             try {
-                if (sendOne(due.learner(), due.settings(), now)) sent++;
+                // Fresh settings per learner: a long pass must not act on a snapshot taken before the learner opened Bolo.
+                var fresh = reminders.find(due.learner()).orElse(null);
+                if (fresh != null && fresh.enabled() && sendOne(due.learner(), fresh, now)) sent++;
             } catch (RuntimeException e) {
                 log.warn("reminder for {} failed: {}", due.learner().value(), e.getClass().getSimpleName());
             }
@@ -70,13 +73,16 @@ public class ReminderSendService {
             return false;
         }
         if (d.kind() == Kind.NONE) return false;
-        UUID id = UUID.randomUUID();
-        if (!reminders.claim(learner, d.day(), id, now, d.ignored(), d.kind() == Kind.COMEBACK)) return false;
         String story = storyLine(learner, s);
         String body = ReminderLines.text(d.kind(), s.keepPrivate(), story, (int) d.day().toEpochDay());
+        UUID id = UUID.randomUUID();
+        if (!reminders.claim(learner, d.day(), id, now, d.ignored(), d.kind() == Kind.COMEBACK)) return false;
         int reached = deliver(learner, body, "/?from=reminder&r=" + id, now);
+        if (reached == 0) return false;
+        // Only a reminder that reached a browser can be ignored (review, reminders I2) or counted as sent.
+        reminders.markDelivered(learner, id);
         events.publishEvent(new ReminderSent(learner, ReminderLines.slot(s.localTime()), hookType(d.kind(), s.keepPrivate(), story)));
-        return reached > 0;
+        return true;
     }
 
     /** Admin "Send me a test reminder": the next line, now, to every browser; ignores the rules. */
@@ -116,7 +122,7 @@ public class ReminderSendService {
 
     private Facts facts(LearnerId learner, ReminderPort.Settings s, ZoneId zone, LocalDate day, Instant now) {
         boolean talkedToday = talks.startedSince(learner, day.atStartOfDay(zone).toInstant());
-        boolean talkSince = s.lastSentAt() != null && talks.startedSince(learner, s.lastSentAt());
+        boolean talkSince = s.delivered() && s.lastSentAt() != null && talks.startedSince(learner, s.lastSentAt());
         var allowance = freeTalks.allowance(learner);
         boolean available = allowance.isEmpty() || allowance.get().left() > 0;
         boolean back = allowance.isPresent() && "free".equals(allowance.get().plan()) && "month".equals(allowance.get().window())
@@ -125,7 +131,8 @@ public class ReminderSendService {
     }
 
     static State state(ReminderPort.Settings s) {
-        return new State(s.enabled(), LocalTime.parse(s.localTime()), zone(s.timeZone()), s.lastSentOn(), s.lastSentAt(), s.tapped(),
+        // A reminder that reached no browser doesn't count for the ignored run: as if none was sent.
+        return new State(s.enabled(), LocalTime.parse(s.localTime()), zone(s.timeZone()), s.lastSentOn(), s.delivered() ? s.lastSentAt() : null, s.tapped(),
                 s.ignored(), s.stoppedAt(), s.comebackSent());
     }
 

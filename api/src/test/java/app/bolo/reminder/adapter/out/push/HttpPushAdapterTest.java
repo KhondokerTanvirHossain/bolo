@@ -58,9 +58,9 @@ class HttpPushAdapterTest {
         var sub = start();
         assertThat(adapter(Duration.ofSeconds(5)).send(sub, "{\"body\":\"hi\"}".getBytes())).isEqualTo(PushPort.Outcome.SENT);
         assertThat(headers.get("method")).isEqualTo("POST");
-        assertThat(headers.get("ttl")).isEqualTo("86400");
+        assertThat(headers.get("ttl")).isEqualTo("7200");
         assertThat(headers.get("content-encoding")).isEqualTo("aes128gcm");
-        assertThat(headers.get("urgency")).isEqualTo("normal");
+        assertThat(headers.get("urgency")).isEqualTo("high");
         assertThat(headers.get("authorization")).startsWith("vapid t=").contains(", k=");
     }
 
@@ -70,6 +70,11 @@ class HttpPushAdapterTest {
         status.set(410);
         assertThat(adapter(Duration.ofSeconds(5)).send(sub, "x".getBytes())).isEqualTo(PushPort.Outcome.GONE);
         status.set(404);
+        assertThat(adapter(Duration.ofSeconds(5)).send(sub, "x".getBytes())).isEqualTo(PushPort.Outcome.GONE);
+        // Review (reminders, I5): a subscription made with another VAPID key answers 401/403 forever.
+        status.set(403);
+        assertThat(adapter(Duration.ofSeconds(5)).send(sub, "x".getBytes())).isEqualTo(PushPort.Outcome.GONE);
+        status.set(401);
         assertThat(adapter(Duration.ofSeconds(5)).send(sub, "x".getBytes())).isEqualTo(PushPort.Outcome.GONE);
     }
 

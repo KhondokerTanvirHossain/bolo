@@ -119,6 +119,8 @@ bolo:
       public-key: ${BOLO_VAPID_PUBLIC_KEY:}
       private-key: ${BOLO_VAPID_PRIVATE_KEY:}
       subject: mailto:k.tanvir.hossain@gmail.com
+    # The push services a browser subscription may point at (Chrome/Android/Samsung, Firefox, Safari/iPhone, Edge).
+    hosts: fcm.googleapis.com,updates.push.services.mozilla.com,.push.apple.com,.notify.windows.com
   reminder:
     # The send job's period (a reminder goes out within a minute of its time). Tests switch it off.
     job-ms: 60000

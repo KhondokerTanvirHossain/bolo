@@ -13,9 +13,12 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
 
-/** Web Push over HTTP: RFC 8291 encryption, RFC 8292 VAPID, a day to live. */
+/** Web Push over HTTP: RFC 8291 encryption, RFC 8292 VAPID, 2 hours to live, high urgency (a visible notification). */
 @Slf4j
 class HttpPushAdapter implements PushPort {
+
+    /** A reminder that can't arrive within its 2-hour window is dropped, never shown late (review, reminders I1). */
+    static final int TTL_SECONDS = 7200;
 
     private final Vapid vapid;
     private final Duration timeout;
@@ -33,12 +36,13 @@ class HttpPushAdapter implements PushPort {
             var dec = Base64.getUrlDecoder();
             byte[] body = WebPushCrypto.encrypt(payload, Vapid.publicKey(dec.decode(s.p256dh())), dec.decode(s.auth()));
             HttpRequest request = HttpRequest.newBuilder(URI.create(s.endpoint())).timeout(timeout)
-                    .header("TTL", "86400").header("Urgency", "normal")
+                    .header("TTL", String.valueOf(TTL_SECONDS)).header("Urgency", "high")
                     .header("Content-Encoding", "aes128gcm").header("Content-Type", "application/octet-stream")
                     .header("Authorization", vapid.authorization(s.endpoint(), Instant.now()))
                     .POST(HttpRequest.BodyPublishers.ofByteArray(body)).build();
             int status = http.send(request, HttpResponse.BodyHandlers.discarding()).statusCode();
-            if (status == 404 || status == 410) return Outcome.GONE;
+            // 401/403: made with another VAPID key (keys changed); it will never work again.
+            if (status == 401 || status == 403 || status == 404 || status == 410) return Outcome.GONE;
             if (status >= 200 && status < 300) return Outcome.SENT;
             log.warn("push to {} answered {}", host(s.endpoint()), status);
             return Outcome.FAILED;

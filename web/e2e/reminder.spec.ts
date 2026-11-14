@@ -9,27 +9,46 @@ const me = { learnerId: "a1", kind: "account", consent: { keepRecordings: true, 
   account: { email: "rahim@example.com", name: "Rahim" } };
 const IPHONE = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1";
 
+const PUBLIC_KEY = "BP4z9KsN6nGRTbVYI_c7VJSPQTBtkgcy27mlmlMoZIIgDll6e3vCYLocInmYWAmS6TlzAC8wEqKK6PBru3jl7A8";
+
 type Reminder = { asked: boolean; on: boolean; time: string; timeZone: string; keepPrivate: boolean; preview: string; devices: number; publicKey: string };
 
 /** permission: what the fake browser box answers. */
-async function stub(page: Page, { permission = "granted", card = null as object | null, asked = false } = {}) {
+/** existing: a subscription this browser already has ("same" key or an "other", older key); it also means permission was granted. */
+async function stub(page: Page, { permission = "granted", card = null as object | null, asked = false, on = false,
+  existing = null as null | "same" | "other" } = {}) {
   await page.addInitScript(() => window.localStorage.setItem("bolo.onboarding.v1", JSON.stringify({ step: "talk" })));
-  await page.addInitScript((answer) => {
+  await page.addInitScript(({ answer, existing, publicKey }) => {
     const w = window as unknown as Record<string, unknown>;
+    const order: string[] = [];
+    w.__order = order;
+    w.__unsubscribed = 0;
+    const realFetch = window.fetch.bind(window);
+    window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input instanceof Request ? input.url : input);
+      if (url.includes("/api/reminder") && init?.method === "PUT") order.push("save");
+      return realFetch(input, init);
+    };
+    const b64 = (k: string) => Uint8Array.from(atob(k.replace(/-/g, "+").replace(/_/g, "/") + "=".repeat((4 - (k.length % 4)) % 4)), (c) => c.charCodeAt(0));
     // The browser's own permission box and push service, faked: no real notification service in tests.
-    class FakeNotification { static permission = "default"; static async requestPermission() { FakeNotification.permission = answer; return answer; } }
+    class FakeNotification {
+      static permission = existing ? "granted" : "default";
+      static requestPermission() { order.push("permission"); FakeNotification.permission = answer; return Promise.resolve(answer); }
+    }
     w.Notification = FakeNotification;
-    const sub = { endpoint: "https://push.example/abc", toJSON: () => ({ endpoint: "https://push.example/abc", keys: { p256dh: "BKey", auth: "Auth" } }),
-      unsubscribe: async () => true };
-    let subscribed = false;
-    const pushManager = { getSubscription: async () => (subscribed ? sub : null), subscribe: async () => { subscribed = true; return sub; } };
+    const make = (key: Uint8Array) => ({ endpoint: "https://push.example/abc", options: { applicationServerKey: key.buffer },
+      toJSON: () => ({ endpoint: "https://push.example/abc", keys: { p256dh: "BKey", auth: "Auth" } }),
+      unsubscribe: async () => { (w.__unsubscribed as number)++; current = null; return true; } });
+    let current: ReturnType<typeof make> | null = existing ? make(existing === "same" ? b64(publicKey) : new Uint8Array([4, 1, 2, 3])) : null;
+    const pushManager = { getSubscription: async () => current,
+      subscribe: async (o: { applicationServerKey: Uint8Array }) => { current = make(new Uint8Array(o.applicationServerKey)); return current; } };
     const reg = { pushManager };
     w.PushManager = function PushManager() {};
     Object.defineProperty(navigator, "serviceWorker", { configurable: true, value: {
       register: async () => reg, ready: Promise.resolve(reg), getRegistration: async () => reg } });
-  }, permission);
-  let reminder: Reminder = { asked, on: false, time: "18:30", timeZone: "Asia/Dhaka", keepPrivate: false,
-    preview: "Bolo wants to know how the demo went.", devices: 0, publicKey: "BPublicKeyBase64UrlAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" };
+  }, { answer: permission, existing, publicKey: PUBLIC_KEY });
+  let reminder: Reminder = { asked, on, time: "18:30", timeZone: "Asia/Dhaka", keepPrivate: false,
+    preview: "Bolo wants to know how the demo went.", devices: 0, publicKey: PUBLIC_KEY };
   const calls = { puts: [] as Record<string, unknown>[], subs: 0, notNow: 0, opened: [] as Record<string, unknown>[], tests: 0 };
   await page.route("**/api/me", (r) => r.fulfill({ json: me }));
   await page.route("**/api/auth/config", (r) => r.fulfill({ json: { enabled: false } }));
@@ -153,3 +172,38 @@ test("opening Bolo from a reminder tells the server which one", async ({ page })
   expect(s.calls.opened[0]).toMatchObject({ reminder: "11111111-1111-1111-1111-111111111111" });
   await expect(page).toHaveURL(/\/$/);
 });
+
+/** Review (reminders, I7): reminders are the account's; a new browser's first talk doesn't ask again or change them. */
+test("an account that already answered elsewhere isn't asked again after its first talk here", async ({ page }) => {
+  const s = await stub(page, { asked: true, on: true });
+  await finishFirstTalk(page, s);
+  await expect(page.getByText("See you tomorrow. Bolo will be here.")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "When should Bolo check in?" })).toBeHidden();
+  expect(s.calls.notNow).toBe(0);
+  expect(s.calls.puts).toHaveLength(0);
+});
+
+/** Review (reminders, I8): Safari only shows its box straight from the tap, so it is asked before anything is saved. */
+test("the permission box opens before the time is saved", async ({ page }) => {
+  const s = await stub(page);
+  await finishFirstTalk(page, s);
+  await page.getByRole("button", { name: /Remind me at/ }).click();
+  await expect(page.getByText("See you tomorrow. Bolo will be here.")).toBeVisible();
+  expect(await page.evaluate(() => (window as unknown as { __order: string[] }).__order)).toEqual(["permission", "save"]);
+});
+
+/** Review (reminders, I6, I5): opening Bolo re-sends this browser's subscription, and remakes one made with an old key. */
+test("opening Bolo re-sends this browser's subscription", async ({ page }) => {
+  const s = await stub(page, { asked: true, on: true, existing: "same" });
+  await page.goto("/");
+  await expect.poll(() => s.calls.subs).toBe(1);
+  expect(await page.evaluate(() => (window as unknown as { __unsubscribed: number }).__unsubscribed)).toBe(0);
+});
+
+test("a subscription made with an old key is remade and sent again", async ({ page }) => {
+  const s = await stub(page, { asked: true, on: true, existing: "other" });
+  await page.goto("/");
+  await expect.poll(() => s.calls.subs).toBe(1);
+  expect(await page.evaluate(() => (window as unknown as { __unsubscribed: number }).__unsubscribed)).toBe(1);
+});
+

@@ -42,19 +42,63 @@ async function registration(): Promise<ServiceWorkerRegistration> {
   return navigator.serviceWorker.ready;
 }
 
-/** Asks (only after a tap), subscribes this browser and tells Bolo. */
-export async function enablePush(publicKey: string): Promise<"on" | "denied" | "failed"> {
+/**
+ * Starts the browser's own box straight from the tap: Safari shows it only from a user gesture, so call this before
+ * any await in the click handler (review, reminders I8).
+ */
+export function askPermission(): Promise<NotificationPermission> | null {
   try {
-    const permission = await Notification.requestPermission();
+    return "Notification" in window ? Notification.requestPermission() : null;
+  } catch {
+    return null;
+  }
+}
+
+/** True when the subscription was made with this key (else it answers 403 forever and must be remade). */
+function sameKey(sub: PushSubscription, publicKey: string): boolean {
+  const k = sub.options?.applicationServerKey;
+  if (!k) return true;
+  const a = new Uint8Array(k);
+  const b = key(publicKey);
+  return a.length === b.length && a.every((v, i) => v === b[i]);
+}
+
+async function subscribeAndSend(reg: ServiceWorkerRegistration, publicKey: string): Promise<boolean> {
+  let sub = await reg.pushManager.getSubscription();
+  if (sub && !sameKey(sub, publicKey)) {
+    await sub.unsubscribe();
+    sub = null;
+  }
+  sub ??= await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key(publicKey) as BufferSource });
+  const json = sub.toJSON() as { endpoint?: string; keys?: { p256dh?: string; auth?: string } };
+  return addDevice(json.endpoint ?? sub.endpoint, json.keys?.p256dh ?? "", json.keys?.auth ?? "");
+}
+
+/** Asks (only after a tap; pass the box already opened by {@link askPermission}), subscribes this browser, tells Bolo. */
+export async function enablePush(publicKey: string | null, asked?: Promise<NotificationPermission> | null): Promise<"on" | "denied" | "failed"> {
+  try {
+    const permission = await (asked ?? Notification.requestPermission());
     if (permission !== "granted") return "denied";
-    const reg = await registration();
-    const sub = (await reg.pushManager.getSubscription())
-      ?? (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key(publicKey) as BufferSource }));
-    const json = sub.toJSON() as { endpoint?: string; keys?: { p256dh?: string; auth?: string } };
-    const saved = await addDevice(json.endpoint ?? sub.endpoint, json.keys?.p256dh ?? "", json.keys?.auth ?? "");
-    return saved ? "on" : "failed";
+    if (!publicKey) return "failed";
+    return (await subscribeAndSend(await registration(), publicKey)) ? "on" : "failed";
   } catch {
     return "failed";
+  }
+}
+
+/**
+ * On every app load with reminders on (review, reminders I6): sends this browser's subscription again, so one the
+ * server dropped, one that moved to another learner, or one the browser rotated is right again. Remakes one made
+ * with an old key. Never asks for permission.
+ */
+export async function resyncPush(publicKey: string): Promise<void> {
+  try {
+    if (!("Notification" in window) || Notification.permission !== "granted" || !("serviceWorker" in navigator)) return;
+    const reg = await navigator.serviceWorker.getRegistration("/sw.js");
+    if (!reg || !(await reg.pushManager.getSubscription())) return;
+    await subscribeAndSend(reg, publicKey);
+  } catch {
+    // tried again next time Bolo opens
   }
 }
 
