@@ -153,3 +153,14 @@ test("the Ratings tab shows the average, the share of 4-5 and the notes", async 
   await expect(page.getByText("Ratings (30 days): 3")).toBeVisible();
   await expect(page.getByRole("cell", { name: "Bolo was fun" })).toBeVisible();
 });
+
+/** Daily reminders: the founder sends the next reminder to their own browsers to check it arrives. */
+test("Send me a test reminder says how many browsers it reached", async ({ page }) => {
+  await stub(page, true);
+  let posts = 0;
+  await page.route("**/api/admin/reminder-test", (r) => { posts++; return r.fulfill({ json: { devices: 2 } }); });
+  await page.goto("/admin");
+  await page.getByRole("button", { name: "Send me a test reminder" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Sent to 2 browsers." })).toBeVisible();
+  expect(posts).toBe(1);
+});

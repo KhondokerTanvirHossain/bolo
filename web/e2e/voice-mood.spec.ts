@@ -123,7 +123,7 @@ test.describe("desktop", () => {
     await expect(page.getByRole("radiogroup", { name: "Bolo's mood" })).toBeVisible();
     await expect(page.getByRole("button", { name: /Bolo's voice.*British · Female/ })).toHaveCount(0);
     await page.getByRole("radio", { name: /Professional/ }).click();
-    expect(saved.at(-1)).toMatchObject({ mood: "professional" });
+    await expect.poll(() => saved.at(-1)).toMatchObject({ mood: "professional" });
   });
 
   /** Review (P3c): a failed save puts the earlier choice back, as on the phone screens. */

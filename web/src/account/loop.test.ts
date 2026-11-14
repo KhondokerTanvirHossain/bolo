@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { afterDebrief, initialLoop, saveAnswered, seenSeeYou } from "./loop";
+import { afterDebrief, initialLoop, reminderAnswered, saveAnswered, seenSeeYou, signedInAfterFirstLoop } from "./loop";
 
 describe("the end of the first loop (US-6.8) and the guest save prompts (US-8.2)", () => {
   it("asks a guest to save after the first talk, then says see you tomorrow", () => {
@@ -32,5 +32,21 @@ describe("the end of the first loop (US-6.8) and the guest save prompts (US-8.2)
   it("a missed save step stays pending until it is answered", () => {
     const a = afterDebrief(initialLoop, { guest: true });
     expect(afterDebrief(a, { guest: true }).pendingSave).toBe(true);
+  });
+
+  it("after the first talk asks for a reminder time before 'see you tomorrow' (PRG-7)", () => {
+    const a = afterDebrief(initialLoop, { guest: false });
+    expect(a.askReminder).toBe(true);
+    const b = reminderAnswered(a);
+    expect(b.askReminder).toBe(false);
+    expect(b.seeYou).toBe(true);
+    expect(afterDebrief(b, { guest: false }).askReminder).toBe(false);
+  });
+
+  it("a guest is asked for a reminder only once signed in, never as a guest", () => {
+    const a = afterDebrief(initialLoop, { guest: true });
+    expect(a.askReminder).toBe(false);
+    expect(signedInAfterFirstLoop(saveAnswered(a)).askReminder).toBe(true);
+    expect(signedInAfterFirstLoop(afterDebrief(saveAnswered(afterDebrief(initialLoop, { guest: true })), { guest: true })).askReminder).toBe(false);
   });
 });

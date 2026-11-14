@@ -3,7 +3,8 @@ import { api } from "@/api/browser";
 export type HomeCard =
   | { kind: "feedback"; talkId: string }
   | { kind: "practice"; pattern: string; title: string; talkId?: string }
-  | { kind: "intro"; day: number };
+  | { kind: "intro"; day: number }
+  | { kind: "reminder" };
 import type { FreeTalks } from "@/plan/freeTalks";
 
 export type WeekDay = { date: string; state: "done" | "rest" | "missed" | "today" | "future" };

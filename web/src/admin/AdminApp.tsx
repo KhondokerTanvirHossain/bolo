@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
+import { sendTestReminder } from "@/reminder/api";
 import { approvePayment, fetchPayments, fetchRatings, rejectPayment, type AdminPayment, type Ratings } from "./admin";
 import { fetchHelp, fetchSettings, fetchUsage, fetchUsers, fetchWaitlist, type Waitlist, grant, helpDone, saveSettings, setUnlimited, type AdminUser, type HelpRequest, type Settings, type Usage } from "./admin";
 
@@ -18,6 +19,7 @@ export function AdminApp() {
   return (
     <main className="dk-page ad-page">
       <h1 className="dk-h1">Bolo admin</h1>
+      <TestReminder />
       <div className="ad-tabs" role="tablist">
         {(Object.keys(TAB_NAMES) as Tab[]).map((t) => (
           <button key={t} role="tab" aria-selected={tab === t} className={`bo-chip${tab === t ? " on" : ""}`} onClick={() => setTab(t)}>
@@ -254,5 +256,22 @@ function SettingsTab() {
       <button className="bo-btn bo-btn--primary" onClick={() => void save()}>Save</button>
       {note && <p className="bo-footnote" role="status">{note}</p>}
     </section>
+  );
+}
+
+/** Daily reminders: sends the next reminder line to the founder's own browsers now, ignoring the rules. */
+function TestReminder() {
+  const [line, setLine] = useState<string | null>(null);
+  const send = async () => {
+    setLine("Sending…");
+    const n = await sendTestReminder();
+    setLine(n === null ? "That didn't send. Try again." : n === 0 ? "No browser has reminders on. Turn them on in Me → Daily reminder."
+      : `Sent to ${n} ${n === 1 ? "browser" : "browsers"}.`);
+  };
+  return (
+    <p className="bo-footnote" style={{ textAlign: "left", margin: "0 0 16px" }}>
+      <button className="bo-btn bo-btn--secondary" onClick={() => void send()}>Send me a test reminder</button>
+      {line && <span role="status" style={{ marginLeft: 12 }}>{line}</span>}
+    </p>
   );
 }

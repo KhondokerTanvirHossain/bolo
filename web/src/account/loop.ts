@@ -3,16 +3,17 @@
  * A finished talk is one whose ready feedback was seen. Guests are asked to save after talks 1, 2 and 3 (once each);
  * an unanswered ask stays pending and is shown before Home next time. "See you tomorrow" follows the first loop once.
  */
-export type Loop = { talksFinished: number; asked: number[]; pendingSave: boolean; seeYou: boolean };
+/** askReminder: the reminder step (PRG-7) is due after the first talk, for accounts; answered once. */
+export type Loop = { talksFinished: number; asked: number[]; pendingSave: boolean; seeYou: boolean; askReminder?: boolean };
 
-export const initialLoop: Loop = { talksFinished: 0, asked: [], pendingSave: false, seeYou: false };
+export const initialLoop: Loop = { talksFinished: 0, asked: [], pendingSave: false, seeYou: false, askReminder: false };
 
 const ASK_AFTER = [1, 2, 3];
 
 export function afterDebrief(loop: Loop, { guest }: { guest: boolean }): Loop {
   const talks = loop.talksFinished + 1;
   const first = talks === 1;
-  if (!guest) return { ...loop, talksFinished: talks, seeYou: loop.seeYou || first };
+  if (!guest) return { ...loop, talksFinished: talks, seeYou: loop.seeYou || first, askReminder: loop.askReminder || first };
   const ask = ASK_AFTER.includes(talks) && !loop.asked.includes(talks);
   return { ...loop, talksFinished: talks, asked: ask ? [...loop.asked, talks] : loop.asked, pendingSave: loop.pendingSave || ask };
 }
@@ -20,6 +21,16 @@ export function afterDebrief(loop: Loop, { guest }: { guest: boolean }): Loop {
 /** Signed in, or "Stay a guest": the step is done; after the first loop, Home says see you tomorrow. */
 export function saveAnswered(loop: Loop): Loop {
   return { ...loop, pendingSave: false, seeYou: loop.seeYou || loop.talksFinished === 1 };
+}
+
+/** The reminder step was answered (on, Not now, or skipped): "See you tomorrow" may follow. */
+export function reminderAnswered(loop: Loop): Loop {
+  return { ...loop, askReminder: false };
+}
+
+/** A guest signed in right after the first talk: the reminder step follows (reminders are for accounts). */
+export function signedInAfterFirstLoop(loop: Loop): Loop {
+  return { ...loop, askReminder: loop.askReminder === true || loop.talksFinished === 1 };
 }
 
 export function seenSeeYou(loop: Loop): Loop {

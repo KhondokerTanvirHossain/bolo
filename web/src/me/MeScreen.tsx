@@ -13,11 +13,14 @@ import { Icon } from "@/scene/Scene";
 import { SpeakingSettings } from "./SpeakingSettings";
 import { HelpDialog } from "@/help/HelpDialog";
 import { fetchMemory, meRowLine, type MemoryView } from "@/memory/memory";
+import { fetchReminder, type Reminder } from "@/reminder/api";
+import { disablePushHere } from "@/reminder/push";
+import { formatTime } from "@/reminder/slots";
 
 const LABEL: Record<string, string> = Object.fromEntries(QUESTIONS.flatMap((q) => q.chips.map((c) => [c.value, c.label] as const)));
 
 /** ScreenMe: who you are, your goals, Speaking, Privacy, and sign in or out. Nothing nested more than 2 levels. */
-export function MeScreen({ me, onPrivacy, onSignedIn, onInvite, onMemory, onVoice, onMood, onAnswerTime }: { me: LearnerView | null; onPrivacy: () => void; onSignedIn: (l: LearnerView) => void; onInvite?: () => void; onMemory?: () => void; onVoice?: () => void; onMood?: () => void; onAnswerTime?: () => void }) {
+export function MeScreen({ me, onPrivacy, onSignedIn, onInvite, onMemory, onVoice, onMood, onAnswerTime, onReminder }: { me: LearnerView | null; onPrivacy: () => void; onSignedIn: (l: LearnerView) => void; onInvite?: () => void; onMemory?: () => void; onVoice?: () => void; onMood?: () => void; onAnswerTime?: () => void; onReminder?: () => void }) {
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const account = me?.account ?? null;
@@ -33,6 +36,11 @@ export function MeScreen({ me, onPrivacy, onSignedIn, onInvite, onMemory, onVoic
   const memoryRow = Boolean(onMemory);
   // Keyed on whether the row shows, not on the callback (a new function each render would refetch forever).
   useEffect(() => { if (memoryRow) void fetchMemory().then(setMemory); }, [memoryRow]);
+  /** Daily reminder row (PRG-5, DS v43 ScreenMe): the time, or Off. Accounts only. */
+  const [reminder, setReminder] = useState<Reminder | null>(null);
+  const reminderRow = Boolean(account && onReminder);
+  // Keyed on whether the row shows (a new callback each render would refetch forever).
+  useEffect(() => { if (reminderRow) void fetchReminder().then(setReminder); }, [reminderRow]);
   const google = async () => {
     setBusy(true);
     setProblem(null);
@@ -75,6 +83,19 @@ export function MeScreen({ me, onPrivacy, onSignedIn, onInvite, onMemory, onVoic
       </div>
       <h2 className="dk-h2" style={{ marginTop: 28 }}>Speaking</h2>
       <SpeakingSettings onVoice={onVoice} onMood={onMood} onAnswerTime={onAnswerTime} />
+      {account && onReminder && (
+        <>
+          <h2 className="dk-h2" style={{ marginTop: 28 }}>Reminders</h2>
+          <div className="bo-group">
+            <button className="bo-row" style={{ width: "100%", border: 0, background: "transparent", textAlign: "left", color: "inherit", font: "inherit" }} onClick={onReminder}>
+              <Icon name="notifications" />
+              <span className="bo-row__body"><span className="bo-row__title" style={{ display: "block" }}>Daily reminder</span></span>
+              <span className="bo-row__value">{reminder ? (reminder.on ? formatTime(reminder.time) : "Off") : ""}</span>
+              <Icon name="chevron_right" />
+            </button>
+          </div>
+        </>
+      )}
       <h2 className="dk-h2" style={{ marginTop: 28 }}>Privacy</h2>
       <div className="bo-group">
         {onMemory && (
@@ -110,7 +131,7 @@ export function MeScreen({ me, onPrivacy, onSignedIn, onInvite, onMemory, onVoic
       {help && <HelpDialog ctx={{ view: "me" }} onClose={() => setHelp(false)} />}
       {account && (
         <div style={{ marginTop: 28 }}>
-          <button className="bo-btn bo-btn--secondary" onClick={() => void signOut().then(() => window.location.assign("/"))}>Sign out</button>
+          <button className="bo-btn bo-btn--secondary" onClick={() => void disablePushHere().then(signOut).then(() => window.location.assign("/"))}>Sign out</button>
         </div>
       )}
     </>

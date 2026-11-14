@@ -22,6 +22,8 @@ type Props = {
   onPractice: (pattern?: string) => void;
   onProgress: () => void;
   onIntro: (day: number) => void;
+  /** Get a daily reminder (PRG-5): opens the reminder step. */
+  onReminder?: () => void;
   /** The practice card opens drills from that talk (DRL-1); without a talk, practice on its sound. */
   onDrills?: (talkId: string) => void;
   onPlayDay1: () => void;
@@ -31,7 +33,7 @@ type Props = {
  * The dashboard Home (DesktopHome, HOM-1, US-6.9): a greeting, Bolo's line in the scene with the Talk disc (the one
  * primary, R1, one tap away, R2), Next up (at most one card by the priority table), and This week (PRG-4).
  */
-export function HomeDashboard({ home, name, minutes, freeLine, note, hasDay1, keysOn, onTalk, onFeedback, onPractice, onProgress, onIntro, onDrills, onPlayDay1 }: Props) {
+export function HomeDashboard({ home, name, minutes, freeLine, note, hasDay1, keysOn, onTalk, onFeedback, onPractice, onProgress, onIntro, onDrills, onPlayDay1, onReminder }: Props) {
   useEffect(() => {
     if (!keysOn) return;
     const onKey = (e: KeyboardEvent) => {
@@ -82,6 +84,13 @@ export function HomeDashboard({ home, name, minutes, freeLine, note, hasDay1, ke
               <span className="bo-homecard__icon bo-homecard__icon--sun"><Icon name="mic" fill /></span>
               <span className="bo-homecard__body"><span className="bo-homecard__title">Record your intro again</span>
                 <span className="bo-homecard__sub">Day {card.day}: hear how far you&apos;ve come</span></span>
+              <Icon name="chevron_right" />
+            </button>
+          ) : card?.kind === "reminder" && onReminder ? (
+            <button className="bo-homecard" data-home-card="reminder" onClick={onReminder}>
+              <span className="bo-homecard__icon bo-homecard__icon--sun"><Icon name="notifications_active" fill /></span>
+              <span className="bo-homecard__body"><span className="bo-homecard__title">Get a daily reminder</span>
+                <span className="bo-homecard__sub">One a day, at a time you choose</span></span>
               <Icon name="chevron_right" />
             </button>
           ) : card?.kind === "practice" ? (
