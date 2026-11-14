@@ -16,7 +16,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 /** SCN-2, US-7.3, US-7.4 (2026-11-15): a Standup rehearsal, where Bolo is the learner's manager. */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
         "bolo.talk.max-live-sessions=1", "bolo.speech.vendor=fake", "bolo.llm.vendor=fake",
-        "bolo.talk.speculate-after-ms=100", "bolo.talk.end-after-ms=300", "bolo.talk.unfinished-end-after-ms=500"})
+        "bolo.talk.speculate-after-ms=100", "bolo.talk.end-after-ms=300", "bolo.talk.unfinished-end-after-ms=500",
+        "bolo.talk.standup.cut-in-after-ms=600", "bolo.talk.standup.cut-in-silence-ms=150"})
 class StandupTalkTest extends PostgresTestBase {
 
     @LocalServerPort int port;
@@ -67,5 +68,71 @@ class StandupTalkTest extends PostgresTestBase {
         try (TalkSocket s = yourTurn()) {
             assertThat(llm.lastReplyRequest()).doesNotContain("manager");
         }
+    }
+
+    int interrupted() {
+        return jdbc.sql("select count(*) from event where name = 'standup_interrupted' and learner_id = "
+                + "(select learner_id from talk_session order by started_at desc limit 1)").query(Integer.class).single();
+    }
+
+    /** Turn 1 ends normally; returns when it's the learner's turn 3. */
+    void firstTurn(TalkSocket s) throws Exception {
+        s.tone(400);
+        s.zeros(600);
+        s.await(3000, "\"buddy_done\"", "\"turn\":2");
+        s.json("{\"type\":\"played\",\"turn\":2}");
+        s.await(2000, "\"your_turn\"");
+    }
+
+    @Test
+    void realisticCutsInWithAFollowUp() throws Exception {
+        settings(",\"scenario\":\"standup\",\"difficulty\":\"realistic\"");
+        try (TalkSocket s = yourTurn()) {
+            firstTurn(s);
+            s.tone(800);
+            s.zeros(200);
+            s.await(3000, "\"buddy_done\"", "\"turn\":4");
+            assertThat(llm.lastReplyRequest()).contains("cutting in");
+        }
+        assertThat(interrupted()).isEqualTo(1);
+    }
+
+    @Test
+    void theFirstTurnIsNeverCutIn() throws Exception {
+        settings(",\"scenario\":\"standup\",\"difficulty\":\"realistic\"");
+        try (TalkSocket s = yourTurn()) {
+            s.tone(800);
+            s.zeros(200);
+            assertThat(s.quiet(150, "\"turn_end\"")).isTrue();
+        }
+    }
+
+    @Test
+    void friendlyNeverCutsIn() throws Exception {
+        settings(",\"scenario\":\"standup\",\"difficulty\":\"friendly\"");
+        try (TalkSocket s = yourTurn()) {
+            firstTurn(s);
+            s.tone(800);
+            s.zeros(600);
+            s.await(3000, "\"buddy_done\"", "\"turn\":4");
+            assertThat(llm.lastReplyRequest()).doesNotContain("cutting in");
+        }
+        assertThat(interrupted()).isZero();
+    }
+
+    /** Review Focus 3: a cut-in "Sorry?" is answered as "Sorry?" (Bolo repeats itself, no model call). */
+    @Test
+    void aCutInSorryIsAnsweredAsSorry() throws Exception {
+        settings(",\"scenario\":\"standup\",\"difficulty\":\"realistic\"");
+        try (TalkSocket s = yourTurn()) {
+            firstTurn(s);
+            int calls = llm.replyCalls();
+            stt.nextText("Sorry?");
+            s.tone(800);
+            s.zeros(200);
+            s.await(3000, "\"buddy_done\"", "\"turn\":4");
+            assertThat(llm.replyCalls()).isEqualTo(calls);
+        }
+        assertThat(interrupted()).isEqualTo(1);
     }
 }

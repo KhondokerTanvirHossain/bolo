@@ -10,7 +10,14 @@ import app.bolo.talk.domain.TurnPolicy;
  */
 record TalkSettings(TurnPolicy policy, String model, int maxTokens, long minuteMs, long wrapGraceMs, long replyTimeoutMs,
                     long noAudioTimeoutMs, long burstAllowanceMs, long quietEncourageMs, long quietHintMs, long quietPauseMs,
-                    long pausedMaxMs, Pace quick, Pace relaxed, Pace stammerFloor) {
+                    long pausedMaxMs, Pace quick, Pace relaxed, Pace stammerFloor, app.bolo.talk.domain.CutIns.Config standup) {
+
+    TalkSettings(TurnPolicy policy, String model, int maxTokens, long minuteMs, long wrapGraceMs, long replyTimeoutMs,
+                 long noAudioTimeoutMs, long burstAllowanceMs, long quietEncourageMs, long quietHintMs, long quietPauseMs,
+                 long pausedMaxMs, Pace quick, Pace relaxed, Pace stammerFloor) {
+        this(policy, model, maxTokens, minuteMs, wrapGraceMs, replyTimeoutMs, noAudioTimeoutMs, burstAllowanceMs, quietEncourageMs,
+                quietHintMs, quietPauseMs, pausedMaxMs, quick, relaxed, stammerFloor, app.bolo.talk.domain.CutIns.Config.DEFAULT);
+    }
 
     /** The spec's quick, relaxed and stammer values (2026-11-14), with the unfinished words of {@code policy}. */
     TalkSettings(TurnPolicy policy, String model, int maxTokens, long minuteMs, long wrapGraceMs, long replyTimeoutMs,

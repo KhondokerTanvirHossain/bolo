@@ -77,7 +77,15 @@ public class TalkRelayService implements TalkRelayUseCase {
                 model, maxTokens, minuteMs, wrapGraceMs, replyTimeoutMs,
                 noAudioTimeoutMs, burstAllowanceMs, quietEncourageMs, quietHintMs, quietPauseMs, pausedMaxMs,
                 pace(env, "bolo.talk.speeds.quick", words), pace(env, "bolo.talk.speeds.relaxed", words),
-                pace(env, "bolo.talk.stammer", words));
+                pace(env, "bolo.talk.stammer", words), standup(env));
+    }
+
+    /** SCN-2: when a Realistic standup cuts in (bolo.talk.standup.*); the spec's values when unset. */
+    private static app.bolo.talk.domain.CutIns.Config standup(org.springframework.core.env.Environment env) {
+        var d = app.bolo.talk.domain.CutIns.Config.DEFAULT;
+        java.util.function.BiFunction<String, Long, Long> v = (k, def) -> env.getProperty("bolo.talk.standup." + k, Long.class, def);
+        return new app.bolo.talk.domain.CutIns.Config(v.apply("cut-in-after-ms", d.afterSpeechMs()), v.apply("cut-in-silence-ms", d.silenceMs()),
+                v.apply("cut-in-max", (long) d.max()).intValue(), v.apply("cut-in-gap-ms", d.gapMs()), v.apply("cut-in-not-last-ms", d.notLastMs()));
     }
 
     /** AX-7, AX-8: one pace from config (bolo.talk.speeds.quick.*, bolo.talk.speeds.relaxed.*, bolo.talk.stammer.*). */
@@ -94,6 +102,7 @@ public class TalkRelayService implements TalkRelayUseCase {
                 talks, turns, audioStore, settings, () -> System.nanoTime() / 1_000_000, events::publishEvent, safety, starters,
                 brief.text(), brief.followUp() ? BuddyPrompt.Opening.FOLLOW_UP : brief.known() ? BuddyPrompt.Opening.FROM_NOTES
                         : BuddyPrompt.Opening.FROM_GOAL);
+        c.onInterrupted(events::publishEvent);
         c.start();
         events.publishEvent(new TalkStarted(talk.id(), learner, talk.scenario(), talk.difficulty()));
         return c;

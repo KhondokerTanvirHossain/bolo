@@ -9,7 +9,8 @@ import java.util.Locale;
  */
 public class TurnTaker {
 
-    public enum Decision { NONE, SPECULATE, RESUMED, COMMIT, UNCLEAR }
+    /** CUT_IN (SCN-2): a Realistic standup ends a long turn at a short breath so Bolo can ask a follow-up. */
+    public enum Decision { NONE, SPECULATE, RESUMED, COMMIT, UNCLEAR, CUT_IN }
 
     private final TurnPolicy policy;
 
@@ -22,6 +23,8 @@ public class TurnTaker {
     static final long MIN_UNCLEAR_SPEECH_MS = 800;
     private boolean speculated;
     private boolean committed;
+    private long cutInAfterMs = -1;
+    private long cutInSilenceMs;
 
     public TurnTaker(TurnPolicy policy) {
         this.policy = policy;
@@ -50,6 +53,10 @@ public class TurnTaker {
             committed = true;
             return Decision.UNCLEAR;
         }
+        if (cutInAfterMs >= 0 && speechMs >= cutInAfterMs && silence >= cutInSilenceMs) {
+            committed = true;
+            return Decision.CUT_IN;
+        }
         if (silence >= endAfterMs()) {
             committed = true;
             return Decision.COMMIT;
@@ -59,6 +66,16 @@ public class TurnTaker {
             return Decision.SPECULATE;
         }
         return Decision.NONE;
+    }
+
+    /** SCN-2: from now on, after {@code afterSpeechMs} of speech in a turn, {@code silenceMs} of quiet ends it as CUT_IN. */
+    public void armCutIn(long afterSpeechMs, long silenceMs) {
+        cutInAfterMs = afterSpeechMs;
+        cutInSilenceMs = silenceMs;
+    }
+
+    public void disarmCutIn() {
+        cutInAfterMs = -1;
     }
 
     public void onTranscript(String textSoFar) {

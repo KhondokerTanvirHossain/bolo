@@ -100,4 +100,39 @@ class TurnTakerTest {
         run(t, 0, 200, true);
         assertThat(run(t, 200, 6000, false)).isEmpty();
     }
+
+    // SCN-2 (2026-11-15): Realistic standup cuts in at the learner's next breath after 20 s of speech.
+    @Test
+    void armedCutInEndsALongTurnAtAShortBreath() {
+        TurnTaker t = new TurnTaker(POLICY);
+        t.armCutIn(20_000, 400);
+        run(t, 0, 20_000, true);
+        t.onTranscript("Yesterday I finished the payment retry and today");
+        assertThat(run(t, 20_000, 20_500, false)).containsExactly(new At(20_400, TurnTaker.Decision.CUT_IN));
+    }
+
+    @Test
+    void cutInWaitsFor20sOfSpeech() {
+        TurnTaker t = new TurnTaker(POLICY);
+        t.armCutIn(20_000, 400);
+        run(t, 0, 19_900, true);
+        t.onTranscript("Yesterday I finished the payment retry");
+        List<At> d = run(t, 19_900, 24_000, false);
+        assertThat(d).doesNotContain(new At(20_300, TurnTaker.Decision.CUT_IN)).contains(new At(22_400, COMMIT));
+        assertThat(d.stream().map(At::decision)).doesNotContain(TurnTaker.Decision.CUT_IN);
+    }
+
+    @Test
+    void unarmedNeverCutsIn() {
+        TurnTaker t = new TurnTaker(POLICY);
+        run(t, 0, 21_000, true);
+        t.onTranscript("Yesterday I finished the payment retry");
+        assertThat(run(t, 21_000, 24_000, false).stream().map(At::decision)).doesNotContain(TurnTaker.Decision.CUT_IN);
+        TurnTaker d = new TurnTaker(POLICY);
+        d.armCutIn(20_000, 400);
+        d.disarmCutIn();
+        run(d, 0, 21_000, true);
+        d.onTranscript("Yesterday I finished the payment retry");
+        assertThat(run(d, 21_000, 24_000, false).stream().map(At::decision)).doesNotContain(TurnTaker.Decision.CUT_IN);
+    }
 }

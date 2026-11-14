@@ -112,6 +112,10 @@ final class TalkConversation implements TalkConnection {
     private final Starters starters;
     /** SCN-2: a Standup rehearsal (Bolo is the manager). */
     private final boolean standup;
+    /** SCN-2: when a Realistic standup may cut in; {@code cutting}: the turn being answered was cut in on. */
+    private final app.bolo.talk.domain.CutIns cutIns;
+    private boolean cutting;
+    private Consumer<app.bolo.talk.application.port.in.StandupInterrupted> onInterrupted = e -> { };
 
     private final ReentrantLock lock = new ReentrantLock();
     private final EnergyVad vad = new EnergyVad();
@@ -213,6 +217,12 @@ final class TalkConversation implements TalkConnection {
         this.taker = new TurnTaker(pace.policy());
         this.system = BuddyPrompt.system(talk.goal(), talk.fearedMoment(), talk.minutes(), brief, opening, talk.mood(), talk.scenario());
         this.standup = "standup".equals(talk.scenario());
+        this.cutIns = app.bolo.talk.domain.CutIns.forTalk(talk.scenario(), talk.difficulty(), talk.stammer(), settings.standup());
+    }
+
+    /** SCN-2: where cut-ins are reported (analytics); set before {@link #start()}. */
+    void onInterrupted(Consumer<app.bolo.talk.application.port.in.StandupInterrupted> c) {
+        this.onInterrupted = c;
     }
 
     /** Opens the recogniser and starts Bolo's opening line, off the socket thread, and starts the watchdog. */
@@ -332,6 +342,11 @@ final class TalkConversation implements TalkConnection {
                 lastYouMs = Long.MIN_VALUE / 2;
                 audioMs = 0;
                 taker.reset();
+                if (cutIns.allowed(learnerTurns + 1, nowMs.getAsLong(), leftMs())) {
+                    taker.armCutIn(cutIns.config().afterSpeechMs(), cutIns.config().silenceMs());
+                } else {
+                    taker.disarmCutIn();
+                }
                 turnStreamStartMs = streamMs;
                 turnPcm.reset();
                 turnWords.clear();
@@ -393,6 +408,12 @@ final class TalkConversation implements TalkConnection {
                 speculation = null;
             }
             case COMMIT -> commit();
+            case CUT_IN -> {
+                cutIns.used(nowMs.getAsLong());
+                cutting = true;
+                onInterrupted.accept(new app.bolo.talk.application.port.in.StandupInterrupted(talk.id(), ctx.learnerId(), learnerTurns + 1));
+                commit();
+            }
             case UNCLEAR -> {
                 dropLive();
                 cue(BuddyPrompt.UNCLEAR_CUE);
@@ -450,6 +471,7 @@ final class TalkConversation implements TalkConnection {
         if (intent != TalkIntent.NONE && !lastBuddyText.isBlank()) {
             cancel(speculation);
             speculation = null;
+            cutting = false;
             if (intent == TalkIntent.SLOWER && !slow) {
                 slow = true;
                 // US-2.7: ask whether to keep the slower Bolo; the web asks, Settings saves it.
@@ -478,7 +500,9 @@ final class TalkConversation implements TalkConnection {
             // Paused while the safety check ran: say nothing now; resume asks the last question again.
             if (ended || endAfterSpeaking != null || phase == Phase.PAUSED) return;
             boolean wrap = elapsedMs() >= limitMs();
-            String sys = wrap ? BuddyPrompt.wrapUpSystem(system) : systemFor(said);
+            boolean cut = cutting;
+            cutting = false;
+            String sys = wrap ? BuddyPrompt.wrapUpSystem(system) : cut ? BuddyPrompt.cutInSystem(system) : systemFor(said);
             shortStreak = words(said).split(" ").length < 5 ? shortStreak + 1 : 0;
             if (shortStreak >= 3) {
                 // One starter card, for the question Bolo is about to ask (sent when that line is done).
@@ -486,7 +510,8 @@ final class TalkConversation implements TalkConnection {
                 shortStreak = 0;
             }
             Reply reply;
-            if (mayReuseSpeculation && !wrap && speculation != null && sameWords(speculation.forTranscript, said)) {
+            // A speculative reply was written without the cut-in instruction.
+            if (mayReuseSpeculation && !wrap && !cut && speculation != null && sameWords(speculation.forTranscript, said)) {
                 reply = speculation;
             } else {
                 cancel(speculation);
@@ -521,7 +546,11 @@ final class TalkConversation implements TalkConnection {
     private void onQuiet(QuietClock.Stage stage) {
         switch (stage) {
             case ENCOURAGE -> cue(BuddyPrompt.ENCOURAGE_CUE);
-            case HINT -> sendStartersAsync();
+            case HINT -> {
+                // SCN-2: a learner who needed a hint this turn isn't cut in on.
+                taker.disarmCutIn();
+                sendStartersAsync();
+            }
             case PAUSE -> {
                 lock.unlock();
                 try {
@@ -669,6 +698,7 @@ final class TalkConversation implements TalkConnection {
         lock.lock();
         try {
             if (ended || phase == Phase.PAUSED || endAfterSpeaking != null) return;
+            cutIns.skipNext();
             if (phase == Phase.YOUR_TURN) dropLive();
             phase = Phase.PAUSED;
             resumeToken++;

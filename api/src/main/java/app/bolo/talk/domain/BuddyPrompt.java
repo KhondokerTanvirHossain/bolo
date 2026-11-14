@@ -150,6 +150,12 @@ public final class BuddyPrompt {
                 + "or what happened next)." + (offerStarter ? " Also offer a short sentence starter they can use." : "") + "\n";
     }
 
+    /** SCN-2: a Realistic standup cutting in on a long update with one short follow-up. */
+    public static String cutInSystem(String system) {
+        return system + "- You are cutting in on their update now: ask ONE short follow-up about what they just said, "
+                + "starting with \"Sorry, quick one:\". At most 15 words.\n";
+    }
+
     public static String wrapUpSystem(String system) {
         return system + "- The talk time is up now. Reply warmly to what they just said, thank them, and say goodbye "
                 + "in at most two short sentences. Ask no new question.\n";

@@ -53,6 +53,11 @@ public class AnalyticsService implements RecordEventUseCase {
     }
 
     @EventListener
+    public void onStandupInterrupted(app.bolo.talk.application.port.in.StandupInterrupted e) {
+        quietly(() -> events.insert(e.learner(), "standup_interrupted", Map.of("turn", e.learnerTurn()), clock.now()));
+    }
+
+    @EventListener
     public void onScenarioChanged(app.bolo.common.event.ScenarioChanged e) {
         quietly(() -> events.insert(e.learner(), "scenario_changed", Map.of("from", e.from(), "to", e.to(), "difficulty", e.difficulty()),
                 clock.now()));

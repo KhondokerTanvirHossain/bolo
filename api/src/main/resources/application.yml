@@ -67,6 +67,9 @@ bolo:
       quick: { encourage-ms: 5000, hint-ms: 10000, pause-ms: 30000, speculate-after-ms: 700, end-after-ms: 1500, unfinished-end-after-ms: 3000 }
       relaxed: { encourage-ms: 30000, hint-ms: 45000, pause-ms: 120000, speculate-after-ms: 1500, end-after-ms: 3500, unfinished-end-after-ms: 5500 }
     stammer: { encourage-ms: 16000, hint-ms: 30000, pause-ms: 90000, speculate-after-ms: 1500, end-after-ms: 4500, unfinished-end-after-ms: 6500 }
+    # SCN-2 (2026-11-15): a Realistic standup cuts in after this much of the learner's speech in one turn, at a breath
+    # of cut-in-silence-ms; at most cut-in-max a talk, cut-in-gap-ms apart, never with under cut-in-not-last-ms left.
+    standup: { cut-in-after-ms: 20000, cut-in-silence-ms: 400, cut-in-max: 2, cut-in-gap-ms: 60000, cut-in-not-last-ms: 30000 }
     # TLK-10: a paused talk is kept this long.
     paused-max-ms: 1800000
     # A socket that sends no audio for this long (a half-open phone connection) is ended.
