@@ -121,4 +121,45 @@ class JdbcReminderAdapter implements ReminderPort {
         else jdbc.sql("update reminder_settings set learner_id = ? where learner_id = ?").params(to.value(), from.value()).update();
         jdbc.sql("update push_subscription set learner_id = ? where learner_id = ?").params(to.value(), from.value()).update();
     }
+
+    @Override
+    public List<Due> candidates() {
+        return jdbc.sql("""
+                select r.* from reminder_settings r
+                where r.enabled and exists (select 1 from push_subscription p where p.learner_id = r.learner_id)""")
+                .query((rs, n) -> new Due(new LearnerId(rs.getObject("learner_id", UUID.class)), settings(rs))).list();
+    }
+
+    @Override
+    public boolean claim(LearnerId learner, LocalDate day, UUID id, Instant at, int ignored, boolean comeback) {
+        return jdbc.sql("""
+                update reminder_settings set last_sent_on = ?, last_sent_at = ?, last_sent_id = ?, tapped = false, ignored = ?,
+                    comeback_sent = comeback_sent or ?
+                where learner_id = ? and enabled and last_sent_on is distinct from ?""")
+                .params(Date.valueOf(day), Timestamp.from(at), id, ignored, comeback, learner.value(), Date.valueOf(day)).update() > 0;
+    }
+
+    @Override
+    public void stop(LearnerId learner, int ignored, Instant at) {
+        jdbc.sql("update reminder_settings set stopped_at = coalesce(stopped_at, ?), ignored = ? where learner_id = ?")
+                .params(Timestamp.from(at), ignored, learner.value()).update();
+    }
+
+    @Override
+    public void saveLine(LearnerId learner, String line, String source, Instant now) {
+        jdbc.sql("""
+                insert into reminder_settings (learner_id, line, line_source, updated_at) values (?, ?, ?, ?)
+                on conflict (learner_id) do update set line = excluded.line, line_source = excluded.line_source""")
+                .params(learner.value(), line, source, Timestamp.from(now)).update();
+    }
+
+    @Override
+    public void deleteEndpoint(String endpoint) {
+        jdbc.sql("delete from push_subscription where endpoint = ?").param(endpoint).update();
+    }
+
+    @Override
+    public void markOk(String endpoint, Instant at) {
+        jdbc.sql("update push_subscription set last_ok_at = ? where endpoint = ?").params(Timestamp.from(at), endpoint).update();
+    }
 }

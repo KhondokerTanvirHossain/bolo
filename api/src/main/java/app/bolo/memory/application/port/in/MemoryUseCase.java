@@ -15,6 +15,9 @@ public interface MemoryUseCase {
      */
     TalkBrief brief(LearnerId learner, TalkSessionId talk, String goal);
 
+    /** The follow-up the next talk would open with, without marking it (daily reminders); empty when none or remembering is off. */
+    java.util.Optional<String> nextFollowUp(LearnerId learner);
+
     /** Me → What Bolo remembers (ACC-9). Recent topics are never shown. {@code kind}: plan, worry or prep. */
     record MemoryView(boolean enabled, List<FollowUp> followUps, List<Item> about, List<Item> interests) {
     }

@@ -119,6 +119,12 @@ bolo:
       public-key: ${BOLO_VAPID_PUBLIC_KEY:}
       private-key: ${BOLO_VAPID_PRIVATE_KEY:}
       subject: mailto:k.tanvir.hossain@gmail.com
+  reminder:
+    # The send job's period (a reminder goes out within a minute of its time). Tests switch it off.
+    job-ms: 60000
+    # One short line per learner after each talk that changes Bolo's notes.
+    model: claude-haiku-5-5
+    max-tokens: 120
   memory:
     # P3b "Bolo knows you": one call after each talk updates the learner's short note (off the talk's path).
     model: claude-sonnet-5-5

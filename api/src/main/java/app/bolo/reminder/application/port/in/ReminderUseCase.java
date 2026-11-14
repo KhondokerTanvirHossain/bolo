@@ -38,4 +38,7 @@ public interface ReminderUseCase {
 
     /** Home's "Get a daily reminder" card: never answered, not dismissed, shown on at most 3 days (this call counts the day). */
     boolean cardDue(LearnerId learner, LocalDate today);
+
+    /** Admin "Send me a test reminder": the next line to every browser now; returns how many it reached. */
+    int sendTest(LearnerId learner);
 }

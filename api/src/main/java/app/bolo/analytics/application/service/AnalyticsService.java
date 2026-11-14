@@ -54,6 +54,16 @@ public class AnalyticsService implements RecordEventUseCase {
         quietly(() -> events.insert(e.learner(), "session_ended", Map.of("turns", e.learnerTurns(), "end_reason", e.reason()), clock.now()));
     }
 
+    @EventListener
+    public void onReminderSent(app.bolo.reminder.application.port.in.ReminderSent e) {
+        quietly(() -> events.insert(e.learner(), "reminder_sent", Map.of("slot", e.slot(), "hook_type", e.hookType()), clock.now()));
+    }
+
+    @EventListener
+    public void onReminderOpened(app.bolo.reminder.application.port.in.ReminderOpened e) {
+        quietly(() -> events.insert(e.learner(), "reminder_opened", Map.of(), clock.now()));
+    }
+
     private static void quietly(Runnable insert) {
         try {
             insert.run();

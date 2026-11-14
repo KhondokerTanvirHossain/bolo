@@ -13,7 +13,7 @@ public final class EventRules {
 
     public static final Set<String> CLIENT = Set.of("app_first_open", "mic_permission_result", "onboarding_step_completed",
             "first_word_spoken", "debrief_viewed", "talk_client_error");
-    public static final Set<String> SERVER = Set.of("session_started", "session_ended");
+    public static final Set<String> SERVER = Set.of("session_started", "session_ended", "reminder_sent", "reminder_opened");
     static final int MAX_PROPS = 8;
     private static final Pattern KEY = Pattern.compile("[a-z0-9_]{1,40}");
     /** Single keys only (no spaces), so not even a short lower-case sentence fits. */

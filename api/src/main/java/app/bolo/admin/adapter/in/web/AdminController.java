@@ -24,6 +24,7 @@ import java.util.UUID;
 class AdminController {
 
     private final AdminService admin;
+    private final app.bolo.reminder.application.port.in.ReminderUseCase reminders;
 
     @ResponseStatus(HttpStatus.NOT_FOUND)
     static class NotFound extends RuntimeException {
@@ -81,6 +82,12 @@ class AdminController {
             @RequestAttribute(name = CurrentLearner.ATTRIBUTE, required = false) LearnerId learner) {
         admin(learner);
         return admin.ratings();
+    }
+
+    /** Daily reminders: the founder sends the next reminder line to their own browsers, now. */
+    @PostMapping("/api/admin/reminder-test")
+    Map<String, Object> reminderTest(@RequestAttribute(name = CurrentLearner.ATTRIBUTE, required = false) LearnerId learner) {
+        return Map.of("devices", reminders.sendTest(admin(learner)));
     }
 
     record Reject(String reason) {

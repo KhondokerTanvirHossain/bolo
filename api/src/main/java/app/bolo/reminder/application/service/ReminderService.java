@@ -31,6 +31,8 @@ public class ReminderService implements ReminderUseCase {
     private final PushPort push;
     private final CurrentLearnerUseCase learners;
     private final BoloClock clock;
+    private final ReminderSendService sender;
+    private final org.springframework.context.ApplicationEventPublisher events;
 
     @Override
     public boolean account(LearnerId learner) {
@@ -46,9 +48,16 @@ public class ReminderService implements ReminderUseCase {
                 preview(learner, keepPrivate), reminders.deviceCount(learner), push.publicKey());
     }
 
-    /** The line the next reminder would show; Task 4 swaps in the story line. */
+    /** The line the next reminder would show: the fresh story line, else the first plain line. */
     String preview(LearnerId learner, boolean keepPrivate) {
-        return "Time for today's talk.";
+        var s = reminders.find(learner).orElse(null);
+        String story = s == null ? null : sender.storyLine(learner, s);
+        return app.bolo.reminder.domain.ReminderLines.text(app.bolo.reminder.domain.ReminderRules.Kind.NORMAL, keepPrivate, story, 0);
+    }
+
+    @Override
+    public int sendTest(LearnerId learner) {
+        return sender.sendTest(learner, clock.now());
     }
 
     @Override
@@ -99,7 +108,9 @@ public class ReminderService implements ReminderUseCase {
         reminders.clearBackOff(learner, zone(timeZone) == null ? null : timeZone, clock.now());
         if (reminderId != null) {
             try {
-                reminders.markTapped(learner, UUID.fromString(reminderId));
+                if (reminders.markTapped(learner, UUID.fromString(reminderId))) {
+                    events.publishEvent(new app.bolo.reminder.application.port.in.ReminderOpened(learner));
+                }
             } catch (IllegalArgumentException ignored) {
                 // not one of ours
             }

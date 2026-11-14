@@ -43,4 +43,25 @@ public interface ReminderPort {
     List<Device> devices(LearnerId learner);
 
     void move(LearnerId from, LearnerId to);
+
+    record Due(LearnerId learner, Settings settings) {
+    }
+
+    /** Learners with reminders on and at least one browser. */
+    List<Due> candidates();
+
+    /**
+     * Claims the day's reminder: only one caller wins for a learner and local day. Sets the sent day/time/id, clears
+     * tapped, stores the ignored run, and marks the comeback sent when {@code comeback}.
+     */
+    boolean claim(LearnerId learner, LocalDate day, UUID id, Instant at, int ignored, boolean comeback);
+
+    void stop(LearnerId learner, int ignored, Instant at);
+
+    /** Stores the next story line (creating the row if missing); null clears it. */
+    void saveLine(LearnerId learner, String line, String source, Instant now);
+
+    void deleteEndpoint(String endpoint);
+
+    void markOk(String endpoint, Instant at);
 }

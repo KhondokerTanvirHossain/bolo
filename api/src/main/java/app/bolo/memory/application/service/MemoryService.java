@@ -71,8 +71,10 @@ public class MemoryService implements MemoryUseCase {
     private record Restore(LearnerId learner, MemoryNote before, Set<String> savedIds, int epoch, java.time.Instant at) {
     }
 
+    private final org.springframework.context.ApplicationEventPublisher events;
+
     public MemoryService(MemoryPort memory, TalkQueryUseCase talks, LlmClient llm, BoloClock clock,
-                         PlatformTransactionManager transactions,
+                         PlatformTransactionManager transactions, org.springframework.context.ApplicationEventPublisher events,
                          @Value("${bolo.memory.model}") String model, @Value("${bolo.memory.max-tokens}") int maxTokens) {
         this.memory = memory;
         this.talks = talks;
@@ -81,6 +83,7 @@ public class MemoryService implements MemoryUseCase {
         this.tx = new TransactionTemplate(transactions);
         this.model = model;
         this.maxTokens = maxTokens;
+        this.events = events;
     }
 
     @EventListener
@@ -113,15 +116,17 @@ public class MemoryService implements MemoryUseCase {
             if (reply == null) return;
             MemoryNote fresh = apply(reply, old, today);
             Set<String> sent = old.ids();
-            tx.executeWithoutResult(s -> {
+            boolean changed = Boolean.TRUE.equals(tx.execute(s -> {
                 MemoryPort.Row now = memory.lockOrCreate(learner);
                 // Withdrawn for a crisis, switched off, or Forget/off/on since this update read the note: don't save.
-                if (withdrawn.containsKey(talk) || !now.enabled() || now.epoch() != epoch) return;
+                if (withdrawn.containsKey(talk) || !now.enabled() || now.epoch() != epoch) return false;
                 MemoryNote saved = fresh.keepOnly(now.note().ids(), sent).withMarksFrom(now.note()).capped(today);
                 memory.save(learner, true, saved, now.talks(), now.lastTalkId());
                 prune();
                 restorable.put(talk, new Restore(learner, now.note(), saved.ids(), now.epoch(), clock.now()));
-            });
+                return true;
+            }));
+            if (changed) events.publishEvent(new app.bolo.memory.application.port.in.MemoryChanged(learner, talk));
         } catch (RuntimeException e) {
             log.warn("memory update failed for talk {}: {}", talk, where(e));
         } finally {
@@ -181,6 +186,12 @@ public class MemoryService implements MemoryUseCase {
         java.time.Instant oldest = clock.now().minus(KEEP);
         withdrawn.values().removeIf(at -> at.isBefore(oldest));
         restorable.values().removeIf(r -> r.at().isBefore(oldest));
+    }
+
+    @Override
+    public java.util.Optional<String> nextFollowUp(LearnerId learner) {
+        return memory.find(learner).filter(MemoryPort.Row::enabled)
+                .flatMap(row -> row.note().opener(clock.today(), clock.now(), row.talks() + 1)).map(MemoryThread::text);
     }
 
     @Override

@@ -28,6 +28,9 @@ public class FakeLlm implements LlmPort {
              "threads":[{"id":"","kind":"plan","text":"Sending the CV to the bank job","said":"2000-01-01","due":""}],
              "interests":[{"id":"","text":"Cricket"}],"drop":[],"topic":"The bank job CV"}""";
 
+    /** Daily reminders: the line written from a follow-up (schema with "line"). */
+    public static final String REMINDER_REPLY = "{\"line\":\"Bolo wants to know how the demo went.\"}";
+
     public static final String SAFE = "{\"crisis\":false}";
     public static final String STARTERS = "{\"starters\":[\"I think that...\",\"For example, ...\"]}";
 
@@ -36,6 +39,7 @@ public class FakeLlm implements LlmPort {
     private volatile String safetyReply = SAFE;
     private volatile boolean failStructured;
     private volatile String memoryReply = MEMORY_REPLY;
+    private volatile String reminderReply = REMINDER_REPLY;
     private volatile boolean failMemory;
     private volatile String lastStructuredRequest = "";
     /** Every structured request's system prompt (Coach, memory), for assertions that must not race each other. */
@@ -43,6 +47,17 @@ public class FakeLlm implements LlmPort {
 
     public void memoryReply(String json) {
         this.memoryReply = json == null ? MEMORY_REPLY : json;
+    }
+
+    private volatile String lastReminderRequest = "";
+
+    /** The last reminder-line request (kept apart from the Coach's, which other tests read). */
+    public String lastReminderRequest() {
+        return lastReminderRequest;
+    }
+
+    public void reminderReply(String json) {
+        this.reminderReply = json == null ? REMINDER_REPLY : json;
     }
 
     public void failMemory(boolean fail) {
@@ -115,7 +130,9 @@ public class FakeLlm implements LlmPort {
         boolean safety = props instanceof java.util.Map<?, ?> m && m.containsKey("crisis");
         boolean starters = props instanceof java.util.Map<?, ?> m2 && m2.containsKey("starters");
         boolean memory = props instanceof java.util.Map<?, ?> m3 && m3.containsKey("threads");
-        if (structured && !safety && !starters) {
+        boolean reminder = props instanceof java.util.Map<?, ?> m4 && m4.containsKey("line");
+        if (reminder) lastReminderRequest = request.system() + "\n" + request.messages();
+        if (structured && !safety && !starters && !reminder) {
             lastStructuredRequest = request.system() + "\n" + request.messages();
             structuredSystems.add(request.system());
         }
@@ -123,9 +140,9 @@ public class FakeLlm implements LlmPort {
             replyCalls.incrementAndGet();
             lastReplyRequest = request.system() + "\n" + request.messages();
         }
-        String text = safety ? safetyReply : starters ? STARTERS : memory ? memoryReply : structured ? structuredReply : reply;
+        String text = safety ? safetyReply : starters ? STARTERS : memory ? memoryReply : reminder ? reminderReply : structured ? structuredReply : reply;
         RuntimeException fail = safety ? (failSafety ? new IllegalStateException("classifier down") : null)
-                : starters ? null : memory ? (failMemory ? new IllegalStateException("memory down") : null) : structured ? (failStructured ? new IllegalStateException("coach down") : null) : failWith;
+                : starters || reminder ? null : memory ? (failMemory ? new IllegalStateException("memory down") : null) : structured ? (failStructured ? new IllegalStateException("coach down") : null) : failWith;
         long pause = deltaMs;
         Thread worker = Thread.ofVirtual().start(() -> {
             try {
