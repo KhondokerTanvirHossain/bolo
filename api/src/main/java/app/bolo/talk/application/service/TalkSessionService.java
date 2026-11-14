@@ -95,21 +95,26 @@ public class TalkSessionService implements StartTalkUseCase, app.bolo.talk.appli
     @Override
     public History history(LearnerId learner) {
         boolean returning = freePlanKeys.freePlanKey(learner).map(k -> !sessions.rememberedStarts(k).isEmpty()).orElse(false);
-        return new History(sessions.countedStarts(learner).size(), sessions.finishedTalks(learner), returning);
+        return new History(countedStarts(learner).size(), sessions.finishedTalks(learner), returning);
     }
 
     private app.bolo.talk.domain.PlanAllowance.Allowance allowanceOf(LearnerId learner) {
-        var starts = new java.util.ArrayList<>(sessions.countedStarts(learner));
+        var starts = new java.util.ArrayList<>(countedStarts(learner));
         // P1d task 6: free talks used by an earlier, deleted account of the same Google user still count.
         freePlanKeys.freePlanKey(learner).ifPresent(key -> starts.addAll(sessions.rememberedStarts(key)));
         // P2a: an active paid plan (granted, earned or paid) gives its monthly talks.
         return plans.allowance(learner, starts);
     }
 
+    /** The talks that used up a talk: the counting rule, less cut-off talks the learner came back from (TLK-10 changed). */
+    private java.util.List<java.time.Instant> countedStarts(LearnerId learner) {
+        return app.bolo.talk.domain.CutOffGrace.countedStarts(sessions.talks(learner), clock.now());
+    }
+
     /** Delete everything (ACC-4): the account's counted free talks are kept under its one-way key (P1d task 6). */
     @org.springframework.context.event.EventListener
     public void onLearnerDeleting(app.bolo.common.event.LearnerDeleting e) {
-        if (e.freePlanKey() != null) sessions.rememberFreeTalks(e.learner(), e.freePlanKey());
+        if (e.freePlanKey() != null) sessions.rememberFreeTalks(e.freePlanKey(), countedStarts(e.learner()));
     }
 
     @Override

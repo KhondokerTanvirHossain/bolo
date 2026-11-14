@@ -39,14 +39,15 @@ public interface TalkSessionPort {
     void moveLearner(LearnerId from, LearnerId to);
 
     /**
-     * When each of the learner's free-plan talks started. A talk counts once its socket opened if it is still open, its
-     * feedback is scoring or ready, or it ran 90 s or more (Bolo ran, whatever the learner said). A failed debrief never
-     * counts, nor a talk that dropped within 90 s without feedback.
+     * Every talk the learner started, oldest first. {@code counted} is the plan's counting rule before the cut-off grace
+     * ({@link app.bolo.talk.domain.CutOffGrace}): a talk counts once its socket opened if it is still open, its feedback
+     * is scoring or ready, or it ran 90 s or more (Bolo ran, whatever the learner said). A failed debrief never counts,
+     * nor a talk that dropped within 90 s without feedback.
      */
-    java.util.List<java.time.Instant> countedStarts(LearnerId learner);
+    java.util.List<app.bolo.talk.domain.CutOffGrace.Talk> talks(LearnerId learner);
 
-    /** P1d task 6: keeps the learner's counted free-talk starts under a one-way key before the account is deleted. */
-    void rememberFreeTalks(LearnerId learner, String key);
+    /** P1d task 6: keeps the learner's counted talk starts under a one-way key before the account is deleted. */
+    void rememberFreeTalks(String key, java.util.List<java.time.Instant> starts);
 
     java.util.List<java.time.Instant> rememberedStarts(String key);
 

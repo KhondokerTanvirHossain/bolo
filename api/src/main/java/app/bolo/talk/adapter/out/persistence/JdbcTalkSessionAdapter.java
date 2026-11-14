@@ -144,22 +144,30 @@ class JdbcTalkSessionAdapter implements TalkSessionPort {
                 .query((rs, n) -> new app.bolo.common.id.TalkSessionId(rs.getObject("id", java.util.UUID.class))).list());
     }
 
-    /** The free-plan counting rule (see {@link TalkSessionPort#countedStarts}). */
-    private static final String COUNTED = """
-            select s.started_at from talk_session s left join debrief d on d.session_id = s.id
-            where s.learner_id = ? and s.attached_at is not null and coalesce(d.status, '') <> 'failed'
-              and (s.ended_at is null or d.status in ('scoring', 'ready')
-                   or s.ended_at - s.attached_at >= interval '90 seconds')""";
+    /** The plan's counting rule before the cut-off grace (see {@link TalkSessionPort#talks}). */
+    private static final String TALKS = """
+            select s.started_at, s.ended_at, s.end_reason,
+                   (s.attached_at is not null and coalesce(d.status, '') <> 'failed'
+                    and (s.ended_at is null or d.status in ('scoring', 'ready')
+                         or s.ended_at - s.attached_at >= interval '90 seconds')) as counted
+            from talk_session s left join debrief d on d.session_id = s.id
+            where s.learner_id = ? order by s.started_at""";
 
     @Override
-    public java.util.List<Instant> countedStarts(LearnerId learner) {
-        return jdbc.sql(COUNTED).param(learner.value()).query((rs, n) -> rs.getTimestamp("started_at").toInstant()).list();
+    public java.util.List<app.bolo.talk.domain.CutOffGrace.Talk> talks(LearnerId learner) {
+        return jdbc.sql(TALKS).param(learner.value()).query((rs, n) -> {
+            Timestamp ended = rs.getTimestamp("ended_at");
+            return new app.bolo.talk.domain.CutOffGrace.Talk(rs.getTimestamp("started_at").toInstant(),
+                    ended == null ? null : ended.toInstant(), rs.getString("end_reason"), rs.getBoolean("counted"));
+        }).list();
     }
 
     @Override
-    public void rememberFreeTalks(LearnerId learner, String key) {
-        jdbc.sql("insert into free_talk_use (subject_hash, started_at) select ?, c.started_at from (" + COUNTED + ") c "
-                        + "on conflict do nothing").params(key, learner.value()).update();
+    public void rememberFreeTalks(String key, java.util.List<Instant> starts) {
+        for (Instant at : starts) {
+            jdbc.sql("insert into free_talk_use (subject_hash, started_at) values (?, ?) on conflict do nothing")
+                    .params(key, Timestamp.from(at)).update();
+        }
     }
 
     @Override

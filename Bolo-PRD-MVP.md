@@ -153,7 +153,7 @@ The MVP has 77 functional requirements across 11 modules. **P0** is required for
 | TLK-7 | If the learner speaks Bangla, the Buddy acknowledges it kindly and asks them to try in English, offering a starter phrase. | P0 |
 | TLK-8 | **Changed 2026-11-12 (founder):** the talk is shown as a live chat in the sky above the companion. The Buddy's turns appear word by word as it speaks; the learner's own words appear live while they speak (exactly as recognised) and settle into their bubble when the turn ends; earlier turns stay and the chat scrolls itself. A **Talk view** setting keeps the earlier style (Buddy caption only, learner's words not shown) for anyone who prefers it. *Was: a live caption of the Buddy's lines only; the learner's own words not shown live.* | P0 |
 | TLK-9 | End the session naturally when the chosen talk time (5 or 10 minutes) is reached; allow early end at any time. | P0 |
-| TLK-10 | Pause and resume within 30 minutes without losing the conversation. | P0 |
+| TLK-10 | *Changed 2026-11-14 (founder):* no exact resume. A talk that was cut off (connection closed or Bolo's voice failed) doesn't use up a talk when the learner starts a new one within 30 minutes (at most 2 a day); the new talk remembers the topic from Bolo's notes (TLK-11). | P0 |
 | TLK-11 | **Changed 2026-11-13 (founder):** Bolo keeps short notes about the learner (plans they mentioned, what's on their mind, how their practice is going, simple facts about them, their interests), updated after each talk. Each talk opens with one personal follow-up, picked on the server (a plan that's due, then a worry, then their practice); a follow-up that opened a talk rests for 2 talks and 3 days. The first talk opens from the setup answers with a real question about the learner's situation. The learner steers: if they change the subject, Bolo follows. Nothing sensitive is noted (health, religion, politics, money amounts, contact details) and a crisis talk is never used. *Was: remember the previous session's topic and open the next session with a follow-up about it.* | P0 |
 | TLK-12 | Steer the conversation to elicit the learner's current focus sounds and patterns. | P1 |
 | TLK-13 | Let the learner ask the Buddy to repeat or slow down ("Sorry?", "Slower please"). | P0 |
@@ -422,12 +422,12 @@ The 9 epics below cover the happy path and every edge case we can foresee for ea
 - **Given** I tap "End" early, **when** I confirm on a single sheet ("End and get feedback?"), **then** the debrief loads if I've spoken ≥ 60 s, or I see the "too short" state (US-3.3) if not.
 - **Given** I tap "End" by mistake, **when** the sheet appears, **then** "Keep talking" is the primary button.
 
-**US-2.10 · Pause and resume** · P0 · TLK-10, R12 · edge case
+**US-2.10 · Pause and resume** · P0 · TLK-10, R12 · edge case · *Changed 2026-11-14 (founder): a new talk replaces resuming; a cut-off talk is free when I start again within 30 minutes.*
 
 *As a* learner who gets interrupted, *I want to* pause and come back, *so that* I don't lose my session.
 
 - **Given** a phone call arrives, or I switch apps or lock the screen, **when** that happens, **then** the session pauses automatically.
-- **Given** I return within 30 minutes, **when** I open the app, **then** "Continue your chat" resumes it and the Buddy recaps the last question.
+- **Given** my talk was cut off (lock screen, call, lost connection), **when** I start a new talk within 30 minutes, **then** the cut-off talk doesn't use up one of my talks (at most 2 a day), and Bolo picks up the topic from its notes.
 - **Given** I return after 30 minutes, **when** I open the app, **then** the session is closed. If I'd spoken ≥ 60 s, its debrief is waiting for me.
 
 **US-2.11 · Continue yesterday's story** · P0 · TLK-11 · *Changed 2026-11-13 (founder): one personal follow-up from Bolo's notes; see TLK-11, TLK-17, ACC-9.*
@@ -745,12 +745,11 @@ When several states are true at once, the first match in each column wins:
 
 | Priority | Primary button | Secondary card (max 1) |
 | --- | --- | --- |
-| 1 | "Continue your chat" (a session paused < 30 min ago) | "Finish your feedback" |
-| 2 | "Talk" (default) | "Re-record your intro" (Day 7/14/21 due) |
+| 1 | "Talk" (default; "Continue your chat" dropped 2026-11-14, TLK-10) | "Finish your feedback" |
+| 2 | — | "Re-record your intro" (Day 7/14/21 due) |
 | 3 | — | "3-minute practice" (drills waiting) |
 
 - **Given** several states are true, **when** Home loads, **then** it shows exactly one primary button and at most one secondary card, following the table.
-- **Given** the primary button is "Continue your chat", **when** I'd rather start fresh, **then** a quiet "Start a new chat" link sits under it.
 - **Given** no state applies, **when** Home loads, **then** I see only the Talk button, the scenario link and the companion scene.
 
 ### 6.7 E7 · Scenarios (Standup Rehearsal)
@@ -936,7 +935,7 @@ Every state below shows one short message and exactly one primary next action (r
 | Learner pauses mid-thought | Turn stays open (adaptive wait ≥ 2.5 s) | Keep talking, or tap Done | US-2.3 |
 | Learner speaks Bangla | Buddy restates the meaning, asks for English, shows a starter | Say it in English | US-2.6 |
 | Learner talks over the Buddy | With headphones the Buddy stops and listens; on speakers it finishes its line | Keep talking | US-2.3 |
-| Phone call or app switch | Session auto-pauses | Continue your chat | US-2.10 |
+| Phone call or app switch | Session auto-pauses; if the connection closes, the talk ends and a new one within 30 min is free | Tap to continue, or Talk | US-2.10 |
 | Session < 60 s of speech | "Not enough talking to give useful feedback yet" | Talk a bit more | US-3.3 |
 | Noisy audio, low-confidence issues | Debrief with fewer fixes + a note about noise | Run mic check | US-3.4 |
 | Scoring slow (> 15 s) or failed | "Your coach is listening back" / "We couldn't prepare your feedback" | Notify me when ready | US-3.7 |

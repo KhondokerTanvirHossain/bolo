@@ -120,6 +120,38 @@ public class FreePlanAcceptanceTest {
             assertThat(client.startTalk(me).status()).isEqualTo(422);
         }
 
+        /** TLK-10 changed 2026-11-14: a talk cut off just now doesn't use a talk, so the learner can start again. */
+        @Test
+        void aTalkCutOffJustNowCanBeTakenAgain() throws Exception {
+            String me = account(5);
+            List<UUID> ids = talkTimes(client, jdbc, me, 7);
+            jdbc.sql("update talk_session set end_reason = 'disconnected' where id = ?").param(ids.getLast()).update();
+            assertThat(left(me)).isEqualTo(1);
+            assertThat(client.startTalk(me).status()).isEqualTo(201);
+        }
+
+        @Test
+        void aCutOffTalkCountsWhenNoNewTalkStartsWithin30Minutes() throws Exception {
+            String me = account(5);
+            UUID id = talkTimes(client, jdbc, me, 1).getFirst();
+            jdbc.sql("update talk_session set started_at = now() - interval '45 minutes', attached_at = now() - interval '45 minutes', "
+                    + "ended_at = now() - interval '40 minutes', end_reason = 'disconnected' where id = ?").param(id).update();
+            assertThat(left(me)).isEqualTo(6);
+        }
+
+        /** Deleting everything keeps only the talks that counted (a forgiven cut-off talk isn't remembered). */
+        @Test
+        void deletingRemembersOnlyTalksThatCounted() throws Exception {
+            String uid = "del" + UUID.randomUUID();
+            String me = signIn(uid);
+            List<UUID> ids = talkTimes(client, jdbc, me, 7);
+            jdbc.sql("update talk_session set started_at = now() - interval '2 hours', attached_at = now() - interval '2 hours', "
+                    + "ended_at = now() - interval '110 minutes', end_reason = 'disconnected' where id = ?").param(ids.get(0)).update();
+            jdbc.sql("update talk_session set started_at = now() - interval '100 minutes' where id = ?").param(ids.get(1)).update();
+            assertThat(client.send("POST", "/api/me/delete", me, "{\"confirm\":\"DELETE\"}").status()).isEqualTo(204);
+            assertThat(client.startTalk(signIn(uid)).status()).isEqualTo(201);
+        }
+
         /** Review: talk starts fired at once can't each pass the check; at most one new talk stays open to attach. */
         @Test
         void startsFiredAtOnceLeaveOneOpenTalk() throws Exception {
