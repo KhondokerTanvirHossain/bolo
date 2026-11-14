@@ -46,6 +46,8 @@ services:
       # The admin portal (P2a): only these signed-in Google accounts (comma-separated).
       BOLO_ADMIN_EMAILS: "k.tanvir.hossain@gmail.com"
       BOLO_LLM_VENDOR: anthropic
+      # Daily reminders (PRG-5): Web Push; BOLO_VAPID_PUBLIC_KEY / BOLO_VAPID_PRIVATE_KEY are made on the box (RUNBOOK).
+      BOLO_PUSH_VENDOR: webpush
       # Learner audio, AES-256-GCM encrypted with BOLO_MEDIA_KEY (bolo.env); deleted by the retention sweep (NFR-14).
       BOLO_MEDIA_DIR: /data/media
     volumes:

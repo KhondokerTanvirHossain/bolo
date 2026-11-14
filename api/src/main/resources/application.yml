@@ -112,6 +112,13 @@ bolo:
   assessment:
     # "Try it" / practice attempts per learner per minute (each is a billed vendor call).
     attempts-per-minute: 20
+  push:
+    # webpush | fake. Production sets webpush in deploy/compose.prod.yml; the VAPID pair lives in bolo.env (made on the box).
+    vendor: ${BOLO_PUSH_VENDOR:fake}
+    vapid:
+      public-key: ${BOLO_VAPID_PUBLIC_KEY:}
+      private-key: ${BOLO_VAPID_PRIVATE_KEY:}
+      subject: mailto:k.tanvir.hossain@gmail.com
   memory:
     # P3b "Bolo knows you": one call after each talk updates the learner's short note (off the talk's path).
     model: claude-sonnet-5-5
