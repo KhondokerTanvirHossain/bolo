@@ -34,5 +34,10 @@ public interface AssessTalkUseCase {
     /** AX-8: with {@code stammer}, repeats and broken-off words aren't judged for sounds and blocks don't lower fluency. */
     TalkAssessment assess(List<TurnInput> turns, boolean stammer);
 
-    List<FixSlot> plan(TalkAssessment assessment, int upgrades);
+    default List<FixSlot> plan(TalkAssessment assessment, int upgrades) {
+        return plan(assessment, upgrades, false);
+    }
+
+    /** SCN-2: {@code standupTip} a valid standup tip exists (slot kind "standup"). */
+    List<FixSlot> plan(TalkAssessment assessment, int upgrades, boolean standupTip);
 }

@@ -25,6 +25,19 @@ public final class DebriefPlan {
         return List.copyOf(plan);
     }
 
+    /**
+     * SCN-2 / ASM-4 (2026-11-15): with {@code standupTip}, the tip takes the last card's place when there are already 3
+     * (the order is fixed, so the last is the lowest-ranked; the sound fix comes first and is never pushed out), or is
+     * added when there is room.
+     */
+    public static List<FixChoice> choose(List<SoundIssue> sounds, int upgrades, Optional<Habit> habit, boolean standupTip) {
+        List<FixChoice> plan = new ArrayList<>(choose(sounds, upgrades, habit));
+        if (!standupTip) return List.copyOf(plan);
+        if (plan.size() >= MAX_FIXES) plan.set(plan.size() - 1, new FixChoice.StandupTip());
+        else plan.add(new FixChoice.StandupTip());
+        return List.copyOf(plan);
+    }
+
     /** ASM-6: under a minute of speech there isn't enough to judge. */
     public static boolean tooShort(FluencyStats stats, long minSpeechMs) {
         return stats.speechMs() < minSpeechMs;

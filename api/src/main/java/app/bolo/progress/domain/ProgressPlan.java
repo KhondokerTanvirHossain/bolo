@@ -22,7 +22,12 @@ public final class ProgressPlan {
 
     /** One past talk with a debrief; status is ready, too_short or failed. skills hold BUILDING / GOOD / STRONG. */
     public record Session(String talkId, Instant startedAt, int minutes, String status, String topic, long speechMs,
-                          Map<String, String> skills, List<PatternSeen> patterns, List<String> fixTitles) {
+                          Map<String, String> skills, List<PatternSeen> patterns, List<String> fixTitles, String scenario) {
+
+        public Session(String talkId, Instant startedAt, int minutes, String status, String topic, long speechMs,
+                       Map<String, String> skills, List<PatternSeen> patterns, List<String> fixTitles) {
+            this(talkId, startedAt, minutes, status, topic, speechMs, skills, patterns, fixTitles, "free");
+        }
         boolean ready() {
             return "ready".equals(status);
         }
@@ -48,7 +53,8 @@ public final class ProgressPlan {
     public record Patterns(List<PatternTag> active, List<PatternTag> fixed) {
     }
 
-    public record Row(String talkId, Instant startedAt, int minutes, String topic, String status, List<String> fixes) {
+    /** SCN-1: {@code scenario} "free" | "standup" (the history row's Standup tag). */
+    public record Row(String talkId, Instant startedAt, int minutes, String topic, String status, List<String> fixes, String scenario) {
     }
 
     private ProgressPlan() {
@@ -123,7 +129,8 @@ public final class ProgressPlan {
 
     public static List<Row> history(List<Session> sessions) {
         return sessions.stream().sorted(Comparator.comparing(Session::startedAt).reversed())
-                .map(s -> new Row(s.talkId(), s.startedAt(), s.minutes(), s.topic(), s.status(), s.fixTitles().stream().limit(3).toList()))
+                .map(s -> new Row(s.talkId(), s.startedAt(), s.minutes(), s.topic(), s.status(), s.fixTitles().stream().limit(3).toList(),
+                        s.scenario()))
                 .toList();
     }
 }

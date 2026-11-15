@@ -62,8 +62,8 @@ class JdbcTurnAdapter implements TurnPort {
 
     @Override
     public Optional<TalkRecord> record(TalkSessionId session) {
-        var head = jdbc.sql("select learner_id, minutes from talk_session where id = ?").param(session.value())
-                .query((rs, n) -> new Object[]{new LearnerId(rs.getObject("learner_id", UUID.class)), rs.getInt("minutes")})
+        var head = jdbc.sql("select learner_id, minutes, scenario from talk_session where id = ?").param(session.value())
+                .query((rs, n) -> new Object[]{new LearnerId(rs.getObject("learner_id", UUID.class)), rs.getInt("minutes"), rs.getString("scenario")})
                 .optional();
         if (head.isEmpty()) return Optional.empty();
         List<TalkRecord.Turn> turns = jdbc.sql("""
@@ -74,7 +74,7 @@ class JdbcTurnAdapter implements TurnPort {
                         rs.getString("audio_key"), (Long) rs.getObject("stream_start_ms"), words(rs.getString("scored")),
                         (Integer) rs.getObject("latency")))
                 .list();
-        return Optional.of(new TalkRecord((LearnerId) head.get()[0], (Integer) head.get()[1], turns));
+        return Optional.of(new TalkRecord((LearnerId) head.get()[0], (Integer) head.get()[1], turns, (String) head.get()[2]));
     }
 
     private static List<ScoredWord> words(String json) {

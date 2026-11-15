@@ -56,7 +56,7 @@ public class ProgressService implements ProgressUseCase {
             for (JsonNode f : body.path("fixes")) if (f.hasNonNull("title")) fixTitles.add(f.path("title").asString());
             String topic = body.path("topic").asString(null);
             out.add(new ProgressPlan.Session(d.talkId(), d.startedAt(), d.minutes(), d.status(), topic == null ? FREE_TALK : topic,
-                    body.path("speechMs").asLong(0), skills, patterns(body), fixTitles));
+                    body.path("speechMs").asLong(0), skills, patterns(body), fixTitles, body.path("scenario").asString("free")));
         }
         return out;
     }

@@ -172,12 +172,15 @@ public class CoachService implements DebriefUseCase, LatestDebriefUseCase, app.b
                 .map(t -> new AssessTalkUseCase.TurnInput(t.idx(), t.text(), t.words())).toList(), stammer);
         if (scored.speechMs() < minSpeechMs) return new Built("too_short", "{\"status\":\"too_short\"}");
 
-        CoachReply reply = askCoach(id, learner, record, stammer);
+        CoachReply reply = askCoach(id, learner, record, stammer, "standup".equals(record.scenario()));
         List<CoachReply.Upgrade> upgrades = (reply.upgrades() == null ? List.<CoachReply.Upgrade>of() : reply.upgrades()).stream()
                 .filter(u -> byIdx.containsKey(u.turn()) && ReplyCheck.quoteIn(byIdx.get(u.turn()).text(), u.said())
                         && ReplyCheck.upgradeOk(u.said(), u.better()))
                 .limit(2).toList();
-        List<FixSlot> plan = assessment.plan(scored, upgrades.size());
+        // SCN-2: a standup's one tip, only when it quotes the learner and names a known rule.
+        boolean standup = "standup".equals(record.scenario());
+        CoachReply.StandupTip tip = standup ? validTip(reply.standupTip(), byIdx) : null;
+        List<FixSlot> plan = assessment.plan(scored, upgrades.size(), tip != null);
 
         TalkContext ctx = new TalkContext(learner, id);
         ObjectNode body = JSON.createObjectNode();
@@ -189,6 +192,7 @@ public class CoachService implements DebriefUseCase, LatestDebriefUseCase, app.b
             ObjectNode fix = switch (slot.kind()) {
                 case "sound" -> soundFix(id, ctx, n, scored.sounds().get(slot.index()), byIdx);
                 case "upgrade" -> upgradeFix(id, ctx, n, upgrades.get(slot.index()), byIdx);
+                case "standup" -> standupFix(id, ctx, n, tip, byIdx);
                 default -> habitFix(id, ctx, n, scored.habit().orElseThrow());
             };
             // A stable id: disputes name the card, not its position (positions shift as cards are removed).
@@ -207,6 +211,7 @@ public class CoachService implements DebriefUseCase, LatestDebriefUseCase, app.b
         body.put("firstSession", debriefs.readyCountFor(learner, id) == 0);
         body.put("speechMs", scored.speechMs());
         body.put("topic", reply.topicOrDefault());
+        body.put("scenario", standup ? "standup" : "free");
         // PRG-3: every pattern found in this talk (not only the three shown), for "My patterns" over time.
         ArrayNode patterns = body.putArray("patterns");
         for (var sc : scored.sounds()) patterns.addObject().put("pattern", sc.pattern()).put("title", sc.title()).put("count", sc.count());
@@ -234,11 +239,11 @@ public class CoachService implements DebriefUseCase, LatestDebriefUseCase, app.b
         }
     }
 
-    private CoachReply askCoach(TalkSessionId id, LearnerId learner, TalkRecord record, boolean stammer) {
+    private CoachReply askCoach(TalkSessionId id, LearnerId learner, TalkRecord record, boolean stammer, boolean standup) {
         List<CoachPrompt.Line> lines = record.turns().stream()
                 .map(t -> new CoachPrompt.Line(t.learner(), t.idx(), t.text())).toList();
-        var request = new LlmRequest(model, CoachPrompt.system(stammer),
-                List.of(LlmMessage.user(CoachPrompt.transcript(lines))), maxTokens, CoachPrompt.schema(), false);
+        var request = new LlmRequest(model, CoachPrompt.system(stammer, standup),
+                List.of(LlmMessage.user(CoachPrompt.transcript(lines))), maxTokens, CoachPrompt.schema(standup), false);
         try {
             String text = llm.stream(new TalkContext(learner, id), request, d -> { }).done().get(60, TimeUnit.SECONDS).text();
             return JSON.readValue(text, CoachReply.class);
@@ -301,6 +306,29 @@ public class CoachService implements DebriefUseCase, LatestDebriefUseCase, app.b
         ReplyCheck.changedWords(u.said(), u.better()).forEach(changed::add);
         putClip(fix, "clip", id, n, cutQuote(byIdx.get(u.turn()), u.said()));
         putModel(fix, id, ctx, n, u.better().trim());
+        return fix;
+    }
+
+    private static CoachReply.StandupTip validTip(CoachReply.StandupTip t, Map<Integer, TalkRecord.Turn> byIdx) {
+        boolean ok = t != null && t.rule() != null && CoachReply.STANDUP_TIPS.containsKey(t.rule()) && byIdx.containsKey(t.turn())
+                && t.said() != null && t.better() != null && ReplyCheck.quoteIn(byIdx.get(t.turn()).text(), t.said())
+                && ReplyCheck.upgradeOk(t.said(), t.better()) && t.why() != null && !t.why().isBlank() && ReplyCheck.clean(t.why());
+        return ok ? t : null;
+    }
+
+    private ObjectNode standupFix(TalkSessionId id, TalkContext ctx, int n, CoachReply.StandupTip t, Map<Integer, TalkRecord.Turn> byIdx) {
+        ObjectNode fix = JSON.createObjectNode();
+        fix.put("kind", "standup");
+        fix.put("rule", t.rule());
+        fix.put("title", CoachReply.STANDUP_TIPS.get(t.rule()));
+        fix.put("said", t.said().trim());
+        fix.put("turn", t.turn());
+        fix.put("better", t.better().trim());
+        ArrayNode changed = fix.putArray("changed");
+        ReplyCheck.changedWords(t.said(), t.better()).forEach(changed::add);
+        fix.put("why", t.why().trim());
+        putClip(fix, "clip", id, n, cutQuote(byIdx.get(t.turn()), t.said()));
+        putModel(fix, id, ctx, n, t.better().trim());
         return fix;
     }
 

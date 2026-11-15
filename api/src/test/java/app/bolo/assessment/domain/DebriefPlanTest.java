@@ -44,4 +44,31 @@ class DebriefPlanTest {
         assertThat(DebriefPlan.tooShort(new FluencyStats(59_000, 100, 100, 0, Map.of(), 10), 60_000)).isTrue();
         assertThat(DebriefPlan.tooShort(new FluencyStats(61_000, 100, 100, 0, Map.of(), 10), 60_000)).isFalse();
     }
+
+    // SCN-2 / ASM-4 (2026-11-15): one standup tip, in place of the last card, never more than 3.
+    @Test
+    void aStandupTipReplacesTheLastOfThree() {
+        assertThat(DebriefPlan.choose(List.of(issue(SoundPattern.V_BH)), 2, Optional.empty(), true))
+                .containsExactly(new FixChoice.Sound(issue(SoundPattern.V_BH)), new FixChoice.Upgrade(0), new FixChoice.StandupTip());
+    }
+
+    @Test
+    void aStandupTipIsAddedWhenThereIsRoom() {
+        assertThat(DebriefPlan.choose(List.of(issue(SoundPattern.V_BH)), 0, Optional.empty(), true))
+                .containsExactly(new FixChoice.Sound(issue(SoundPattern.V_BH)), new FixChoice.StandupTip());
+    }
+
+    @Test
+    void theSoundFixIsNeverPushedOut() {
+        List<FixChoice> plan = DebriefPlan.choose(List.of(issue(SoundPattern.V_BH)), 2,
+                Optional.of(new Habit(Habit.Kind.FILLER, "um", 7, 0)), true);
+        assertThat(plan).hasSize(3).first().isEqualTo(new FixChoice.Sound(issue(SoundPattern.V_BH)));
+        assertThat(plan.getLast()).isEqualTo(new FixChoice.StandupTip());
+    }
+
+    @Test
+    void noTipNoChange() {
+        assertThat(DebriefPlan.choose(List.of(issue(SoundPattern.V_BH)), 2, Optional.empty(), false))
+                .isEqualTo(DebriefPlan.choose(List.of(issue(SoundPattern.V_BH)), 2, Optional.empty()));
+    }
 }
