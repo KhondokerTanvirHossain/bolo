@@ -5,7 +5,8 @@ export type TrendPoint = { at: string; level: Level | string };
 export type Trends = { sessions: number; after: number; skills: Partial<Record<string, TrendPoint[]>> };
 export type PatternTag = { key: string; title: string; tag: "NEW" | "IMPROVING" | "STEADY" | "FIXED" | string };
 export type Patterns = { active: PatternTag[]; fixed: PatternTag[] };
-export type Row = { talkId: string; startedAt: string; minutes: number; topic: string; status: string; fixes: string[] };
+/** scenario (SCN-1): "standup" rows say "Standup rehearsal"; missing or "free" is a free talk. */
+export type Row = { talkId: string; startedAt: string; minutes: number; topic: string; status: string; fixes: string[]; scenario?: string };
 export type Progress = { effort: { talks: number; minutes: number }; trends: Trends; patterns: Patterns; latest: Row[] };
 
 export async function fetchProgress(): Promise<Progress | null> {

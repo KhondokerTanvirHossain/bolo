@@ -4,6 +4,7 @@ import { Icon, Scene } from "@/scene/Scene";
 import type { Home } from "./home";
 import { boloLine, greeting } from "./greeting";
 import { WeekCard } from "./WeekCard";
+import { scenarioLine, type Choice } from "@/scenario/scenario";
 
 type Props = {
   home: Home | null;
@@ -27,13 +28,16 @@ type Props = {
   /** The practice card opens drills from that talk (DRL-1); without a talk, practice on its sound. */
   onDrills?: (talkId: string) => void;
   onPlayDay1: () => void;
+  /** SCN-1: what Talk starts (Free talk by default); Change opens the picker (accounts with settings only). */
+  choice?: Choice;
+  onScenario?: () => void;
 };
 
 /**
  * The dashboard Home (DesktopHome, HOM-1, US-6.9): a greeting, Bolo's line in the scene with the Talk disc (the one
  * primary, R1, one tap away, R2), Next up (at most one card by the priority table), and This week (PRG-4).
  */
-export function HomeDashboard({ home, name, minutes, freeLine, note, hasDay1, keysOn, onTalk, onFeedback, onPractice, onProgress, onIntro, onDrills, onPlayDay1, onReminder }: Props) {
+export function HomeDashboard({ home, name, minutes, freeLine, note, hasDay1, keysOn, onTalk, onFeedback, onPractice, onProgress, onIntro, onDrills, onPlayDay1, onReminder, choice, onScenario }: Props) {
   useEffect(() => {
     if (!keysOn) return;
     const onKey = (e: KeyboardEvent) => {
@@ -63,7 +67,8 @@ export function HomeDashboard({ home, name, minutes, freeLine, note, hasDay1, ke
           <button className="bo-talk" aria-label="Start talking" onClick={onTalk} autoFocus>
             <Icon name="mic" fill /><span className="bo-talk__label">Talk</span>
           </button>
-          <div className="bo-talk-meta">Free talk · {minutes} min</div>
+          <div className="bo-talk-meta">{scenarioLine(choice ?? { scenario: "free", difficulty: "realistic" }, minutes)}
+            {onScenario && <> · <button className="dk-link" onClick={onScenario}>Change</button></>}</div>
           {freeLine && <p className="dk-hero__free" data-free-talks>{freeLine}</p>}
           {hasDay1 && <button className="dk-link dk-hero__day1" onClick={onPlayDay1}>Play my Day 1 clip</button>}
         </div>

@@ -6,6 +6,7 @@ import { HelpLink } from "@/help/HelpLink";
 import { Icon, Scene } from "@/scene/Scene";
 import { TalkChat } from "./TalkChat";
 import { TimeLeft } from "./TimeLeft";
+import { talkLabel } from "@/scenario/scenario";
 import type { TalkState } from "./talkState";
 
 type Props = {
@@ -267,7 +268,7 @@ export function TalkScreen({ state, deviceId = null, onDone, onEnd, onTalkAgain,
         <Scene />
         <div className="dk-talk__top">
           <span />
-          <TimeLeft clock={live || state.phase === "paused" ? state.clock : null} minutes={state.minutes} />
+          <TimeLeft clock={live || state.phase === "paused" ? state.clock : null} minutes={state.minutes} scenario={state.scenario} difficulty={state.difficulty} />
           {topRight}
         </div>
         <div className="dk-talk__chat">
@@ -291,7 +292,7 @@ export function TalkScreen({ state, deviceId = null, onDone, onEnd, onTalkAgain,
       <div className="dk-talk__top">
         <span />
         <span style={{ color: "var(--on-scene-secondary)", font: "500 14px/20px var(--font-sans)" }}>
-          Free talk · {state.minutes} min
+          {talkLabel(state) ?? "Free talk"} · {state.minutes} min
         </span>
         {topRight}
       </div>

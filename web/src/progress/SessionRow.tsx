@@ -6,7 +6,8 @@ export function SessionRow({ row, onOpen }: { row: Row; onOpen: (talkId: string)
   const n = row.fixes.length;
   const what = row.status === "too_short" ? "short talk" : row.status === "failed" ? "no feedback"
     : `${n} ${n === 1 ? "thing" : "things"} to try`;
-  const label = `${dayOf(row.startedAt)} ${monthOf(row.startedAt, "long")}, ${row.topic}, free talk, ${row.minutes} minutes, ${what}`;
+  const kind = row.scenario === "standup" ? "Standup rehearsal" : "Free talk";
+  const label = `${dayOf(row.startedAt)} ${monthOf(row.startedAt, "long")}, ${row.topic}, ${kind.toLowerCase()}, ${row.minutes} minutes, ${what}`;
   return (
     <button className="bo-session" aria-label={label} onClick={() => onOpen(row.talkId)}
       style={{ width: "100%", border: 0, background: "transparent", textAlign: "left", color: "inherit", font: "inherit" }}>
@@ -16,7 +17,7 @@ export function SessionRow({ row, onOpen }: { row: Row; onOpen: (talkId: string)
       </div>
       <div className="bo-session__body" aria-hidden="true">
         <div className="bo-session__topic">{row.topic}</div>
-        <div className="bo-session__meta">Free talk · {row.minutes} min</div>
+        <div className="bo-session__meta">{kind} · {row.minutes} min</div>
         <div className="bo-session__fixes">
           {row.status === "ready"
             ? row.fixes.map((f) => <span className="bo-fixtag" key={f}>{f}</span>)

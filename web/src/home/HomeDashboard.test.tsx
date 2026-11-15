@@ -91,4 +91,18 @@ describe("the intro card (P1g)", () => {
     expect(p.onIntro).toHaveBeenCalledWith(7);
     expect(screen.getByText("Day 7: hear how far you've come")).toBeTruthy();
   });
+
+  it("theTalkLineNamesTheScenarioAndChangeOpensThePicker", () => {
+    const onScenario = vi.fn();
+    render(<HomeDashboard {...props(null)} choice={{ scenario: "standup", difficulty: "realistic" }} onScenario={onScenario} />);
+    expect(screen.getByText(/Standup rehearsal · Realistic · 5 min/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Change" }));
+    expect(onScenario).toHaveBeenCalled();
+  });
+
+  it("withoutAChoiceItIsFreeTalk", () => {
+    render(<HomeDashboard {...props(null)} />);
+    expect(screen.getByText(/Free talk · 5 min/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Change" })).toBeNull();
+  });
 });

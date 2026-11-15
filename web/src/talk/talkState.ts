@@ -25,6 +25,9 @@ export type TalkState = {
   phase: TalkPhase;
   talkId: string | null;
   minutes: number;
+  /** SCN-1: what the talk started as (the time pill names a standup). */
+  scenario?: string;
+  difficulty?: string | null;
   caption: string;
   captionTurn: number;
   summary?: Summary;
@@ -62,7 +65,7 @@ export type ServerMessage =
 export type TalkAction =
   | ServerMessage
   | { type: "connecting" }
-  | { type: "started"; minutes: number; talkId?: string }
+  | { type: "started"; minutes: number; talkId?: string; scenario?: string | null; difficulty?: string | null }
   | { type: "busy" }
   | { type: "needs_sign_in" }
   | { type: "free_limit" }
@@ -101,7 +104,7 @@ export function talk(state: TalkState, action: TalkAction): TalkState {
     case "connecting":
       return { ...initialTalk, phase: "connecting" };
     case "started":
-      return { ...state, minutes: action.minutes, talkId: action.talkId ?? state.talkId };
+      return { ...state, minutes: action.minutes, talkId: action.talkId ?? state.talkId, scenario: action.scenario ?? "free", difficulty: action.difficulty ?? null };
     case "busy":
       return { ...state, phase: "busy" };
     case "needs_sign_in":

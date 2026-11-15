@@ -103,7 +103,7 @@ export function useTalk(deviceId: string | null) {
     }
     if (l.ended) return;
 
-    const created = await api.post<{ id: string; minutes: number }>("/api/talk");
+    const created = await api.post<{ id: string; minutes: number; scenario?: string; difficulty?: string | null }>("/api/talk");
     if (l.ended) return;
     if (created.kind !== "ok") {
       teardown();
@@ -113,7 +113,7 @@ export function useTalk(deviceId: string | null) {
         : created.kind === "refused" && created.code === "daily-cap" ? { type: "daily_cap" } : { type: "socket_closed" });
       return;
     }
-    dispatch({ type: "started", minutes: created.value.minutes, talkId: created.value.id });
+    dispatch({ type: "started", minutes: created.value.minutes, talkId: created.value.id, scenario: created.value.scenario, difficulty: created.value.difficulty });
 
     const maybePlayed = () => {
       if (l.pendingPlayed === null || !l.player.idle()) return;

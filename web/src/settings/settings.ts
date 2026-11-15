@@ -12,9 +12,13 @@ export type Settings = {
   buddySpeed: "normal" | "slower"; captions: boolean; talkView?: "chat" | "classic";
   voiceGender?: VoiceGender; voiceAccent?: VoiceAccent; mood?: Mood;
   answerTime?: AnswerTime; answerTimeAuto?: AnswerSpeed; stammer?: boolean;
+  /** SCN-1 (2026-11-15): Free talk or a Standup rehearsal, and a standup's difficulty. */
+  scenario?: Scenario; difficulty?: Difficulty;
 };
+export type Scenario = "free" | "standup";
+export type Difficulty = "friendly" | "realistic";
 export const DEFAULT_SETTINGS: Settings = { buddySpeed: "normal", captions: true, talkView: "chat", voiceGender: "female", voiceAccent: "british", mood: "friendly",
-  answerTime: "auto", answerTimeAuto: "normal", stammer: false };
+  answerTime: "auto", answerTimeAuto: "normal", stammer: false, scenario: "free", difficulty: "realistic" };
 export const CAPTIONS_KEY = "bolo.captions";
 
 /** null when they can't be read: callers must not save defaults over what the learner chose. */

@@ -39,7 +39,8 @@ export type LearnerView = {
   kind: "guest" | "account";
   consent: { keepRecordings: boolean; policyVersion: string } | null;
   profile: { goal: string; fearedMoment: string; talkMinutes: 5 | 10 } | null;
-  settings?: { buddySpeed: "normal" | "slower"; captions: boolean; talkView?: "chat" | "classic" };
+  settings?: { buddySpeed: "normal" | "slower"; captions: boolean; talkView?: "chat" | "classic"; stammer?: boolean;
+    scenario?: "free" | "standup"; difficulty?: "friendly" | "realistic" };
   /** The Google account (ACC-1); null for guests. */
   account?: { email: string; name: string | null } | null;
 };

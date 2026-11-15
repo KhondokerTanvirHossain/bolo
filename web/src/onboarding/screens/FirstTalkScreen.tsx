@@ -34,6 +34,8 @@ import { VoiceMoodScreen } from "@/voice/VoiceMoodScreens";
 import { clearThisBrowser } from "@/account/session";
 import { TalkScreen } from "@/talk/TalkScreen";
 import { useTalk } from "@/talk/useTalk";
+import { ScenarioPicker } from "@/scenario/ScenarioPicker";
+import { saveChoice, scenarioOf, type Choice } from "@/scenario/scenario";
 
 type View = { kind: "home" } | { kind: "practice"; pattern?: string } | { kind: "feedback"; talkId: string } | { kind: "me" } | { kind: "privacy" } | { kind: "invite" } | { kind: "memory" } | { kind: "voice" } | { kind: "mood" } | { kind: "answer" }
   | { kind: "progress" } | { kind: "history" } | { kind: "session"; talkId: string; from: "progress" | "history" }
@@ -50,6 +52,8 @@ export function FirstTalkScreen({ deviceId }: { deviceId: string | null }) {
   const [home, setHome] = useState<Home | null>(null);
   const [captions, setCaptions] = useState(true);
   const [me, setMe] = useState<LearnerView | null>(null);
+  /** SCN-1: the "What do you want to practise?" picker is open over Home. */
+  const [picking, setPicking] = useState(false);
   /** null until /api/auth/config answers. */
   const [signInOn, setSignInOn] = useState<boolean | null>(null);
   const [loop, setLoopState] = useState<Loop>(() => loadLoop());
@@ -149,7 +153,8 @@ export function FirstTalkScreen({ deviceId }: { deviceId: string | null }) {
           onProgress={() => toTab("progress")}
           onIntro={(day) => setView({ kind: "intro", day })}
           onReminder={account ? () => setView({ kind: "reminder" }) : undefined}
-          onPlayDay1={() => void audio.current?.play()} />
+          onPlayDay1={() => void audio.current?.play()}
+          choice={scenarioOf(me?.settings)} onScenario={me?.settings ? () => setPicking(true) : undefined} />
       </AppShell>
       </div>
       {url && <audio ref={audio} src={url} preload="auto" data-testid="day1-audio" />}
@@ -233,6 +238,16 @@ export function FirstTalkScreen({ deviceId }: { deviceId: string | null }) {
   }
   // PRG-7: after the first talk and its drills offer, the reminder time, once, before "See you tomorrow" (accounts).
   if (loop.askReminder && account) return <ReminderStep firstLoop onDone={reminderDone} />;
+  if (picking && me) {
+    const pick = (c: Choice) => {
+      setPicking(false);
+      // Shown at once; a failed save puts the line back on the next load.
+      setMe({ ...me, settings: { ...(me.settings ?? { buddySpeed: "normal", captions: true }), ...c } });
+      void saveChoice(c);
+    };
+    return homePage(<ScenarioPicker current={scenarioOf(me.settings)} stammer={me.settings?.stammer === true} onPick={pick}
+      onClose={() => setPicking(false)} />);
+  }
   return homePage(turnOn ? <ReminderTurnOn reminder={turnOn} onClose={(r) => {
     closeTurnOn();
     if (r === "denied") setReminderNote(`Come back around ${formatTime(turnOn.time)}`);
