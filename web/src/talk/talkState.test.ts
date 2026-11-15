@@ -158,3 +158,20 @@ describe("the live bubble ends with the turn (review P3a)", () => {
     expect(s.clock).toBeNull();
   });
 });
+
+describe("the English teacher hat (2026-11-16)", () => {
+  const live = { ...initialTalk, phase: "your_turn" as const };
+  it("a teach message shows the better sentence; judged adds the result; the next turn after it clears the card", () => {
+    let s = talk(live, { type: "teach", better: "I need to tell the client.", changed: ["need", "the"], why: "Smoother." });
+    expect(s.teach).toEqual({ better: "I need to tell the client.", changed: ["need", "the"], why: "Smoother.", result: null });
+    s = talk(s, { type: "state", value: "your_turn" });
+    expect(s.teach?.better).toBe("I need to tell the client.");
+    s = talk(s, { type: "judged", result: "nailed" });
+    expect(s.teach?.result).toBe("nailed");
+    s = talk(s, { type: "state", value: "buddy_speaking" });
+    expect(s.teach?.result).toBe("nailed");
+    s = talk(s, { type: "state", value: "your_turn" });
+    expect(s.teach).toBeNull();
+  });
+});
+

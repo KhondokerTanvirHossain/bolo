@@ -7,6 +7,7 @@ import { Icon, Scene } from "@/scene/Scene";
 import { TalkChat } from "./TalkChat";
 import { TimeLeft } from "./TimeLeft";
 import { talkLabel } from "@/scenario/scenario";
+import { highlight } from "@/coach/highlight";
 import type { TalkState } from "./talkState";
 
 type Props = {
@@ -187,7 +188,22 @@ export function TalkScreen({ state, deviceId = null, onDone, onEnd, onTalkAgain,
           </div>
         </div>
       )}
-      {yourTurn && state.hint && (
+      {state.teach && (
+        // Hats (DS v45 ScreenTeacherTalk): the better sentence stays while the learner tries it; the judgement follows.
+        <div className="bo-hint" role="note" aria-label="Say it better"
+          style={{ position: "absolute", left: "50%", bottom: 150, transform: "translateX(-50%)", width: "min(520px, calc(100% - 32px))", zIndex: 2 }}>
+          <p className="bo-hint__label"><Icon name="school" size="sm" />Say it better</p>
+          <p className="bo-hint__starter">&quot;{highlight(state.teach.better, state.teach.changed, "bo-better")}&quot;</p>
+          {state.teach.result && (
+            <span className={`bo-result bo-result--${state.teach.result === "nailed" ? "nailed" : state.teach.result === "closer" ? "closer" : "once"}`}
+              role="status" style={{ marginTop: 8 }}>
+              <Icon name={state.teach.result === "nailed" ? "check_circle" : state.teach.result === "closer" ? "north_east" : "replay"} />
+              {state.teach.result === "nailed" ? "Nailed it" : state.teach.result === "closer" ? "Closer" : "Good try"}
+            </span>
+          )}
+        </div>
+      )}
+      {yourTurn && state.hint && !state.teach && (
         <div className="bo-hint" role="note"
           style={{ position: "absolute", left: "50%", bottom: 150, transform: "translateX(-50%)", width: "min(520px, calc(100% - 32px))", zIndex: 2 }}>
           <p className="bo-hint__label"><Icon name="lightbulb" size="sm" />Try starting with</p>

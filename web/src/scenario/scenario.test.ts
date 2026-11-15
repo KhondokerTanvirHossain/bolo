@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { scenarioLine, talkLabel, scenarioOf } from "./scenario";
+import { longTalks, scenarioLine, talkLabel, scenarioOf } from "./scenario";
 
 describe("scenario lines (SCN-1, DS v44)", () => {
   it("Home's line names the scenario, the difficulty and the length", () => {
@@ -17,3 +17,20 @@ describe("scenario lines (SCN-1, DS v44)", () => {
     expect(scenarioOf({ buddySpeed: "normal", captions: true, scenario: "standup" })).toEqual({ scenario: "standup", difficulty: "realistic" });
   });
 });
+
+describe("hats and talk length (2026-11-16)", () => {
+  it("names every hat on Home and in the talk", () => {
+    expect(scenarioLine({ scenario: "teacher", difficulty: "realistic" }, 10)).toBe("English teacher · 10 min");
+    expect(scenarioLine({ scenario: "ielts", difficulty: "realistic" }, 5)).toBe("IELTS practice · 5 min");
+    expect(talkLabel({ scenario: "teacher" })).toBe("English teacher");
+    expect(talkLabel({ scenario: "ielts" })).toBe("IELTS practice");
+  });
+  it("10-minute talks only on Premium and Ultimate (and with no plan)", () => {
+    expect(longTalks("premium")).toBe(true);
+    expect(longTalks("ultimate")).toBe(true);
+    expect(longTalks("basic")).toBe(false);
+    expect(longTalks("free")).toBe(false);
+    expect(longTalks(null)).toBe(true);
+  });
+});
+

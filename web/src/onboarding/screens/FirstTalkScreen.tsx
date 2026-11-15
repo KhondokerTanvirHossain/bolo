@@ -35,7 +35,7 @@ import { clearThisBrowser } from "@/account/session";
 import { TalkScreen } from "@/talk/TalkScreen";
 import { useTalk } from "@/talk/useTalk";
 import { ScenarioPicker } from "@/scenario/ScenarioPicker";
-import { saveChoice, scenarioOf, type Choice } from "@/scenario/scenario";
+import { longTalks, saveChoice, scenarioOf, type Choice } from "@/scenario/scenario";
 
 type View = { kind: "home" } | { kind: "practice"; pattern?: string } | { kind: "feedback"; talkId: string } | { kind: "me" } | { kind: "privacy" } | { kind: "invite" } | { kind: "memory" } | { kind: "voice" } | { kind: "mood" } | { kind: "answer" }
   | { kind: "progress" } | { kind: "history" } | { kind: "session"; talkId: string; from: "progress" | "history" }
@@ -48,13 +48,12 @@ type View = { kind: "home" } | { kind: "practice"; pattern?: string } | { kind: 
 export function FirstTalkScreen({ deviceId }: { deviceId: string | null }) {
   const [url, setUrl] = useState<string | null>(null);
   /** SCN-1 (review I4): the scenario Home shows, sent with each start. */
-  const choiceRef = useRef<Choice | null>(null);
+  const choiceRef = useRef<(Choice & { minutes: number }) | null>(null);
   const conversation = useTalk(deviceId, choiceRef);
   const [view, setView] = useState<View>({ kind: "home" });
   const [home, setHome] = useState<Home | null>(null);
   const [captions, setCaptions] = useState(true);
   const [me, setMe] = useState<LearnerView | null>(null);
-  choiceRef.current = me?.settings ? scenarioOf(me.settings) : null;
   /** SCN-1: the "What do you want to practise?" picker is open over Home. */
   const [picking, setPicking] = useState(false);
   /** null until /api/auth/config answers. */
@@ -141,7 +140,10 @@ export function FirstTalkScreen({ deviceId }: { deviceId: string | null }) {
   const toTab = (t: Tab) => { setSeeYou(false); setReminderNote(null); setView({ kind: t === "talk" ? "home" : t }); };
   const lastTalk = home?.card && "talkId" in home.card ? home.card.talkId : undefined;
   const foot = <SideCards freeLine={freeLine} plan={home?.freeTalks ? planName(home.freeTalks) : null} help={{ view: view.kind, talkId: lastTalk }} />;
-  const minutes = home?.freeTalks ? 5 : (me?.profile?.talkMinutes ?? 5);
+  // Hats (2026-11-16): 10-minute talks on Premium and Ultimate (and with no plan); free and Basic talk 5 minutes.
+  const long = longTalks(home?.freeTalks ? (home.freeTalks.plan ?? "free") : null);
+  const minutes: 5 | 10 = long && (me?.settings?.talkMinutes ?? me?.profile?.talkMinutes) === 10 ? 10 : 5;
+  choiceRef.current = me?.settings ? { ...scenarioOf(me.settings), minutes } : null;
   /** The dashboard Home (P1f) inside the shell; {@code sheet} sits over it and turns its Space key off. */
   const homePage = (sheet?: ReactNode) => (
     <>
@@ -248,8 +250,12 @@ export function FirstTalkScreen({ deviceId }: { deviceId: string | null }) {
       setMe({ ...me, settings: { ...(me.settings ?? { buddySpeed: "normal", captions: true }), ...c } });
       void saveChoice(c);
     };
+    const length = (m: 5 | 10) => {
+      setMe({ ...me, settings: { ...(me.settings ?? { buddySpeed: "normal", captions: true }), talkMinutes: m } });
+      void saveChoice(scenarioOf(me.settings), m);
+    };
     return homePage(<ScenarioPicker current={scenarioOf(me.settings)} stammer={me.settings?.stammer === true} onPick={pick}
-      onClose={() => setPicking(false)} />);
+      minutes={minutes} longTalks={long} onLength={length} onClose={() => setPicking(false)} />);
   }
   return homePage(turnOn ? <ReminderTurnOn reminder={turnOn} onClose={(r) => {
     closeTurnOn();

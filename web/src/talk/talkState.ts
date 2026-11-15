@@ -34,6 +34,8 @@ export type TalkState = {
   micProblem?: MicProblem;
   /** TLK-6: two sentence starters, shown until the learner's turn ends. */
   hint: string[] | null;
+  /** The English teacher's Say it better card; {@code result} once the try is judged (nailed, closer, good_try). */
+  teach?: { better: string; changed: string[]; why: string; result: string | null } | null;
   /** TLK-14: the approved crisis content, which stays on screen. */
   crisis: Crisis | null;
   /** US-2.7: "Slower please" was heard; ask whether to keep the slower Bolo. */
@@ -57,6 +59,9 @@ export type ServerMessage =
   | { type: "buddy_done"; turn: number }
   | { type: "ended"; reason: string; turns: number; p50Ms: number | null; p90Ms: number | null }
   | { type: "hint"; starters: string[] }
+  /** Hats (2026-11-16): the English teacher shows a better sentence, then judges the try. */
+  | { type: "teach"; better: string; changed?: string[]; why?: string }
+  | { type: "judged"; result: string }
   | { type: "paused"; reason: string; leftMs?: number; at?: number }
   | { type: "resumed"; leftMs?: number; at?: number }
   | ({ type: "crisis" } & Crisis)
@@ -124,6 +129,8 @@ export function talk(state: TalkState, action: TalkAction): TalkState {
       return { ...state, phase: action.value, hint: action.value === "your_turn" ? state.hint : null,
         // Review (P3a): a live bubble only lives during the learner's turn.
         live: action.value === "your_turn" ? state.live : null,
+        // The judged card stays through Bolo's answer and goes when the learner's next turn begins.
+        teach: action.value === "your_turn" && state.teach?.result ? null : state.teach,
         clock: clockOf(action.leftMs, action.at, false, state.clock) };
     case "slower":
       return { ...state, askKeepSlower: true };
@@ -131,6 +138,10 @@ export function talk(state: TalkState, action: TalkAction): TalkState {
       return { ...state, askKeepSlower: false };
     case "hint":
       return { ...state, hint: action.starters };
+    case "teach":
+      return { ...state, teach: { better: action.better, changed: action.changed ?? [], why: action.why ?? "", result: null } };
+    case "judged":
+      return state.teach ? { ...state, teach: { ...state.teach, result: action.result } } : state;
     case "paused":
       return FINAL.includes(state.phase) ? state
         : { ...state, phase: "paused", hint: null, live: null, clock: clockOf(action.leftMs, action.at, true, state.clock && { ...state.clock, paused: true }) };

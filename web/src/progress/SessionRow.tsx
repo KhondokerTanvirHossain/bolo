@@ -6,7 +6,8 @@ export function SessionRow({ row, onOpen }: { row: Row; onOpen: (talkId: string)
   const n = row.fixes.length;
   const what = row.status === "too_short" ? "short talk" : row.status === "failed" ? "no feedback"
     : `${n} ${n === 1 ? "thing" : "things"} to try`;
-  const kind = row.scenario === "standup" ? "Standup rehearsal" : "Free talk";
+  const kind = row.scenario === "standup" ? "Standup rehearsal" : row.scenario === "teacher" ? "English teacher"
+    : row.scenario === "ielts" ? "IELTS practice" : "Free talk";
   const label = `${dayOf(row.startedAt)} ${monthOf(row.startedAt, "long")}, ${row.topic}, ${kind.toLowerCase()}, ${row.minutes} minutes, ${what}`;
   return (
     <button className="bo-session" aria-label={label} onClick={() => onOpen(row.talkId)}

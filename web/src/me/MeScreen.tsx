@@ -16,6 +16,7 @@ import { fetchMemory, meRowLine, type MemoryView } from "@/memory/memory";
 import { fetchReminder, type Reminder } from "@/reminder/api";
 import { disablePushHere } from "@/reminder/push";
 import { formatTime } from "@/reminder/slots";
+import { longTalks } from "@/scenario/scenario";
 
 const LABEL: Record<string, string> = Object.fromEntries(QUESTIONS.flatMap((q) => q.chips.map((c) => [c.value, c.label] as const)));
 
@@ -77,7 +78,7 @@ export function MeScreen({ me, onPrivacy, onSignedIn, onInvite, onMemory, onVoic
           <>
             <div className="bo-row"><div className="bo-row__body"><div className="bo-row__title">{LABEL[me.profile.goal] ?? me.profile.goal}</div><div className="bo-row__sub">What you need English for</div></div></div>
             <div className="bo-row"><div className="bo-row__body"><div className="bo-row__title">{LABEL[me.profile.fearedMoment] ?? me.profile.fearedMoment}</div><div className="bo-row__sub">The hardest moment</div></div></div>
-            <div className="bo-row"><div className="bo-row__body"><div className="bo-row__title">{free ? 5 : me.profile.talkMinutes} minutes</div><div className="bo-row__sub">{free ? "Each talk on your plan" : "Each talk"}</div></div></div>
+            <div className="bo-row"><div className="bo-row__body"><div className="bo-row__title">{free && !longTalks(free.plan ?? "free") ? 5 : (me.settings?.talkMinutes ?? me.profile.talkMinutes)} minutes</div><div className="bo-row__sub">{free ? "Each talk on your plan" : "Each talk"}</div></div></div>
           </>
         ) : <div className="bo-row"><div className="bo-row__body"><div className="bo-row__sub">No goals yet.</div></div></div>}
       </div>

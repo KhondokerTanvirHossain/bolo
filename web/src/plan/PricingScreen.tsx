@@ -92,7 +92,7 @@ export function PricingScreen() {
       <main className="bo-pricing">
         <Link className="bo-btn bo-btn--quiet-neutral bo-pricing__back" href="/">Back to Bolo</Link>
         <h1 className="bo-flow__title">Choose a plan</h1>
-        <p className="bo-flow__body">Each talk is up to 5 minutes, then your coach&apos;s feedback.</p>
+        <p className="bo-flow__body">Each talk is up to 5 minutes, then your coach&apos;s feedback. Premium and Ultimate can choose 10-minute talks.</p>
         {failed && <p className="bo-footnote" role="alert">Plans didn&apos;t load. Check your connection, then reload.</p>}
         {plans && (
           <>

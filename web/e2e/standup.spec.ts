@@ -47,8 +47,8 @@ for (const [name, viewport] of [["desktop", { width: 1280, height: 800 }], ["pho
       await page.getByRole("button", { name: "Change" }).click();
       const dialog = page.getByRole("dialog", { name: "What do you want to practise?" });
       await expect(dialog).toBeVisible();
-      await expect(dialog.getByText("Realistic interrupts once or twice, like a real meeting.")).toBeVisible();
       await dialog.getByRole("radio", { name: /Standup rehearsal/ }).click();
+      await expect(dialog.getByText("Realistic interrupts once or twice, like a real meeting.")).toBeVisible();
       await expect(dialog.getByRole("button", { name: "Realistic" })).toHaveAttribute("aria-pressed", "true");
       await dialog.getByRole("button", { name: "Friendly" }).click();
       await expect(dialog).toBeHidden();
@@ -76,6 +76,7 @@ for (const [name, viewport] of [["desktop", { width: 1280, height: 800 }], ["pho
       await stub(page, { stammer: true });
       await page.goto("/");
       await page.getByRole("button", { name: "Change" }).click();
+      await page.getByRole("radio", { name: /Standup rehearsal/ }).click();
       await expect(page.getByText("With I stammer on, Bolo won't cut in.")).toBeVisible();
     });
   });

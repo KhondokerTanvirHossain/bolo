@@ -52,7 +52,7 @@ export function errorKey(e: unknown): string {
 }
 
 /** {@code choice} (SCN-1, review I4): what Home showed when Talk was tapped; sent with the start so it wins over a save still on its way. */
-export function useTalk(deviceId: string | null, choice?: { current: { scenario: string; difficulty: string } | null }) {
+export function useTalk(deviceId: string | null, choice?: { current: { scenario: string; difficulty: string; minutes?: number } | null }) {
   const [state, dispatch] = useReducer(talk, initialTalk);
   /** P3a: the mic level (0–1) for the meter, published at most every LEVEL_EVERY_MS. */
   const [level, setLevel] = useState(0);

@@ -14,8 +14,10 @@ export type Settings = {
   answerTime?: AnswerTime; answerTimeAuto?: AnswerSpeed; stammer?: boolean;
   /** SCN-1 (2026-11-15): Free talk or a Standup rehearsal, and a standup's difficulty. */
   scenario?: Scenario; difficulty?: Difficulty;
+  /** Hats (2026-11-16): 5 or 10 minutes; 10 only on Premium and Ultimate. Missing: the onboarding answer. */
+  talkMinutes?: 5 | 10;
 };
-export type Scenario = "free" | "standup";
+export type Scenario = "free" | "standup" | "teacher" | "ielts";
 export type Difficulty = "friendly" | "realistic";
 export const DEFAULT_SETTINGS: Settings = { buddySpeed: "normal", captions: true, talkView: "chat", voiceGender: "female", voiceAccent: "british", mood: "friendly",
   answerTime: "auto", answerTimeAuto: "normal", stammer: false, scenario: "free", difficulty: "realistic" };
