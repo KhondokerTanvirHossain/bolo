@@ -135,7 +135,7 @@ The MVP has 77 functional requirements across 11 modules. **P0** is required for
 | ONB-1 | Launch straight into a voice welcome; no sign-up before the first conversation. | P0 |
 | ONB-7 | Before the mic prompt, show one consent screen: an explicit choice to keep recordings or not (nothing pre-selected), plus an "I'm 13 or older" confirmation. | P0 |
 | ONB-2 | Request microphone permission with a one-line reason shown before the system prompt. | P0 |
-| ONB-3 | Ask 3 setup questions by voice with tap-able answer chips: goal, feared situation, daily talk time (5 or 10 minutes of talking). | P0 |
+| ONB-3 | Ask 3 setup questions by voice with tap-able answer chips: goal, feared situation, daily talk time (5 or 10 minutes of talking). *Changed 2026-11-16: 10-minute talks are for Premium and Ultimate (chosen under Change → Talk length); free and Basic talks are 5 minutes. A 10-minute talk counts as one talk.* | P0 |
 | ONB-4 | Record a 30-second self-introduction as the Day 1 clip; keep it on the device until sign-in, and upload it only if the learner chose to keep recordings. | P0 |
 | ONB-5 | Run a 5-second mic check (volume and background noise) and coach the learner if the level is poor. | P0 |
 | ONB-6 | Offer Bangla helper text under onboarding screens (toggle, on by default). | P1 |
@@ -219,6 +219,8 @@ The MVP has 77 functional requirements across 11 modules. **P0** is required for
 | SCN-1 | Offer Free Talk (default) and Standup Rehearsal in the MVP; both are free in the closed beta. | P0 |
 | SCN-2 | In Standup Rehearsal, the Buddy plays the learner's manager (a client role is P1), asks for an update and interrupts with follow-ups. *Changed 2026-11-15: Realistic cuts in at the learner's next breath after about 20 s of speaking, at most twice a talk; never with I stammer on.* | P0 |
 | SCN-3 | Let the learner set the context in one line by voice ("I'm a backend dev on a payments team"). | P1 |
+| SCN-4 | *Added 2026-11-16 (founder): Bolo's hats.* **English teacher**: when a sentence can clearly be said better (never the first turn, at least 3 turns apart, at most 4 a talk), Bolo shows one better sentence ("A smoother way to say that: …"), the learner says it again, and Bolo judges the try: Nailed it / Closer / Good try. Free talk never corrects during the talk. | P0 |
+| SCN-5 | *Added 2026-11-16 (founder):* **IELTS Speaking practice**: Bolo is a calm examiner (Part 1 and Part 2 in 5 minutes; Parts 1–3 in 10), never comments during the test and **never gives a band score**. | P0 |
 
 ### 5.8 Account, privacy and plans (ACC)
 
@@ -1057,6 +1059,7 @@ The MVP tracks 30 events, enough to compute every success metric in section 1 an
 | `session_started` | Talk tapped | scenario, difficulty (standup only) | Loops |
 | `scenario_changed` | Learner switches Free talk ↔ Standup | from, to, difficulty | Scenario adoption |
 | `standup_interrupted` | Realistic standup cuts in | turn | Tuning cut-ins (SCN-2) |
+| `teacher_taught` / `teacher_judged` | English teacher shows a better sentence / judges the try | result (nailed, closer, good_try) | Teacher hat (SCN-4) |
 | `session_ended` | Session closes | speaking\_s, turns, end\_reason (time / user / idle / network) | Loops |
 | `debrief_viewed` | Debrief opens | fixes\_count, confidence\_skipped | Debrief completion |
 | `fix_card_completed` | A fix card is passed | fix\_type, tried, result | Debrief completion |

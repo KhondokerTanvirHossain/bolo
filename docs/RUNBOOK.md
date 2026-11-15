@@ -490,3 +490,16 @@ Me → Speaking → **Time to answer** (Automatic, Quick, Normal, Relaxed) and *
   and `select count(*), count(distinct learner_id) from event where name = 'standup_interrupted' and at > now() - interval '7 days';`
 - **Turn cut-ins off quickly:** set `BOLO_TALK_STANDUP_CUT_IN_MAX=0` in `bolo.env` and restart bolo-api.
 
+## Bolo's hats and 10-minute talks (SCN-4, SCN-5; 2026-11-16)
+
+- **Hats:** `learner_settings.scenario` / `talk_session.scenario` = `free | standup | teacher | ielts` (V33).
+- **English teacher:** after each learner turn (from turn 2, 3 turns apart, at most 4 a talk) a small model call
+  (`bolo.talk.teacher.model`, default `claude-haiku-5-5`, timeout `bolo.talk.teacher.timeout-ms`, default 2500) decides
+  whether to teach. A slow or failed call means Bolo just replies. The retry is judged in Java (word order match ≥ 80 %
+  nailed, ≥ 50 % closer, else good try). Socket messages `teach` and `judged`.
+- **IELTS practice:** prompt only (examiner, never a band score); answering timers at least Relaxed.
+- **Talk length:** `learner_settings.talk_minutes` (5 | 10). Premium and Ultimate (and learners with no plan) get their
+  choice; free and Basic get 5. A 10-minute talk counts as one talk.
+- **How often the teacher teaches:**
+  `select name, props->>'result', count(*) from event where name in ('teacher_taught','teacher_judged') and at > now() - interval '7 days' group by 1, 2;`
+
