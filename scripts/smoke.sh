@@ -28,6 +28,7 @@ post() { curl -s --max-time 15 -b "$jar" -c "$jar" -X POST "$BOLO_URL$1" -H 'Con
   -H "Origin: $BOLO_URL" -d "$2"; }
 check "a newcomer gets in without an invite" guest "$(post /api/session '{}' | grep -o '"kind":"guest"' | cut -d'"' -f4)"
 post /api/consent '{"keepRecordings":false,"over13":true,"policyVersion":"2026-11-v1"}' >/dev/null
+check "Talk starts a free talk by default (SCN-1)" free "$(curl -s --max-time 15 -b "$jar" "$BOLO_URL/api/me" | grep -o '"scenario":"[a-z]*"' | cut -d'"' -f4)"
 check "a guest signs in before the first talk" '{"code":"sign-in"}' "$(post /api/talk '{}')"
 INVITE="$(scripts/probe-invite.sh 2>/dev/null || true)"
 headers=$(curl -s -D - -o /dev/null --max-time 15 -X POST "$BOLO_URL/api/session" \

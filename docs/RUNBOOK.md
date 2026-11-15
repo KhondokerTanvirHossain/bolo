@@ -474,3 +474,19 @@ Me → Speaking → **Time to answer** (Automatic, Quick, Normal, Relaxed) and *
   ```
 - **Stop every reminder now.** `update reminder_settings set enabled = false;` (learners can turn theirs back on).
 
+## Standup rehearsal (SCN-1, SCN-2; 2026-11-15)
+
+- **What it is:** under the Talk button, **Change** picks Free talk or a Standup rehearsal (Friendly / Realistic). Saved
+  on the learner (`learner_settings.scenario`, `difficulty`) and copied onto each talk (`talk_session.scenario`,
+  `difficulty`); a change during a talk applies from the next one.
+- **Cut-ins (Realistic only):** `bolo.talk.standup.*` in `application.yml` — after `cut-in-after-ms` (20 s) of speech in
+  one turn, a breath of `cut-in-silence-ms` (0.4 s) ends the turn and Bolo asks one short follow-up; at most `cut-in-max`
+  (2) a talk, `cut-in-gap-ms` (60 s) apart, never with under `cut-in-not-last-ms` (30 s) left, never in the first turn,
+  after a pause or after a hint, never with I stammer on.
+- **The tip:** a standup's debrief asks the Coach for one `standupTip` (outcome_first, give_a_date, blocker_and_ask); it
+  takes the last card's place. A tip not quoted from the talk is dropped.
+- **How many standups, how many cut-ins:**
+  `select props->>'scenario' s, count(*) from event where name = 'session_started' and at > now() - interval '7 days' group by 1;`
+  and `select count(*), count(distinct learner_id) from event where name = 'standup_interrupted' and at > now() - interval '7 days';`
+- **Turn cut-ins off quickly:** set `BOLO_TALK_STANDUP_CUT_IN_MAX=0` in `bolo.env` and restart bolo-api.
+

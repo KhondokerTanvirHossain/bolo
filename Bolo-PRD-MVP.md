@@ -217,7 +217,7 @@ The MVP has 77 functional requirements across 11 modules. **P0** is required for
 | ID | Requirement | Priority |
 | --- | --- | --- |
 | SCN-1 | Offer Free Talk (default) and Standup Rehearsal in the MVP; both are free in the closed beta. | P0 |
-| SCN-2 | In Standup Rehearsal, the Buddy plays a client or manager, asks for an update and interrupts with follow-ups. | P0 |
+| SCN-2 | In Standup Rehearsal, the Buddy plays the learner's manager (a client role is P1), asks for an update and interrupts with follow-ups. *Changed 2026-11-15: Realistic cuts in at the learner's next breath after about 20 s of speaking, at most twice a talk; never with I stammer on.* | P0 |
 | SCN-3 | Let the learner set the context in one line by voice ("I'm a backend dev on a payments team"). | P1 |
 
 ### 5.8 Account, privacy and plans (ACC)
@@ -776,7 +776,7 @@ When several states are true at once, the first match in each column wins:
 
 - **Given** Standup Rehearsal starts, **when** the Buddy speaks, **then** it plays a manager or client and asks for my update (yesterday, today, blockers).
 - **Given** I'm giving my update, **when** I've spoken for about 20 s, **then** the Buddy may interrupt once with a realistic follow-up ("Sorry, what's the ETA on that?").
-- **Given** I choose a difficulty, **when** the scenario starts, **then** "Friendly" never interrupts, while "Realistic" interrupts once or twice and speaks at normal speed.
+- **Given** I choose a difficulty, **when** the scenario starts, **then** "Friendly" never interrupts, while "Realistic" interrupts once or twice. *(Changed 2026-11-15: Bolo's speaking speed is the learner's own setting in both; with I stammer on, Bolo never interrupts.)*
 - **Given** the rehearsal ends, **when** the debrief loads, **then** one of the 3 fixes is scenario-specific (e.g. "Lead with the outcome, then the detail"). It replaces the lowest-ranked fix, so there are never more than 3.
 
 **US-7.4 · Handle being interrupted** · P0 · edge case
@@ -784,7 +784,7 @@ When several states are true at once, the first match in each column wins:
 *As a* learner, *I want* to practise answering when interrupted, *so that* I can stay calm in real meetings.
 
 - **Given** the Buddy interrupts me, **when** I stop and answer the question, **then** it lets me return to my update ("Got it, carry on").
-- **Given** I freeze after an interruption for 8 s, **when** the timer passes, **then** the Buddy offers a hint phrase ("Good question. I expect it by…").
+- **Given** I freeze after an interruption, **when** my usual hint time passes (Time to answer; 15 s at Normal — changed 2026-11-15 from a fixed 8 s), **then** the Buddy offers a hint phrase ("Good question. I expect it by…").
 
 ### 6.8 E8 · Account, privacy, data and plans
 
@@ -1054,7 +1054,9 @@ The MVP tracks 30 events, enough to compute every success metric in section 1 an
 | `mic_permission_result` | Mic prompt answered | granted / denied / never-ask | Funnel |
 | `onboarding_step_completed` | Each setup step completes | step, duration\_s | Funnel |
 | `first_word_spoken` | Learner's first spoken answer (onboarding or conversation) | seconds\_since\_first\_open | Time to first word |
-| `session_started` | Talk tapped | scenario, is\_resume | Loops |
+| `session_started` | Talk tapped | scenario, difficulty (standup only) | Loops |
+| `scenario_changed` | Learner switches Free talk ↔ Standup | from, to, difficulty | Scenario adoption |
+| `standup_interrupted` | Realistic standup cuts in | turn | Tuning cut-ins (SCN-2) |
 | `session_ended` | Session closes | speaking\_s, turns, end\_reason (time / user / idle / network) | Loops |
 | `debrief_viewed` | Debrief opens | fixes\_count, confidence\_skipped | Debrief completion |
 | `fix_card_completed` | A fix card is passed | fix\_type, tried, result | Debrief completion |
