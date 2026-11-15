@@ -175,3 +175,11 @@ describe("the English teacher hat (2026-11-16)", () => {
   });
 });
 
+describe("review fixes (hats)", () => {
+  it("a dropped try clears the Say it better card", () => {
+    let s = talk({ ...initialTalk, phase: "your_turn" as const }, { type: "teach", better: "I need to go.", changed: [], why: "" });
+    s = talk(s, { type: "teach_dropped" });
+    expect(s.teach).toBeNull();
+  });
+});
+

@@ -119,6 +119,9 @@ final class TalkConversation implements TalkConnection {
     private final boolean teacher;
     private final app.bolo.talk.domain.Teaching teaching = new app.bolo.talk.domain.Teaching();
     private TeacherCheck teacherCheck;
+    /** Review I4: the check started with the speculative reply, for the words it was started on. */
+    private String earlyCheckFor;
+    private java.util.concurrent.CompletableFuture<java.util.Optional<TeacherCheck.Teach>> earlyCheck;
     private Consumer<app.bolo.talk.application.port.in.TeacherMoment> onTeacher = e -> { };
 
     private final ReentrantLock lock = new ReentrantLock();
@@ -415,6 +418,11 @@ final class TalkConversation implements TalkConnection {
                 List<Exchange> withLearner = new ArrayList<>(history);
                 withLearner.add(new Exchange(Exchange.Speaker.LEARNER, transcript.trim()));
                 speculation = ask(BuddyPrompt.messages(withLearner), systemFor(transcript.trim()), transcript.trim());
+                // Review I4: the teacher check starts now too, so it's mostly done when the turn ends.
+                if (teacher && teacherCheck != null && teaching.pending().isEmpty() && teaching.mayTeach(learnerTurns + 1)) {
+                    earlyCheckFor = transcript.trim();
+                    earlyCheck = teacherCheck.ask(ctx, earlyCheckFor, talk.stammer());
+                }
             }
             case RESUMED -> {
                 cancel(speculation);
@@ -463,8 +471,11 @@ final class TalkConversation implements TalkConnection {
         // TLK-14 first: a turn that trips the keyword screen waits for the classifier before Bolo says anything, and a
         // classifier that fails or is slow counts as a crisis (fail closed).
         if (CrisisScreen.mayBeCrisis(said)) {
-            // Hats: a retry that trips the screen isn't judged (review focus 2).
-            teaching.drop();
+            // Hats: a try that trips the screen isn't judged; the web clears the card (review I1).
+            if (teaching.pending().isPresent()) {
+                teaching.drop();
+                out.send(message("teach_dropped"));
+            }
             cancel(speculation);
             speculation = null;
             crisisPending = true;
@@ -488,7 +499,7 @@ final class TalkConversation implements TalkConnection {
         // TLK-13: "Sorry?" and "Slower please" are answered in Java, with no model call.
         TalkIntent intent = TalkIntent.of(said);
         if (intent != TalkIntent.NONE && !lastBuddyText.isBlank()) {
-            teaching.drop();
+            // Review I2: "Sorry?" after a teach repeats it, and the next turn is still the try.
             cancel(speculation);
             speculation = null;
             if (intent == TalkIntent.SLOWER && !slow) {
@@ -525,14 +536,17 @@ final class TalkConversation implements TalkConnection {
     /** Hats: asks the teacher check off the audio thread; a sentence worth teaching is spoken as a fixed line, else Bolo replies. */
     private void teach(String said, long commitAt) {
         int turn = learnerTurns;
-        boolean stammer = talk.stammer();
+        int token = resumeToken;
         TeacherCheck check = teacherCheck;
+        var started = earlyCheck != null && sameWords(earlyCheckFor, said) ? earlyCheck : check.ask(ctx, said, talk.stammer());
+        earlyCheck = null;
+        earlyCheckFor = null;
         Thread.ofVirtual().start(() -> {
-            var t = check.check(ctx, said, stammer);
+            var t = check.await(started);
             lock.lock();
             try {
-                // Paused while checking: say nothing now; resume asks the last question again (like the crisis path).
-                if (ended || endAfterSpeaking != null || phase == Phase.PAUSED || learnerTurns != turn) return;
+                // Paused (or paused and resumed, review I3) while checking: say nothing; resume asks the last question again.
+                if (ended || endAfterSpeaking != null || phase == Phase.PAUSED || token != resumeToken || learnerTurns != turn) return;
                 if (t.isEmpty()) {
                     replyTo(said, commitAt, true, false);
                     return;

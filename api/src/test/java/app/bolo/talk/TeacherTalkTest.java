@@ -119,19 +119,50 @@ class TeacherTalkTest extends PostgresTestBase {
         assertThat(events("teacher_taught")).isZero();
     }
 
-    /** Review Focus 2: "Sorry?" on the retry is answered as TLK-13; the retry is dropped, never judged later. */
+    /** Review I2: "Sorry?" right after a teach repeats it, and the next turn is still the try. */
     @Test
-    void aSorryRetryIsNotJudged() throws Exception {
+    void aSorryRepeatsTheTeachAndKeepsTheTry() throws Exception {
         try (TalkSocket s = open()) {
             say(s, 0);
             say(s, 2);
             stt.nextText("Sorry?");
-            say(s, 4);
+            speak(s, 4);
+            s.await(4000, "\"caption\"", "A smoother way to say that");
+            s.await(4000, "\"buddy_done\"", "\"turn\":6");
             stt.nextText(BETTER);
-            say(s, 6);
-            assertThat(s.quiet(100, "\"type\":\"judged\"")).isTrue();
+            speak(s, 6);
+            s.await(4000, "\"type\":\"judged\"", "\"result\":\"nailed\"");
+            s.await(4000, "\"buddy_done\"", "\"turn\":8");
+        }
+        assertThat(events("teacher_judged")).isEqualTo(1);
+    }
+
+    /** Review I1: a try dropped by the crisis screen tells the web to clear the card. */
+    @Test
+    void aDroppedTryClearsTheCard() throws Exception {
+        try (TalkSocket s = open()) {
+            say(s, 0);
+            say(s, 2);
+            stt.nextText("this bug makes me want to die laughing");
+            speak(s, 4);
+            s.await(5000, "\"type\":\"teach_dropped\"");
         }
         assertThat(events("teacher_judged")).isZero();
+    }
+
+    /** Review I3 / focus 4: a pause and resume while the check runs: the late check says nothing; the resume does. */
+    @Test
+    void aPauseDuringTheCheckSpeaksNoLateTeachLine() throws Exception {
+        llm.teachDelayMs(10);
+        try (TalkSocket s = open()) {
+            say(s, 0);
+            speak(s, 2);
+            s.json("{\"type\":\"pause\"}");
+            s.json("{\"type\":\"resume\"}");
+            s.await(4000, "\"caption\"", "That sounds great");
+            assertThat(s.quiet(800, "A smoother way to say that")).isTrue();
+        }
+        assertThat(events("teacher_taught")).isZero();
     }
 
     @Test

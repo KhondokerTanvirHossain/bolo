@@ -62,6 +62,8 @@ export type ServerMessage =
   /** Hats (2026-11-16): the English teacher shows a better sentence, then judges the try. */
   | { type: "teach"; better: string; changed?: string[]; why?: string }
   | { type: "judged"; result: string }
+  /** Review I1: the try was dropped (the crisis screen); the card goes. */
+  | { type: "teach_dropped" }
   | { type: "paused"; reason: string; leftMs?: number; at?: number }
   | { type: "resumed"; leftMs?: number; at?: number }
   | ({ type: "crisis" } & Crisis)
@@ -140,6 +142,8 @@ export function talk(state: TalkState, action: TalkAction): TalkState {
       return { ...state, hint: action.starters };
     case "teach":
       return { ...state, teach: { better: action.better, changed: action.changed ?? [], why: action.why ?? "", result: null } };
+    case "teach_dropped":
+      return { ...state, teach: null };
     case "judged":
       return state.teach ? { ...state, teach: { ...state.teach, result: action.result } } : state;
     case "paused":

@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -50,19 +51,46 @@ public class TeacherCheck {
         this.timeoutMs = timeoutMs;
     }
 
-    public Optional<Teach> check(TalkContext ctx, String said, boolean stammer) {
+    /** How long a finished turn waits for the check (review I4: the check usually starts earlier, at speculation). */
+    public long timeoutMs() {
+        return timeoutMs;
+    }
+
+    /** Starts the check; the future never fails (anything wrong is "don't teach"). */
+    public CompletableFuture<Optional<Teach>> ask(TalkContext ctx, String said, boolean stammer) {
         try {
             var request = new LlmRequest(model, SYSTEM + (stammer ? STAMMER : ""), List.of(LlmMessage.user("Learner's last turn: " + said)),
                     150, SCHEMA, true);
-            JsonNode n = JSON.readTree(llm.stream(ctx, request, d -> { }).done().get(timeoutMs, TimeUnit.MILLISECONDS).text());
-            if (!n.path("teach").asBoolean(false)) return Optional.empty();
-            String better = n.path("better").asString("").strip();
-            String why = n.path("why").asString("").strip();
-            return ok(said, better) ? Optional.of(new Teach(better, why)) : Optional.empty();
+            return llm.stream(ctx, request, d -> { }).done().handle((r, e) -> e != null ? Optional.<Teach>empty() : parse(said, r.text()));
+        } catch (RuntimeException e) {
+            return CompletableFuture.completedFuture(Optional.empty());
+        }
+    }
+
+    /** Waits at most {@link #timeoutMs()} for a started check. */
+    public Optional<Teach> await(CompletableFuture<Optional<Teach>> started) {
+        try {
+            return started.get(timeoutMs, TimeUnit.MILLISECONDS);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             return Optional.empty();
         } catch (Exception e) {
+            return Optional.empty();
+        }
+    }
+
+    public Optional<Teach> check(TalkContext ctx, String said, boolean stammer) {
+        return await(ask(ctx, said, stammer));
+    }
+
+    private static Optional<Teach> parse(String said, String text) {
+        try {
+            JsonNode n = JSON.readTree(text);
+            if (!n.path("teach").asBoolean(false)) return Optional.empty();
+            String better = n.path("better").asString("").strip();
+            String why = n.path("why").asString("").strip();
+            return ok(said, better) ? Optional.of(new Teach(better, why)) : Optional.empty();
+        } catch (RuntimeException e) {
             return Optional.empty();
         }
     }
