@@ -1,9 +1,10 @@
 # ScreenScenarioPicker
 
-The sheet behind **Change** under the Talk button (SCN-1, SCN-2, US-7.1, US-7.3). On desktop it is DesktopScenarioPicker (a centred dialog).
+The sheet behind **Change** under the Talk button (SCN-1, SCN-2, US-7.1, US-7.3; hats and talk length 2026-11-16). On desktop it is DesktopScenarioPicker (a centred dialog).
 
-- **Free talk** (default) and **Standup rehearsal**, as radio cards with one line each.
-- Choosing Standup rehearsal reveals the difficulty inside its card: **Friendly** never interrupts; **Realistic** interrupts once or twice and speaks at normal speed. Realistic is preselected the first time. With I stammer on, the footnote reads "With I stammer on, Bolo won't cut in." and Realistic never interrupts.
-- **One tap applies and the sheet closes**; for Standup, after the difficulty is picked. The Talk button's line then reads "Standup rehearsal · Realistic · 5 min · Change" and Bolo remembers it on the account.
-- *Changed v44, 2026-11-14:* no role-and-team question in P0. Bolo uses what it already remembers about the learner's work; if it knows nothing, its first line asks what they work on. The voice work-context step stays P1 (SCN-3).
-- In the talk: ScreenStandupTalk. In the debrief: StandupTip.
+- **Bolo's hats**, as radio cards with one line each: **Free talk** (default, Bolo the buddy), **English teacher**, **Standup rehearsal**, **IELTS Speaking practice** (practice only, never a band score).
+- Choosing Standup rehearsal reveals the difficulty inside its card: **Friendly** never interrupts; **Realistic** interrupts once or twice. Realistic is preselected the first time. With I stammer on, the footnote reads "With I stammer on, Bolo won't cut in." and Realistic never interrupts.
+- **Talk length** (*new in v45*): 5 min / 10 min chips. Premium and Ultimate can pick 10; a 10-minute talk uses one talk. On Free and Basic, 10 min is off and a line reads "10-minute talks come with Premium" with **See plans**.
+- **One tap applies and the sheet closes** for a hat (for Standup, once the difficulty is picked); the length chips save without closing. The Talk button's line then reads e.g. "English teacher · 10 min · Change", and Bolo remembers it on the account.
+- No role-and-team question in P0 (SCN-3 stays P1).
+- In the talk: ScreenStandupTalk, ScreenTeacherTalk, ScreenIeltsTalk. In the debrief: StandupTip (Standup only).

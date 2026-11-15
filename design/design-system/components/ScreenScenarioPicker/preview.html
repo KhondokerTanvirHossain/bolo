@@ -1,4 +1,4 @@
-<!-- @dsCard group="Screens" height=820 subtitle="Free talk or a standup rehearsal, from "Change"" page -->
+<!-- @dsCard group="Screens" height=820 subtitle="Bolo's hats: Free talk, English teacher, Standup, IELTS practice; talk length on Premium" page -->
 <!doctype html>
 <html lang="en">
 <head><meta charset="utf-8"><title>ScreenScenarioPicker — Bolo</title></head>
@@ -25,20 +25,23 @@
     <div class="bo-homecard" role="button"><span class="bo-homecard__icon"><span class="bo-icon bo-icon--fill" aria-hidden="true">forum</span></span><div class="bo-homecard__body"><div class="bo-homecard__title">Finish your feedback</div><div class="bo-homecard__sub">2 fixes left</div></div><span class="bo-icon bo-chev" aria-hidden="true">chevron_right</span></div>
     <div class="bo-talk-wrap" style="padding:var(--space-8) 0 var(--space-6)">
       <button class="bo-talk" aria-label="Talk"><span class="bo-icon bo-icon--fill" aria-hidden="true">mic</span><span class="bo-talk__label">Talk</span></button>
-      <div class="bo-talk-meta">Free talk · 5 min · <a href="#">Change</a></div>
+      <div class="bo-talk-meta">English teacher · 10 min · <a href="#">Change</a></div>
     </div>
   </div>
   <nav class="bo-tabbar" role="tablist"><button class="bo-tab" role="tab" aria-selected="true"><span class="bo-tab__pill"><span class="bo-icon " aria-hidden="true">graphic_eq</span></span>Talk</button><button class="bo-tab" role="tab" aria-selected="false"><span class="bo-tab__pill"><span class="bo-icon " aria-hidden="true">insights</span></span>Progress</button><button class="bo-tab" role="tab" aria-selected="false"><span class="bo-tab__pill"><span class="bo-icon " aria-hidden="true">person</span></span>Me</button></nav>
 <div class="bo-sheet-scrim"></div>
-  <div class="bo-sheet" role="dialog" aria-modal="true" aria-labelledby="sc-t">
+  <div class="bo-sheet" role="dialog" aria-modal="true" aria-labelledby="sc-t" style="max-height:92%;overflow:auto">
     <div class="bo-sheet__grabber"></div>
     <h2 class="bo-sheet__title" id="sc-t">What do you want to practise?</h2>
     <div class="bo-plans" role="radiogroup" aria-label="Scenario" style="margin-top:var(--space-4)">
-      <button class="bo-plan" role="radio" aria-checked="false"><span class="bo-radio"></span><span class="bo-plan__body"><span class="bo-plan__name">Free talk</span><span class="bo-plan__meta">Chat about your day, your work, anything.</span></span></button>
-      <div class="bo-plan" role="radio" aria-checked="true" style="flex-wrap:wrap;align-items:flex-start"><span class="bo-radio" style="margin-top:2px"></span><span class="bo-plan__body"><span class="bo-plan__name">Standup rehearsal</span><span class="bo-plan__meta">Bolo plays your manager and asks for your update.</span></span>
-        <div class="bo-chips" style="width:100%;padding-left:34px;margin-top:var(--space-2)"><button class="bo-chip" aria-pressed="false" style="background:var(--surface)">Friendly</button><button class="bo-chip" aria-pressed="true" style="background:var(--surface)"><span class="bo-icon bo-icon--sm" aria-hidden="true">check</span>Realistic</button></div></div>
+      <button class="bo-plan" role="radio" aria-checked="false"><span class="bo-radio"></span><span class="bo-plan__body"><span class="bo-plan__name">Free talk</span><span class="bo-plan__meta">Chat with Bolo about anything.</span></span></button>
+      <button class="bo-plan" role="radio" aria-checked="true"><span class="bo-radio"></span><span class="bo-plan__body"><span class="bo-plan__name">English teacher</span><span class="bo-plan__meta">Bolo shows a better way to say it, then you try again.</span></span></button>
+      <button class="bo-plan" role="radio" aria-checked="false"><span class="bo-radio"></span><span class="bo-plan__body"><span class="bo-plan__name">Standup rehearsal</span><span class="bo-plan__meta">Bolo plays your manager and asks for your update.</span></span></button>
+      <button class="bo-plan" role="radio" aria-checked="false"><span class="bo-radio"></span><span class="bo-plan__body"><span class="bo-plan__name">IELTS Speaking practice</span><span class="bo-plan__meta">An examiner asks Parts 1, 2 and 3. Practice only, no band score.</span></span></button>
     </div>
-    <p class="bo-footnote" style="text-align:left;margin-top:var(--space-3)">Realistic interrupts once or twice, like a real meeting.</p>
+    <p class="bo-fix__label" style="margin:var(--space-4) 0 var(--space-2)">Talk length</p>
+    <div class="bo-chips"><button class="bo-chip" aria-pressed="false">5 min</button><button class="bo-chip" aria-pressed="true"><span class="bo-icon bo-icon--sm" aria-hidden="true">check</span>10 min</button></div>
+    <p class="bo-footnote" style="text-align:left;margin-top:var(--space-3)">On Free and Basic: "10-minute talks come with Premium" with <a href="#">See plans</a>, and 10 min is off.</p>
   </div>
 </div>
 </div>
