@@ -34,6 +34,12 @@ record TalkSettings(TurnPolicy policy, String model, int maxTokens, long minuteM
         return new Pace(quietEncourageMs, quietHintMs, quietPauseMs, policy);
     }
 
+    /** Hats (2026-11-16): IELTS practice answers at least at the Relaxed pace (Part 2 is a long turn, thinking time matters). */
+    Pace pace(String speed, boolean stammer, String scenario) {
+        Pace p = pace(speed, stammer);
+        return "ielts".equals(scenario) ? p.atLeast(relaxed) : p;
+    }
+
     /** The pace for a talk: "quick", "relaxed", else normal; with stammer, every value at least the floor. */
     Pace pace(String speed, boolean stammer) {
         Pace p = "quick".equals(speed) ? quick : "relaxed".equals(speed) ? relaxed : normal();

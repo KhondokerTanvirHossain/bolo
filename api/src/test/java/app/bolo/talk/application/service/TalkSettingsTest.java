@@ -25,4 +25,13 @@ class TalkSettingsTest {
         assertThat(settings.pace("relaxed", true).pauseMs()).isEqualTo(120_000);
         assertThat(settings.pace("quick", false).policy().unfinishedWords()).containsExactly("and");
     }
+
+    /** Hats (2026-11-16): IELTS practice answers at least at the Relaxed pace (Part 2 is a long turn). */
+    @Test
+    void ieltsIsAtLeastRelaxed() {
+        assertThat(settings.pace("quick", false, "ielts")).isEqualTo(settings.pace("relaxed", false));
+        assertThat(settings.pace("normal", false, "ielts").policy().endAfterMs()).isEqualTo(3_500);
+        assertThat(settings.pace("quick", false, "teacher")).isEqualTo(settings.pace("quick", false));
+        assertThat(settings.pace("relaxed", true, "ielts").policy().endAfterMs()).isEqualTo(4_500);
+    }
 }

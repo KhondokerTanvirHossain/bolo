@@ -211,7 +211,7 @@ final class TalkConversation implements TalkConnection {
         this.safety = safety;
         this.starters = starters;
         this.slow = talk.slowVoice();
-        Pace pace = settings.pace(talk.answerTime(), talk.stammer());
+        Pace pace = settings.pace(talk.answerTime(), talk.stammer(), talk.scenario());
         this.quiet = new QuietClock(pace);
         this.taker = new TurnTaker(pace.policy());
         this.system = BuddyPrompt.system(talk.goal(), talk.fearedMoment(), talk.minutes(), brief, opening, talk.mood(), talk.scenario());

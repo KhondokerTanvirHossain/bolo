@@ -155,4 +155,29 @@ class BuddyPromptTest {
                 BuddyPrompt.Opening.FROM_NOTES, null, "standup");
         assertThat(known).contains("A tester").doesNotContain("what they work on").doesNotContain("cricket").doesNotContain("Topics you've");
     }
+
+    // Hats (2026-11-16).
+    @Test
+    void ieltsIsAnExaminerWithNoBandScore() {
+        String ten = BuddyPrompt.system("study_abroad", null, 10, null, BuddyPrompt.Opening.FROM_GOAL, null, "ielts");
+        assertThat(ten).contains("IELTS Speaking").contains("examiner").contains("Part 1").contains("Part 2").contains("Part 3")
+                .contains("cue card").contains("Never give a band score");
+        assertThat(ten).doesNotContain("Never correct their pronunciation, grammar or word choice, and never mention mistakes. If you didn't");
+        String five = BuddyPrompt.system("study_abroad", null, 5, null, BuddyPrompt.Opening.FROM_GOAL, null, "ielts");
+        assertThat(five).contains("Part 1").contains("Part 2").doesNotContain("Part 3");
+    }
+
+    @Test
+    void ieltsIgnoresBolosNotesAndMood() {
+        String s = BuddyPrompt.system("study_abroad", null, 10, "What you remember about them from earlier talks:\n- Loves cricket\n",
+                BuddyPrompt.Opening.FROM_NOTES, "funny", "ielts");
+        assertThat(s).doesNotContain("Loves cricket").doesNotContain("Your mood is funny");
+    }
+
+    @Test
+    void teacherInvitesARealSituation() {
+        String s = BuddyPrompt.system("work_meetings", null, 5, null, BuddyPrompt.Opening.FROM_GOAL, null, "teacher");
+        assertThat(s).contains("English teacher").contains("real situation").contains("Never correct them yourself");
+        assertThat(BuddyPrompt.judgedSystem(s, "Nailed it!")).contains("Start your reply with exactly \"Nailed it!\"");
+    }
 }

@@ -62,6 +62,8 @@ public final class BuddyPrompt {
     /** SCN-2 (2026-11-15): {@code scenario} "standup" makes Bolo the learner's warm manager at a daily standup. */
     public static String system(String goal, String fearedMoment, int minutes, String brief, Opening opening, String mood, String scenario) {
         if ("standup".equals(scenario)) return standup(minutes, opening == Opening.FROM_GOAL ? null : workNotes(brief), mood);
+        if ("ielts".equals(scenario)) return ielts(minutes);
+        if ("teacher".equals(scenario)) return teacher(minutes, opening == Opening.FROM_GOAL ? null : brief, mood);
         String focus = goal == null
                 ? "Talk about everyday life in an interesting way: their work or studies, plans, people and opinions."
                 : "Their goal is " + human(goal) + (fearedMoment == null ? "" : ", and the moment they dread most is "
@@ -107,6 +109,57 @@ public final class BuddyPrompt {
             - If their words look like Bangla written in English letters, or don't make sense, kindly ask them to try \
             saying it in English and offer a short sentence starter.
             """;
+
+    /** Hats (2026-11-16): a calm IELTS Speaking examiner running a practice test. Never a band score; no notes, no mood. */
+    private static String ielts(int minutes) {
+        boolean full = minutes >= 10;
+        return """
+                You are Bolo, acting as a calm, polite IELTS Speaking examiner running a practice test on a voice call. \
+                The candidate is a Bangladeshi adult practising for the real test. This is practice only.
+                - Speak like an examiner: short, neutral and polite. One question at a time. No chit-chat and no opinions of your own.
+                - Never comment on their answers: no corrections, no praise, no criticism. Never give a band score, an \
+                estimate of one, or say what they would score. If they ask, say this practice gives no band score and their \
+                feedback comes after the talk.
+                - Part 1: introduce yourself as the examiner in one sentence, then ask 4 short questions on familiar topics \
+                (their home, work or studies, a daily habit, a free-time activity).
+                - Part 2: say "Now Part 2." and read one cue card aloud: "Describe ...", then "You should say:" with three \
+                points, and "and explain ...". Tell them to take a moment to think, then speak for up to two minutes. Never \
+                interrupt their long answer. When they finish, ask one short follow-up question.
+                %s\
+                - Move between the parts yourself ("Thank you. Now Part 2.").
+                - If they bring up something harmful, politely move on to the next question.
+                - If their words look like Bangla written in English letters, politely ask them to answer in English.
+                - Plain spoken text only: no lists, no markdown, no emoji, no stage directions.
+                - The practice lasts %d minutes.%s
+                """.formatted(full ? "- Part 3: 3 or 4 discussion questions linked to the Part 2 topic, more general and abstract.\n" : "",
+                minutes, full ? "" : " Do only Part 1 and Part 2, then thank them and close.");
+    }
+
+    /** Hats (2026-11-16): the English teacher. Bolo itself never corrects: the app teaches when it's worth it (Teaching). */
+    private static String teacher(int minutes, String brief, String mood) {
+        return """
+                You are Bolo, the learner's warm, patient English teacher, talking out loud on a voice call. The learner is \
+                a Bangladeshi adult who reads English well but freezes when speaking it. Your job is to get them speaking \
+                about things they really need to say. Don't invent a setting.
+                - Reply in one or two short spoken sentences, at most 35 words.
+                - Invite them to practise a real situation they need to handle in English (at work, an interview, a call, \
+                a shop, with neighbours), or anything on their mind. Ask one open question at a time and follow up on it.
+                - Never correct them yourself and never mention mistakes: when a sentence is worth improving, the app shows \
+                them a better version and you will be told how their try went. Otherwise just reply naturally.
+                - Use simple, everyday words. Plain spoken text only: no lists, no markdown, no emoji, no stage directions.
+                - If they bring up something harmful, kindly say you'd rather not talk about that and change the subject.
+                - If their words look like Bangla written in English letters, or don't make sense, kindly ask them to try \
+                saying it in English and offer a short sentence starter.
+                - Open with a short hello as their English teacher and ask what real situation they'd like to practise saying today.
+                - The talk lasts %d minutes.
+                """.formatted(minutes) + moodStyle(mood) + (brief == null || brief.isBlank() ? "" : "\n" + brief.strip() + "\n");
+    }
+
+    /** Hats: the reply after the learner tried the better sentence; {@code line} is Teaching's judgement ("Nailed it!"). */
+    public static String judgedSystem(String system, String line) {
+        return system + "- They just tried saying the better sentence again. Start your reply with exactly \"" + line
+                + "\", then in one short sentence carry on with one question about what they were talking about. Don't repeat the sentence.\n";
+    }
 
     /** SCN-2 (review I3): only what Bolo remembers about them; the free-talk topic ideas and recent topics stay out. */
     static String workNotes(String brief) {
