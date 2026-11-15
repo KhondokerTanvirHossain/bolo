@@ -65,19 +65,26 @@ public class TalkSessionService implements StartTalkUseCase, app.bolo.talk.appli
         if (sessions.startsBy(learner, clock.now().minusSeconds(60)) >= startsPerMinute) throw new app.bolo.common.error.TooManyRequestsException();
         // P1d: a guest signs in before the first talk (only while sign-in is on); an account talks on the free plan.
         if (!voiceAccess.guestMayUseVoice(view)) throw new RefusedException("sign-in");
-        if (!view.unlimited() && "account".equals(view.kind()) && allowanceOf(learner).left() == 0) {
+        var allowance = !view.unlimited() && "account".equals(view.kind()) ? allowanceOf(learner) : null;
+        if (allowance != null && allowance.left() == 0) {
             throw new RefusedException("free-limit");
         }
         // P2a: the global daily cap protects the bill; unlimited learners (probes, founder) never meet it.
         if (!view.unlimited() && plans.todayCount() >= plans.dailyCap()) throw new RefusedException("daily-cap");
-        int chosen = view.profile() == null ? FreePlan.FREE_MINUTES : view.profile().talkMinutes();
+        int profileMinutes = view.profile() == null ? FreePlan.FREE_MINUTES : view.profile().talkMinutes();
+        // 2026-11-16: the length shown when Talk was tapped, else the saved one, else the onboarding answer.
+        Integer saved = view.settings() == null ? null : view.settings().talkMinutes();
+        int chosen = choice != null && choice.minutes() != null && (choice.minutes() == 5 || choice.minutes() == 10) ? choice.minutes()
+                : saved != null ? saved : profileMinutes;
         // A free-plan talk is 5 minutes (ACC-5). Guests only talk with sign-in off or when unlimited: no plan applies.
         boolean onFreePlan = !view.unlimited() && "account".equals(view.kind());
-        int minutes = onFreePlan ? FreePlan.FREE_MINUTES : chosen;
+        // 10-minute talks are for Premium and Ultimate (founder 2026-11-16); a 10-minute talk still counts as one talk.
+        boolean longTalks = allowance != null && ("premium".equals(allowance.plan()) || "ultimate".equals(allowance.plan()));
+        int minutes = onFreePlan && !longTalks ? FreePlan.FREE_MINUTES : chosen;
         var now = clock.now();
         sessions.endOpenFor(learner, EndReason.DISCONNECTED, now);
         var set = view.settings();
-        boolean picked = choice != null && ("free".equals(choice.scenario()) || "standup".equals(choice.scenario()));
+        boolean picked = choice != null && choice.scenario() != null && java.util.Set.of("free", "standup", "teacher", "ielts").contains(choice.scenario());
         String scenario = picked ? choice.scenario() : set == null || set.scenario() == null ? "free" : set.scenario();
         String difficulty = picked && ("friendly".equals(choice.difficulty()) || "realistic".equals(choice.difficulty())) ? choice.difficulty()
                 : set == null || set.difficulty() == null ? "realistic" : set.difficulty();

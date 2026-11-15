@@ -22,7 +22,12 @@ public interface StartTalkUseCase {
      */
     TalkView start(LearnerId learner, StartChoice choice);
 
-    record StartChoice(String scenario, String difficulty) {
+    /** {@code minutes} (2026-11-16): 5 or 10; 10 only on Premium and Ultimate. Null uses the saved length. */
+    record StartChoice(String scenario, String difficulty, Integer minutes) {
+
+        public StartChoice(String scenario, String difficulty) {
+            this(scenario, difficulty, null);
+        }
     }
 
     /** The learner's own talk, only while it is live. */

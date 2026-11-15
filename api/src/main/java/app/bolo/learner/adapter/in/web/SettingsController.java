@@ -20,7 +20,8 @@ class SettingsController {
     /** talkView, voiceGender, voiceAccent, mood, answerTime, stammer, scenario and difficulty may be left out: the current choice stays.
      * answerTimeAuto is Bolo's to set and is ignored here. */
     record SettingsRequest(String buddySpeed, boolean captions, String talkView, String voiceGender, String voiceAccent, String mood,
-                           String answerTime, Boolean stammer, String scenario, String difficulty) {
+                           String answerTime, Boolean stammer, String scenario, String difficulty,
+                           Integer talkMinutes) {
     }
 
     @PutMapping("/api/me/settings")
@@ -29,6 +30,6 @@ class SettingsController {
                 @RequestBody SettingsRequest body) {
         if (learner == null) throw new SignedOutException();
         settings.update(learner, body.buddySpeed(), body.captions(), body.talkView(), body.voiceGender(), body.voiceAccent(), body.mood(),
-                body.answerTime(), body.stammer(), body.scenario(), body.difficulty());
+                body.answerTime(), body.stammer(), body.scenario(), body.difficulty(), body.talkMinutes());
     }
 }

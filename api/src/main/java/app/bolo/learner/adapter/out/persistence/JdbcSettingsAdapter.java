@@ -21,28 +21,28 @@ class JdbcSettingsAdapter implements SettingsPort {
     public void upsert(LearnerId learner, Settings s, Instant now) {
         jdbc.sql("""
                 insert into learner_settings (learner_id, buddy_speed, captions, talk_view, voice_gender, voice_accent, mood,
-                    answer_time, stammer, scenario, difficulty, updated_at)
-                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    answer_time, stammer, scenario, difficulty, talk_minutes, updated_at)
+                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 on conflict (learner_id) do update set buddy_speed = excluded.buddy_speed, captions = excluded.captions,
                     talk_view = excluded.talk_view, voice_gender = excluded.voice_gender, voice_accent = excluded.voice_accent,
                     mood = excluded.mood, answer_time = excluded.answer_time, stammer = excluded.stammer,
-                    scenario = excluded.scenario, difficulty = excluded.difficulty,
+                    scenario = excluded.scenario, difficulty = excluded.difficulty, talk_minutes = excluded.talk_minutes,
                     updated_at = excluded.updated_at""")
                 .params(learner.value(), s.buddySpeed(), s.captions(), s.talkView(), s.voiceGender(), s.voiceAccent(), s.mood(),
-                        s.answerTime(), s.stammer(), s.scenario(), s.difficulty(), Timestamp.from(now)).update();
+                        s.answerTime(), s.stammer(), s.scenario(), s.difficulty(), s.talkMinutes(), Timestamp.from(now)).update();
     }
 
     @Override
     public Optional<Settings> find(LearnerId learner) {
         return jdbc.sql("""
                 select buddy_speed, captions, talk_view, voice_gender, voice_accent, mood, answer_time, answer_time_auto, stammer,
-                    scenario, difficulty
+                    scenario, difficulty, talk_minutes
                 from learner_settings where learner_id = ?""")
                 .param(learner.value())
                 .query((rs, n) -> new Settings(rs.getString("buddy_speed"), rs.getBoolean("captions"), rs.getString("talk_view"),
                         rs.getString("voice_gender"), rs.getString("voice_accent"), rs.getString("mood"), rs.getString("answer_time"),
                         rs.getString("answer_time_auto"), rs.getBoolean("stammer"), rs.getString("scenario"),
-                        rs.getString("difficulty"))).optional();
+                        rs.getString("difficulty"), (Integer) rs.getObject("talk_minutes"))).optional();
     }
 
     @Override

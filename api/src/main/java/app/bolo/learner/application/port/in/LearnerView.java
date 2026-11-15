@@ -19,7 +19,13 @@ public record LearnerView(LearnerId learnerId, String kind, ConsentView consent,
     /** buddySpeed: "normal" | "slower" (SET-1); captions on or off (SET-2). */
     /** P3c: voiceGender (female, male), voiceAccent (british, american, indian), mood (friendly, funny, professional, calm). */
     public record SettingsView(String buddySpeed, boolean captions, String talkView, String voiceGender, String voiceAccent, String mood,
-                               String answerTime, String answerTimeAuto, boolean stammer, String scenario, String difficulty) {
+                               String answerTime, String answerTimeAuto, boolean stammer, String scenario, String difficulty,
+                               Integer talkMinutes) {
+
+        public SettingsView(String buddySpeed, boolean captions, String talkView, String voiceGender, String voiceAccent, String mood,
+                            String answerTime, String answerTimeAuto, boolean stammer, String scenario, String difficulty) {
+            this(buddySpeed, captions, talkView, voiceGender, voiceAccent, mood, answerTime, answerTimeAuto, stammer, scenario, difficulty, null);
+        }
 
         /** SCN-1: scenario "free" | "standup", difficulty "friendly" | "realistic". */
         public SettingsView(String buddySpeed, boolean captions, String talkView, String voiceGender, String voiceAccent, String mood,

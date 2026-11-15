@@ -211,7 +211,7 @@ public class CoachService implements DebriefUseCase, LatestDebriefUseCase, app.b
         body.put("firstSession", debriefs.readyCountFor(learner, id) == 0);
         body.put("speechMs", scored.speechMs());
         body.put("topic", reply.topicOrDefault());
-        body.put("scenario", standup ? "standup" : "free");
+        body.put("scenario", record.scenario() == null ? "free" : record.scenario());
         // PRG-3: every pattern found in this talk (not only the three shown), for "My patterns" over time.
         ArrayNode patterns = body.putArray("patterns");
         for (var sc : scored.sounds()) patterns.addObject().put("pattern", sc.pattern()).put("title", sc.title()).put("count", sc.count());
