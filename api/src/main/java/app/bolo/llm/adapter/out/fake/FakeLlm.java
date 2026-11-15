@@ -41,6 +41,18 @@ public class FakeLlm implements LlmPort {
     private volatile String memoryReply = MEMORY_REPLY;
     private volatile String reminderReply = REMINDER_REPLY;
     private volatile boolean failMemory;
+    /** Hats: what the teacher check answers, and how long it takes (a slow check means "don't teach"). */
+    public static final String NO_TEACH = "{\"teach\":false,\"better\":\"\",\"why\":\"\"}";
+    private volatile String teachReply = NO_TEACH;
+    private volatile long teachDelayMs;
+
+    public void teachReply(String json) {
+        teachReply = json == null ? NO_TEACH : json;
+    }
+
+    public void teachDelayMs(long ms) {
+        teachDelayMs = ms;
+    }
     private volatile String lastStructuredRequest = "";
     /** Every structured request's system prompt (Coach, memory), for assertions that must not race each other. */
     private final java.util.List<String> structuredSystems = new java.util.concurrent.CopyOnWriteArrayList<>();
@@ -131,8 +143,9 @@ public class FakeLlm implements LlmPort {
         boolean starters = props instanceof java.util.Map<?, ?> m2 && m2.containsKey("starters");
         boolean memory = props instanceof java.util.Map<?, ?> m3 && m3.containsKey("threads");
         boolean reminder = props instanceof java.util.Map<?, ?> m4 && m4.containsKey("line");
+        boolean teach = props instanceof java.util.Map<?, ?> m5 && m5.containsKey("teach");
         if (reminder) lastReminderRequest = request.system() + "\n" + request.messages();
-        if (structured && !safety && !starters && !reminder) {
+        if (structured && !safety && !starters && !reminder && !teach) {
             lastStructuredRequest = request.system() + "\n" + request.messages();
             structuredSystems.add(request.system());
         }
@@ -140,10 +153,10 @@ public class FakeLlm implements LlmPort {
             replyCalls.incrementAndGet();
             lastReplyRequest = request.system() + "\n" + request.messages();
         }
-        String text = safety ? safetyReply : starters ? STARTERS : memory ? memoryReply : reminder ? reminderReply : structured ? structuredReply : reply;
+        String text = teach ? teachReply : safety ? safetyReply : starters ? STARTERS : memory ? memoryReply : reminder ? reminderReply : structured ? structuredReply : reply;
         RuntimeException fail = safety ? (failSafety ? new IllegalStateException("classifier down") : null)
                 : starters || reminder ? null : memory ? (failMemory ? new IllegalStateException("memory down") : null) : structured ? (failStructured ? new IllegalStateException("coach down") : null) : failWith;
-        long pause = deltaMs;
+        long pause = teach ? teachDelayMs : deltaMs;
         Thread worker = Thread.ofVirtual().start(() -> {
             try {
                 if (fail != null) throw new LlmUnavailableException("fake failure", fail);

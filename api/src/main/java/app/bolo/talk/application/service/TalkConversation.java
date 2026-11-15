@@ -115,6 +115,11 @@ final class TalkConversation implements TalkConnection {
     /** SCN-2: when a Realistic standup may cut in. */
     private final app.bolo.talk.domain.CutIns cutIns;
     private Consumer<app.bolo.talk.application.port.in.StandupInterrupted> onInterrupted = e -> { };
+    /** Hats (2026-11-16): the English teacher. {@code teacherCheck} null: never teaches (tests that build a talk by hand). */
+    private final boolean teacher;
+    private final app.bolo.talk.domain.Teaching teaching = new app.bolo.talk.domain.Teaching();
+    private TeacherCheck teacherCheck;
+    private Consumer<app.bolo.talk.application.port.in.TeacherMoment> onTeacher = e -> { };
 
     private final ReentrantLock lock = new ReentrantLock();
     private final EnergyVad vad = new EnergyVad();
@@ -216,12 +221,19 @@ final class TalkConversation implements TalkConnection {
         this.taker = new TurnTaker(pace.policy());
         this.system = BuddyPrompt.system(talk.goal(), talk.fearedMoment(), talk.minutes(), brief, opening, talk.mood(), talk.scenario());
         this.standup = "standup".equals(talk.scenario());
+        this.teacher = "teacher".equals(talk.scenario());
         this.cutIns = app.bolo.talk.domain.CutIns.forTalk(talk.scenario(), talk.difficulty(), talk.stammer(), settings.standup());
     }
 
     /** SCN-2: where cut-ins are reported (analytics); set before {@link #start()}. */
     void onInterrupted(Consumer<app.bolo.talk.application.port.in.StandupInterrupted> c) {
         this.onInterrupted = c;
+    }
+
+    /** Hats: the English teacher's check and where its moments are reported; set before {@link #start()}. */
+    void useTeacher(TeacherCheck check, Consumer<app.bolo.talk.application.port.in.TeacherMoment> moments) {
+        this.teacherCheck = check;
+        this.onTeacher = moments;
     }
 
     /** Opens the recogniser and starts Bolo's opening line, off the socket thread, and starts the watchdog. */
@@ -451,6 +463,8 @@ final class TalkConversation implements TalkConnection {
         // TLK-14 first: a turn that trips the keyword screen waits for the classifier before Bolo says anything, and a
         // classifier that fails or is slow counts as a crisis (fail closed).
         if (CrisisScreen.mayBeCrisis(said)) {
+            // Hats: a retry that trips the screen isn't judged (review focus 2).
+            teaching.drop();
             cancel(speculation);
             speculation = null;
             crisisPending = true;
@@ -474,6 +488,7 @@ final class TalkConversation implements TalkConnection {
         // TLK-13: "Sorry?" and "Slower please" are answered in Java, with no model call.
         TalkIntent intent = TalkIntent.of(said);
         if (intent != TalkIntent.NONE && !lastBuddyText.isBlank()) {
+            teaching.drop();
             cancel(speculation);
             speculation = null;
             if (intent == TalkIntent.SLOWER && !slow) {
@@ -484,6 +499,16 @@ final class TalkConversation implements TalkConnection {
             history.add(new Exchange(Exchange.Speaker.BUDDY, lastBuddyText));
             buddyTurn = nextIdx++;
             startSpeaker(buddyTurn, fixed(lastBuddyText), commitAt);
+        } else if (teacher && teaching.pending().isPresent()) {
+            // Hats: this turn was the learner's try at the better sentence; judge it, then carry on.
+            String better = teaching.pending().get();
+            teaching.drop();
+            app.bolo.talk.domain.Teaching.Result r = app.bolo.talk.domain.Teaching.judge(said, better);
+            out.send(message("judged", "result", r.dbValue()));
+            onTeacher.accept(new app.bolo.talk.application.port.in.TeacherMoment(talk.id(), ctx.learnerId(), r.dbValue()));
+            replyTo(said, commitAt, false, false, r.line());
+        } else if (teacher && teacherCheck != null && teaching.mayTeach(learnerTurns) && elapsedMs() < limitMs()) {
+            teach(said, commitAt);
         } else {
             replyTo(said, commitAt, true, cutIn);
         }
@@ -497,14 +522,50 @@ final class TalkConversation implements TalkConnection {
         });
     }
 
-    /** Bolo's reply to a committed learner turn (lock may or may not be held by the caller; it is taken here). */
+    /** Hats: asks the teacher check off the audio thread; a sentence worth teaching is spoken as a fixed line, else Bolo replies. */
+    private void teach(String said, long commitAt) {
+        int turn = learnerTurns;
+        boolean stammer = talk.stammer();
+        TeacherCheck check = teacherCheck;
+        Thread.ofVirtual().start(() -> {
+            var t = check.check(ctx, said, stammer);
+            lock.lock();
+            try {
+                // Paused while checking: say nothing now; resume asks the last question again (like the crisis path).
+                if (ended || endAfterSpeaking != null || phase == Phase.PAUSED || learnerTurns != turn) return;
+                if (t.isEmpty()) {
+                    replyTo(said, commitAt, true, false);
+                    return;
+                }
+                String better = t.get().better();
+                teaching.taught(turn, better);
+                cancel(speculation);
+                speculation = null;
+                String line = app.bolo.talk.domain.Teaching.line(better);
+                out.send(message("teach", "better", better, "changed", app.bolo.talk.domain.Teaching.changed(said, better), "why", t.get().why()));
+                history.add(new Exchange(Exchange.Speaker.BUDDY, line));
+                buddyTurn = nextIdx++;
+                startSpeaker(buddyTurn, fixed(line), commitAt);
+                onTeacher.accept(new app.bolo.talk.application.port.in.TeacherMoment(talk.id(), ctx.learnerId(), null));
+            } finally {
+                lock.unlock();
+            }
+        });
+    }
+
     private void replyTo(String said, long commitAt, boolean mayReuseSpeculation, boolean cut) {
+        replyTo(said, commitAt, mayReuseSpeculation, cut, null);
+    }
+
+    /** Bolo's reply to a committed learner turn (lock may or may not be held by the caller; it is taken here). {@code judged}: the teacher's judgement line to start with. */
+    private void replyTo(String said, long commitAt, boolean mayReuseSpeculation, boolean cut, String judged) {
         lock.lock();
         try {
             // Paused while the safety check ran: say nothing now; resume asks the last question again.
             if (ended || endAfterSpeaking != null || phase == Phase.PAUSED) return;
             boolean wrap = elapsedMs() >= limitMs();
-            String sys = wrap ? BuddyPrompt.wrapUpSystem(system) : cut ? BuddyPrompt.cutInSystem(system) : systemFor(said);
+            String sys = wrap ? BuddyPrompt.wrapUpSystem(system) : judged != null ? BuddyPrompt.judgedSystem(system, judged)
+                    : cut ? BuddyPrompt.cutInSystem(system) : systemFor(said);
             shortStreak = words(said).split(" ").length < 5 ? shortStreak + 1 : 0;
             if (shortStreak >= 3) {
                 // One starter card, for the question Bolo is about to ask (sent when that line is done).
@@ -513,7 +574,7 @@ final class TalkConversation implements TalkConnection {
             }
             Reply reply;
             // A speculative reply was written without the cut-in instruction.
-            if (mayReuseSpeculation && !wrap && !cut && speculation != null && sameWords(speculation.forTranscript, said)) {
+            if (mayReuseSpeculation && !wrap && !cut && judged == null && speculation != null && sameWords(speculation.forTranscript, said)) {
                 reply = speculation;
             } else {
                 cancel(speculation);

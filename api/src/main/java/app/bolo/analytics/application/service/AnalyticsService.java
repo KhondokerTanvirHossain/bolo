@@ -58,6 +58,12 @@ public class AnalyticsService implements RecordEventUseCase {
     }
 
     @EventListener
+    public void onTeacherMoment(app.bolo.talk.application.port.in.TeacherMoment e) {
+        quietly(() -> events.insert(e.learner(), e.result() == null ? "teacher_taught" : "teacher_judged",
+                e.result() == null ? Map.of() : Map.of("result", e.result()), clock.now()));
+    }
+
+    @EventListener
     public void onScenarioChanged(app.bolo.common.event.ScenarioChanged e) {
         quietly(() -> events.insert(e.learner(), "scenario_changed", Map.of("from", e.from(), "to", e.to(), "difficulty", e.difficulty()),
                 clock.now()));

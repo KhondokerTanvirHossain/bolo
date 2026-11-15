@@ -39,6 +39,9 @@ public class TalkRelayService implements TalkRelayUseCase {
     private final ApplicationEventPublisher events;
     private final SafetyGuard safety;
     private final Starters starters;
+    /** Hats (2026-11-16): the English teacher's check. */
+    @org.springframework.beans.factory.annotation.Autowired
+    private TeacherCheck teacherCheck;
     private final TalkSettings settings;
     private final MemoryUseCase memory;
 
@@ -103,6 +106,7 @@ public class TalkRelayService implements TalkRelayUseCase {
                 brief.text(), brief.followUp() ? BuddyPrompt.Opening.FOLLOW_UP : brief.known() ? BuddyPrompt.Opening.FROM_NOTES
                         : BuddyPrompt.Opening.FROM_GOAL);
         c.onInterrupted(events::publishEvent);
+        c.useTeacher(teacherCheck, events::publishEvent);
         c.start();
         events.publishEvent(new TalkStarted(talk.id(), learner, talk.scenario(), talk.difficulty()));
         return c;
