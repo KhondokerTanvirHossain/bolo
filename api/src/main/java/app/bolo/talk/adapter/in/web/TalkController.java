@@ -25,9 +25,10 @@ class TalkController {
     /** TLK-1. The browser then opens /ws/talk/{id}. */
     @PostMapping("/api/talk")
     @ResponseStatus(HttpStatus.CREATED)
-    Started start(@RequestAttribute(name = CurrentLearner.ATTRIBUTE, required = false) LearnerId learner) {
+    Started start(@RequestAttribute(name = CurrentLearner.ATTRIBUTE, required = false) LearnerId learner,
+                  @org.springframework.web.bind.annotation.RequestBody(required = false) app.bolo.talk.application.port.in.StartTalkUseCase.StartChoice choice) {
         if (learner == null) throw new SignedOutException();
-        var view = talks.start(learner);
+        var view = talks.start(learner, choice);
         return new Started(view.id(), view.minutes(), view.scenario(), view.difficulty());
     }
 }

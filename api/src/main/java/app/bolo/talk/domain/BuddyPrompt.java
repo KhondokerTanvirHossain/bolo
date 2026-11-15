@@ -61,7 +61,7 @@ public final class BuddyPrompt {
 
     /** SCN-2 (2026-11-15): {@code scenario} "standup" makes Bolo the learner's warm manager at a daily standup. */
     public static String system(String goal, String fearedMoment, int minutes, String brief, Opening opening, String mood, String scenario) {
-        if ("standup".equals(scenario)) return standup(minutes, brief, mood);
+        if ("standup".equals(scenario)) return standup(minutes, opening == Opening.FROM_GOAL ? null : workNotes(brief), mood);
         String focus = goal == null
                 ? "Talk about everyday life in an interesting way: their work or studies, plans, people and opinions."
                 : "Their goal is " + human(goal) + (fearedMoment == null ? "" : ", and the moment they dread most is "
@@ -107,6 +107,14 @@ public final class BuddyPrompt {
             - If their words look like Bangla written in English letters, or don't make sense, kindly ask them to try \
             saying it in English and offer a short sentence starter.
             """;
+
+    /** SCN-2 (review I3): only what Bolo remembers about them; the free-talk topic ideas and recent topics stay out. */
+    static String workNotes(String brief) {
+        if (brief == null) return null;
+        String kept = brief.lines().filter(l -> !l.startsWith("Ideas if the talk needs a new direction")
+                && !l.startsWith("Topics you've talked about recently")).collect(java.util.stream.Collectors.joining("\n"));
+        return kept.isBlank() ? null : kept;
+    }
 
     private static String standup(int minutes, String brief, String mood) {
         boolean knows = brief != null && !brief.isBlank();

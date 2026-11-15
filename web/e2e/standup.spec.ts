@@ -94,3 +94,21 @@ test("a standup's history row and its Standup tip card", async ({ page }) => {
   await expect(page.getByText("A manager plans around your date.")).toBeVisible();
   await expect(page.getByText("\"The report will be ready soon\"")).toBeVisible();
 });
+
+/** Review I4: pick Standup and tap Talk at once: the start carries the choice, so a slow settings save can't start a free talk. */
+test("Talk sends the scenario Home shows", async ({ page }) => {
+  await stub(page);
+  let saveGate: () => void = () => {};
+  await page.route("**/api/me/settings", (r) => new Promise<void>((done) => { saveGate = () => { void r.fulfill({ status: 204 }); done(); }; }));
+  const starts: string[] = [];
+  await page.route("**/api/talk", (r) => { starts.push(r.request().postData() ?? ""); return r.fulfill({ status: 201, json: { id: T, minutes: 5, scenario: "standup", difficulty: "realistic" } }); });
+  await page.routeWebSocket("**/ws/talk/**", () => {});
+  await page.goto("/");
+  await page.getByRole("button", { name: "Change" }).click();
+  await page.getByRole("radio", { name: /Standup rehearsal/ }).click();
+  await page.getByRole("button", { name: "Realistic" }).click();
+  await page.getByRole("button", { name: "Start talking" }).click();
+  await expect.poll(() => starts.length).toBe(1);
+  expect(JSON.parse(starts[0])).toMatchObject({ scenario: "standup", difficulty: "realistic" });
+  saveGate();
+});

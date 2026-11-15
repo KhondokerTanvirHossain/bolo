@@ -51,7 +51,8 @@ export function errorKey(e: unknown): string {
   return name.toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 40) || "unknown";
 }
 
-export function useTalk(deviceId: string | null) {
+/** {@code choice} (SCN-1, review I4): what Home showed when Talk was tapped; sent with the start so it wins over a save still on its way. */
+export function useTalk(deviceId: string | null, choice?: { current: { scenario: string; difficulty: string } | null }) {
   const [state, dispatch] = useReducer(talk, initialTalk);
   /** P3a: the mic level (0–1) for the meter, published at most every LEVEL_EVERY_MS. */
   const [level, setLevel] = useState(0);
@@ -103,7 +104,7 @@ export function useTalk(deviceId: string | null) {
     }
     if (l.ended) return;
 
-    const created = await api.post<{ id: string; minutes: number; scenario?: string; difficulty?: string | null }>("/api/talk");
+    const created = await api.post<{ id: string; minutes: number; scenario?: string; difficulty?: string | null }>("/api/talk", choice?.current ?? {});
     if (l.ended) return;
     if (created.kind !== "ok") {
       teardown();
@@ -215,7 +216,7 @@ export function useTalk(deviceId: string | null) {
         }
       })();
     };
-  }, [deviceId, teardown]);
+  }, [deviceId, teardown, choice]);
 
   const done = useCallback(() => { if (live.current) sendJson(live.current, { type: "done" }); }, []);
   const end = useCallback(() => {

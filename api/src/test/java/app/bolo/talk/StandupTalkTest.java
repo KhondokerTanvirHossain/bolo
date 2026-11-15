@@ -135,4 +135,18 @@ class StandupTalkTest extends PostgresTestBase {
         }
         assertThat(interrupted()).isEqualTo(1);
     }
+
+    /** Review I2: a cut-in turn the crisis screen flags and the classifier clears gets an ordinary reply. */
+    @Test
+    void aClearedCrisisTurnGetsNoCutInPrompt() throws Exception {
+        settings(",\"scenario\":\"standup\",\"difficulty\":\"realistic\"");
+        try (TalkSocket s = yourTurn()) {
+            firstTurn(s);
+            stt.nextText("this bug makes me want to die laughing");
+            s.tone(800);
+            s.zeros(200);
+            s.await(5000, "\"buddy_done\"", "\"turn\":4");
+            assertThat(llm.lastReplyRequest()).doesNotContain("cutting in");
+        }
+    }
 }

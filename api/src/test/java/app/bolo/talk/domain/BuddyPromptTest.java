@@ -109,7 +109,8 @@ class BuddyPromptTest {
 
     // SCN-2 (2026-11-15): the Standup rehearsal.
     static String standup(String brief) {
-        return BuddyPrompt.system("work_meetings", null, 5, brief, BuddyPrompt.Opening.FROM_GOAL, null, "standup");
+        return BuddyPrompt.system("work_meetings", null, 5, brief, brief == null ? BuddyPrompt.Opening.FROM_GOAL : BuddyPrompt.Opening.FROM_NOTES,
+                null, "standup");
     }
 
     @Test
@@ -141,5 +142,17 @@ class BuddyPromptTest {
     void standupStartersAreForAStatusUpdate() {
         assertThat(app.bolo.talk.application.service.Starters.system(true)).contains("status update to a manager");
         assertThat(app.bolo.talk.application.service.Starters.system(false)).doesNotContain("manager");
+    }
+
+    /** Review I3: a brief with only fresh topic ideas (memory empty or off) means Bolo doesn't know their work. */
+    @Test
+    void standupWithOnlyTopicIdeasAsksWhatTheyWorkOnAndDropsTheIdeas() {
+        String s = BuddyPrompt.system("work_meetings", null, 5, "Ideas if the talk needs a new direction: cricket; cooking\n",
+                BuddyPrompt.Opening.FROM_GOAL, null, "standup");
+        assertThat(s).contains("what they work on").doesNotContain("cricket").doesNotContain("Ideas if");
+        String known = BuddyPrompt.system("work_meetings", null, 5, "What you remember about them from earlier talks:\n- A tester\n"
+                + "Topics you've talked about recently (pick something else): x\nIdeas if the talk needs a new direction: cricket\n",
+                BuddyPrompt.Opening.FROM_NOTES, null, "standup");
+        assertThat(known).contains("A tester").doesNotContain("what they work on").doesNotContain("cricket").doesNotContain("Topics you've");
     }
 }

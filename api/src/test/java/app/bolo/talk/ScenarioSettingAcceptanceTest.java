@@ -141,4 +141,23 @@ class ScenarioSettingAcceptanceTest extends PostgresTestBase {
                 .query(String.class).single();
         assertThat(props).contains("\"scenario\": \"standup\"").contains("\"difficulty\": \"realistic\"");
     }
+
+    /** Review I4: the choice sent with the start wins over a settings save still on its way. */
+    @Test
+    void theStartsChoiceWins() throws Exception {
+        put("");
+        var r = client.send("POST", "/api/talk", cookie, "{\"scenario\":\"standup\",\"difficulty\":\"friendly\"}");
+        assertThat(r.status()).as(r.body()).isEqualTo(201);
+        var row = row(UUID.fromString(TalkTestClient.id(r)));
+        assertThat(row.get("scenario")).isEqualTo("standup");
+        assertThat(row.get("difficulty")).isEqualTo("friendly");
+    }
+
+    @Test
+    void aStartWithAnUnknownScenarioUsesTheSettings() throws Exception {
+        put(",\"scenario\":\"standup\"");
+        var r = client.send("POST", "/api/talk", cookie, "{\"scenario\":\"interview\"}");
+        assertThat(r.status()).isEqualTo(201);
+        assertThat(row(UUID.fromString(TalkTestClient.id(r))).get("scenario")).isEqualTo("standup");
+    }
 }

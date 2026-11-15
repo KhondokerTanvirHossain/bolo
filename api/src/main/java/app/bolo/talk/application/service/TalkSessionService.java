@@ -57,7 +57,7 @@ public class TalkSessionService implements StartTalkUseCase, app.bolo.talk.appli
 
     @Override
     @org.springframework.transaction.annotation.Transactional
-    public TalkView start(LearnerId learner) {
+    public TalkView start(LearnerId learner, StartChoice choice) {
         LearnerView view = consented(learner).orElseThrow(() -> new RefusedException("no-consent"));
         // Review (P1d): starts fired at once must not each pass the free-plan check; one at a time, in one transaction.
         sessions.lockStarts();
@@ -77,10 +77,13 @@ public class TalkSessionService implements StartTalkUseCase, app.bolo.talk.appli
         var now = clock.now();
         sessions.endOpenFor(learner, EndReason.DISCONNECTED, now);
         var set = view.settings();
-        String scenario = set == null || set.scenario() == null ? "free" : set.scenario();
+        boolean picked = choice != null && ("free".equals(choice.scenario()) || "standup".equals(choice.scenario()));
+        String scenario = picked ? choice.scenario() : set == null || set.scenario() == null ? "free" : set.scenario();
+        String difficulty = picked && ("friendly".equals(choice.difficulty()) || "realistic".equals(choice.difficulty())) ? choice.difficulty()
+                : set == null || set.difficulty() == null ? "realistic" : set.difficulty();
         // SCN-1: copied onto the talk, so a change during it applies from the next talk.
         TalkSession session = new TalkSession(TalkSessionId.newId(), learner, minutes, now, null, scenario,
-                "standup".equals(scenario) ? (set.difficulty() == null ? "realistic" : set.difficulty()) : null);
+                "standup".equals(scenario) ? difficulty : null);
         if (!sessions.insertIfBelowCap(session, maxLive, now.minus(SLOT_HOLD), now.minus(attachWithin))) {
             throw new RefusedException("busy");
         }

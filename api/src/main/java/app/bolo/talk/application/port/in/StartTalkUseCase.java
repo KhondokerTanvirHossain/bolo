@@ -12,7 +12,18 @@ public interface StartTalkUseCase {
      * Refused with "no-consent" without consent to the current policy, "busy" when every live slot is taken. Ends the
      * learner's own leftover talks first, so "Try again" is never blocked by itself.
      */
-    TalkView start(LearnerId learner);
+    default TalkView start(LearnerId learner) {
+        return start(learner, null);
+    }
+
+    /**
+     * SCN-1 (review I4): {@code choice} is what the web showed when Talk was tapped; it wins over a settings save still
+     * on its way. Null, or an unknown scenario, uses the learner's saved settings.
+     */
+    TalkView start(LearnerId learner, StartChoice choice);
+
+    record StartChoice(String scenario, String difficulty) {
+    }
 
     /** The learner's own talk, only while it is live. */
     Optional<TalkView> openFor(LearnerId learner, TalkSessionId id);

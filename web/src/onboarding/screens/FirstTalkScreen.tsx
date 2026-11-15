@@ -47,11 +47,14 @@ type View = { kind: "home" } | { kind: "practice"; pattern?: string } | { kind: 
  */
 export function FirstTalkScreen({ deviceId }: { deviceId: string | null }) {
   const [url, setUrl] = useState<string | null>(null);
-  const conversation = useTalk(deviceId);
+  /** SCN-1 (review I4): the scenario Home shows, sent with each start. */
+  const choiceRef = useRef<Choice | null>(null);
+  const conversation = useTalk(deviceId, choiceRef);
   const [view, setView] = useState<View>({ kind: "home" });
   const [home, setHome] = useState<Home | null>(null);
   const [captions, setCaptions] = useState(true);
   const [me, setMe] = useState<LearnerView | null>(null);
+  choiceRef.current = me?.settings ? scenarioOf(me.settings) : null;
   /** SCN-1: the "What do you want to practise?" picker is open over Home. */
   const [picking, setPicking] = useState(false);
   /** null until /api/auth/config answers. */

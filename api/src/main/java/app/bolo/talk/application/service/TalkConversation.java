@@ -112,9 +112,8 @@ final class TalkConversation implements TalkConnection {
     private final Starters starters;
     /** SCN-2: a Standup rehearsal (Bolo is the manager). */
     private final boolean standup;
-    /** SCN-2: when a Realistic standup may cut in; {@code cutting}: the turn being answered was cut in on. */
+    /** SCN-2: when a Realistic standup may cut in. */
     private final app.bolo.talk.domain.CutIns cutIns;
-    private boolean cutting;
     private Consumer<app.bolo.talk.application.port.in.StandupInterrupted> onInterrupted = e -> { };
 
     private final ReentrantLock lock = new ReentrantLock();
@@ -299,6 +298,8 @@ final class TalkConversation implements TalkConnection {
                     startSilence(frameMs);
                     onQuiet(quiet.onQuiet(frameMs));
                 }
+                // Review I1: a turn that runs into the talk's last 30 s isn't cut in on.
+                if (phase == Phase.YOUR_TURN && leftMs() < cutIns.config().notLastMs()) taker.disarmCutIn();
                 if (phase == Phase.YOUR_TURN) handle(taker.onFrame(speech, audioMs));
             }
             if (phase == Phase.YOUR_TURN && elapsedMs() >= limitMs() + settings.wrapGraceMs()) wrapUpNow();
@@ -410,9 +411,8 @@ final class TalkConversation implements TalkConnection {
             case COMMIT -> commit();
             case CUT_IN -> {
                 cutIns.used(nowMs.getAsLong());
-                cutting = true;
                 onInterrupted.accept(new app.bolo.talk.application.port.in.StandupInterrupted(talk.id(), ctx.learnerId(), learnerTurns + 1));
-                commit();
+                commit(true);
             }
             case UNCLEAR -> {
                 dropLive();
@@ -423,6 +423,11 @@ final class TalkConversation implements TalkConnection {
     }
 
     private void commit() {
+        commit(false);
+    }
+
+    /** {@code cutIn} (SCN-2): only the ordinary reply to this very turn asks the cut-in follow-up (review I2). */
+    private void commit(boolean cutIn) {
         String said = transcript.trim();
         if (said.isEmpty()) return;
         long commitAt = nowMs.getAsLong();
@@ -460,7 +465,7 @@ final class TalkConversation implements TalkConnection {
                     crisis();
                 } else {
                     crisisPending = false;
-                    replyTo(said, commitAt, false);
+                    replyTo(said, commitAt, false, false);
                 }
             });
             return;
@@ -471,7 +476,6 @@ final class TalkConversation implements TalkConnection {
         if (intent != TalkIntent.NONE && !lastBuddyText.isBlank()) {
             cancel(speculation);
             speculation = null;
-            cutting = false;
             if (intent == TalkIntent.SLOWER && !slow) {
                 slow = true;
                 // US-2.7: ask whether to keep the slower Bolo; the web asks, Settings saves it.
@@ -481,7 +485,7 @@ final class TalkConversation implements TalkConnection {
             buddyTurn = nextIdx++;
             startSpeaker(buddyTurn, fixed(lastBuddyText), commitAt);
         } else {
-            replyTo(said, commitAt, true);
+            replyTo(said, commitAt, true, cutIn);
         }
         // Every other turn is checked in parallel; a late "crisis" stops Bolo mid-reply (or, after the end, withdraws
         // the debrief). A failed check here means no crisis: the keyword screen already passed.
@@ -494,14 +498,12 @@ final class TalkConversation implements TalkConnection {
     }
 
     /** Bolo's reply to a committed learner turn (lock may or may not be held by the caller; it is taken here). */
-    private void replyTo(String said, long commitAt, boolean mayReuseSpeculation) {
+    private void replyTo(String said, long commitAt, boolean mayReuseSpeculation, boolean cut) {
         lock.lock();
         try {
             // Paused while the safety check ran: say nothing now; resume asks the last question again.
             if (ended || endAfterSpeaking != null || phase == Phase.PAUSED) return;
             boolean wrap = elapsedMs() >= limitMs();
-            boolean cut = cutting;
-            cutting = false;
             String sys = wrap ? BuddyPrompt.wrapUpSystem(system) : cut ? BuddyPrompt.cutInSystem(system) : systemFor(said);
             shortStreak = words(said).split(" ").length < 5 ? shortStreak + 1 : 0;
             if (shortStreak >= 3) {
