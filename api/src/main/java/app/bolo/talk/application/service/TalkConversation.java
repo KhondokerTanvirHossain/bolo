@@ -117,7 +117,9 @@ final class TalkConversation implements TalkConnection {
     private Consumer<app.bolo.talk.application.port.in.StandupInterrupted> onInterrupted = e -> { };
     /** Hats (2026-11-16): the English teacher. {@code teacherCheck} null: never teaches (tests that build a talk by hand). */
     private final boolean teacher;
-    private final app.bolo.talk.domain.Teaching teaching = new app.bolo.talk.domain.Teaching();
+    private final app.bolo.talk.domain.Teaching teaching;
+    /** The learner's first answer in a teacher talk: what they'd like to learn today (founder 2026-11-18). */
+    private String wish;
     private TeacherCheck teacherCheck;
     /** Review I4: the check started with the speculative reply, for the words it was started on. */
     private String earlyCheckFor;
@@ -225,6 +227,7 @@ final class TalkConversation implements TalkConnection {
         this.system = BuddyPrompt.system(talk.goal(), talk.fearedMoment(), talk.minutes(), brief, opening, talk.mood(), talk.scenario());
         this.standup = "standup".equals(talk.scenario());
         this.teacher = "teacher".equals(talk.scenario());
+        this.teaching = app.bolo.talk.domain.Teaching.forMinutes(talk.minutes());
         this.cutIns = app.bolo.talk.domain.CutIns.forTalk(talk.scenario(), talk.difficulty(), talk.stammer(), settings.standup());
     }
 
@@ -421,7 +424,7 @@ final class TalkConversation implements TalkConnection {
                 // Review I4: the teacher check starts now too, so it's mostly done when the turn ends.
                 if (teacher && teacherCheck != null && teaching.pending().isEmpty() && teaching.mayTeach(learnerTurns + 1)) {
                     earlyCheckFor = transcript.trim();
-                    earlyCheck = teacherCheck.ask(ctx, earlyCheckFor, talk.stammer());
+                    earlyCheck = teacherCheck.ask(ctx, earlyCheckFor, talk.stammer(), wish);
                 }
             }
             case RESUMED -> {
@@ -467,6 +470,7 @@ final class TalkConversation implements TalkConnection {
         lastTurnWords.clear();
         lastTurnWords.addAll(turnWords);
         history.add(new Exchange(Exchange.Speaker.LEARNER, said));
+        if (teacher && learnerTurns == 1) wish = said;
 
         // TLK-14 first: a turn that trips the keyword screen waits for the classifier before Bolo says anything, and a
         // classifier that fails or is slow counts as a crisis (fail closed).
@@ -538,7 +542,7 @@ final class TalkConversation implements TalkConnection {
         int turn = learnerTurns;
         int token = resumeToken;
         TeacherCheck check = teacherCheck;
-        var started = earlyCheck != null && sameWords(earlyCheckFor, said) ? earlyCheck : check.ask(ctx, said, talk.stammer());
+        var started = earlyCheck != null && sameWords(earlyCheckFor, said) ? earlyCheck : check.ask(ctx, said, talk.stammer(), wish);
         earlyCheck = null;
         earlyCheckFor = null;
         Thread.ofVirtual().start(() -> {
@@ -555,8 +559,9 @@ final class TalkConversation implements TalkConnection {
                 teaching.taught(turn, better);
                 cancel(speculation);
                 speculation = null;
-                String line = app.bolo.talk.domain.Teaching.line(better);
-                out.send(message("teach", "better", better, "changed", app.bolo.talk.domain.Teaching.changed(said, better), "why", t.get().why()));
+                String line = app.bolo.talk.domain.Teaching.line(t.get().kind(), better);
+                out.send(message("teach", "better", better, "changed", app.bolo.talk.domain.Teaching.changed(said, better), "why", t.get().why(),
+                        "kind", t.get().kind().dbValue()));
                 history.add(new Exchange(Exchange.Speaker.BUDDY, line));
                 buddyTurn = nextIdx++;
                 startSpeaker(buddyTurn, fixed(line), commitAt);

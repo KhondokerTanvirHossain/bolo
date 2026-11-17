@@ -175,6 +175,12 @@ class BuddyPromptTest {
     }
 
     @Test
+    void teacherAsksWhatTheyWantToLearn() {
+        String s = BuddyPrompt.system("work_meetings", null, 5, null, BuddyPrompt.Opening.FROM_GOAL, null, "teacher");
+        assertThat(s).contains("Is there anything you'd like to learn today?").contains("idioms");
+    }
+
+    @Test
     void teacherInvitesARealSituation() {
         String s = BuddyPrompt.system("work_meetings", null, 5, null, BuddyPrompt.Opening.FROM_GOAL, null, "teacher");
         assertThat(s).contains("English teacher").contains("real situation").contains("Never correct them yourself");

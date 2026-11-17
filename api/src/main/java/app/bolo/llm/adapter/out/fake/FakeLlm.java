@@ -53,6 +53,13 @@ public class FakeLlm implements LlmPort {
     public void teachDelayMs(long ms) {
         teachDelayMs = ms;
     }
+
+    private volatile String lastTeachRequest = "";
+
+    /** The last teacher check's request (system and messages). */
+    public String lastTeachRequest() {
+        return lastTeachRequest;
+    }
     private volatile String lastStructuredRequest = "";
     /** Every structured request's system prompt (Coach, memory), for assertions that must not race each other. */
     private final java.util.List<String> structuredSystems = new java.util.concurrent.CopyOnWriteArrayList<>();
@@ -145,6 +152,7 @@ public class FakeLlm implements LlmPort {
         boolean reminder = props instanceof java.util.Map<?, ?> m4 && m4.containsKey("line");
         boolean teach = props instanceof java.util.Map<?, ?> m5 && m5.containsKey("teach");
         if (reminder) lastReminderRequest = request.system() + "\n" + request.messages();
+        if (teach) lastTeachRequest = request.system() + "\n" + request.messages();
         if (structured && !safety && !starters && !reminder && !teach) {
             lastStructuredRequest = request.system() + "\n" + request.messages();
             structuredSystems.add(request.system());

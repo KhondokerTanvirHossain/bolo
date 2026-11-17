@@ -8,14 +8,53 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * The English teacher hat (founder 2026-11-16: "teach when it's worth it"): when Bolo may teach a better sentence, and
- * how the learner's retry is judged. Never the first learner turn; the next teach at least 3 learner turns after the
- * last (teach, retry, one ordinary turn); at most 4 a talk. One per talk; the talk's lock guards it.
+ * The English teacher hat (founder 2026-11-16: "teach when it's worth it"; 2026-11-18: "a little more aggressive"):
+ * when Bolo may teach a better sentence, and how the learner's retry is judged. Never the first learner turn (it answers
+ * "anything you'd like to learn today?"); the next teach may come right after the try (teach, try, teach); at most 6 a
+ * talk in 5 minutes, 10 in 10 minutes. One per talk; the talk's lock guards it.
  */
 public final class Teaching {
 
-    static final int MAX = 4;
-    static final int GAP = 3;
+    static final int MAX = 6;
+    static final int MAX_LONG = 10;
+    static final int GAP = 2;
+
+    /** What kind of better the check found (founder 2026-11-18: vocabulary, grammar and idioms). */
+    public enum Kind {
+        GRAMMAR("A smoother way to say that"), WORD("A stronger word for that"), PHRASE("A more natural way to say that"),
+        IDIOM("An idiom for that");
+
+        private final String intro;
+
+        Kind(String intro) {
+            this.intro = intro;
+        }
+
+        public String dbValue() {
+            return name().toLowerCase(Locale.ROOT);
+        }
+
+        /** The check's kind; anything unknown is grammar. */
+        public static Kind of(String value) {
+            if (value != null) for (Kind k : values()) if (k.dbValue().equals(value.strip().toLowerCase(Locale.ROOT))) return k;
+            return GRAMMAR;
+        }
+    }
+
+    private final int max;
+
+    public Teaching() {
+        this(MAX);
+    }
+
+    private Teaching(int max) {
+        this.max = max;
+    }
+
+    /** 6 teaching moments in a 5-minute talk, 10 in a 10-minute one. */
+    public static Teaching forMinutes(int minutes) {
+        return new Teaching(minutes >= 10 ? MAX_LONG : MAX);
+    }
 
     /** The judgement of a retry: never a score, never "wrong". */
     public enum Result {
@@ -42,7 +81,7 @@ public final class Teaching {
 
     /** {@code learnerTurn}: 1-based, including the turn just finished. */
     public boolean mayTeach(int learnerTurn) {
-        return pending == null && learnerTurn > 1 && taught < MAX && learnerTurn >= lastTurn + GAP;
+        return pending == null && learnerTurn > 1 && taught < max && learnerTurn >= lastTurn + GAP;
     }
 
     public void taught(int learnerTurn, String better) {
@@ -62,7 +101,17 @@ public final class Teaching {
 
     /** What Bolo says when it teaches. */
     public static String line(String better) {
-        return "A smoother way to say that: \"" + better + "\" Try saying it.";
+        return line(Kind.GRAMMAR, better);
+    }
+
+    /** The spoken line names the kind; the sentence always ends with punctuation so it doesn't run into "Try saying it". */
+    public static String line(Kind kind, String better) {
+        return kind.intro + ": \"" + ended(better) + "\" Try saying it.";
+    }
+
+    static String ended(String s) {
+        String t = s == null ? "" : s.strip();
+        return t.isEmpty() || ".!?".indexOf(t.charAt(t.length() - 1)) >= 0 ? t : t + ".";
     }
 
     /** The try's words against the better sentence, in order (longest common subsequence); repeats are ignored. */

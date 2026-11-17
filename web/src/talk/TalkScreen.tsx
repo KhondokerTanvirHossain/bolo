@@ -9,6 +9,7 @@ import { TimeLeft } from "./TimeLeft";
 import { talkLabel } from "@/scenario/scenario";
 import { highlight } from "@/coach/highlight";
 import type { TalkState } from "./talkState";
+import { teachLabel } from "./talkState";
 
 type Props = {
   state: TalkState;
@@ -192,7 +193,7 @@ export function TalkScreen({ state, deviceId = null, onDone, onEnd, onTalkAgain,
         // Hats (DS v45 ScreenTeacherTalk): the better sentence stays while the learner tries it; the judgement follows.
         <div className="bo-hint" role="note" aria-label="Say it better"
           style={{ position: "absolute", left: "50%", bottom: 150, transform: "translateX(-50%)", width: "min(520px, calc(100% - 32px))", zIndex: 2 }}>
-          <p className="bo-hint__label"><Icon name="school" size="sm" />Say it better</p>
+          <p className="bo-hint__label"><Icon name="school" size="sm" />{teachLabel(state.teach.kind)}</p>
           <p className="bo-hint__starter">&quot;{highlight(state.teach.better, state.teach.changed, "bo-better")}&quot;</p>
           {state.teach.result && (
             <span className={`bo-result bo-result--${state.teach.result === "nailed" ? "nailed" : state.teach.result === "closer" ? "closer" : "once"}`}

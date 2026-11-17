@@ -35,7 +35,7 @@ export type TalkState = {
   /** TLK-6: two sentence starters, shown until the learner's turn ends. */
   hint: string[] | null;
   /** The English teacher's Say it better card; {@code result} once the try is judged (nailed, closer, good_try). */
-  teach?: { better: string; changed: string[]; why: string; result: string | null } | null;
+  teach?: { better: string; changed: string[]; why: string; kind: string | null; result: string | null } | null;
   /** TLK-14: the approved crisis content, which stays on screen. */
   crisis: Crisis | null;
   /** US-2.7: "Slower please" was heard; ask whether to keep the slower Bolo. */
@@ -60,7 +60,7 @@ export type ServerMessage =
   | { type: "ended"; reason: string; turns: number; p50Ms: number | null; p90Ms: number | null }
   | { type: "hint"; starters: string[] }
   /** Hats (2026-11-16): the English teacher shows a better sentence, then judges the try. */
-  | { type: "teach"; better: string; changed?: string[]; why?: string }
+  | { type: "teach"; better: string; changed?: string[]; why?: string; kind?: string }
   | { type: "judged"; result: string }
   /** Review I1: the try was dropped (the crisis screen); the card goes. */
   | { type: "teach_dropped" }
@@ -141,7 +141,7 @@ export function talk(state: TalkState, action: TalkAction): TalkState {
     case "hint":
       return { ...state, hint: action.starters };
     case "teach":
-      return { ...state, teach: { better: action.better, changed: action.changed ?? [], why: action.why ?? "", result: null } };
+      return { ...state, teach: { better: action.better, changed: action.changed ?? [], why: action.why ?? "", kind: action.kind ?? null, result: null } };
     case "teach_dropped":
       return { ...state, teach: null };
     case "judged":
@@ -186,4 +186,12 @@ export function talk(state: TalkState, action: TalkAction): TalkState {
     default:
       return state;
   }
+}
+
+/** DS v46 ScreenTeacherTalk: the Say it better card names what Bolo is teaching. */
+const TEACH_KIND: Record<string, string> = { grammar: "Grammar", word: "Better word", phrase: "Natural phrase", idiom: "Idiom", english: "In English" };
+
+export function teachLabel(kind: string | null | undefined): string {
+  const k = kind ? TEACH_KIND[kind] : undefined;
+  return k ? `Say it better · ${k}` : "Say it better";
 }

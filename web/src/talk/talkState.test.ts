@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { initialTalk, leftNow, talk, timeLeftLabel } from "./talkState";
+import { initialTalk, leftNow, talk, teachLabel, timeLeftLabel } from "./talkState";
 
 describe("talk state", () => {
   it("follows the server's state", () => {
@@ -163,7 +163,7 @@ describe("the English teacher hat (2026-11-16)", () => {
   const live = { ...initialTalk, phase: "your_turn" as const };
   it("a teach message shows the better sentence; judged adds the result; the next turn after it clears the card", () => {
     let s = talk(live, { type: "teach", better: "I need to tell the client.", changed: ["need", "the"], why: "Smoother." });
-    expect(s.teach).toEqual({ better: "I need to tell the client.", changed: ["need", "the"], why: "Smoother.", result: null });
+    expect(s.teach).toEqual({ better: "I need to tell the client.", changed: ["need", "the"], why: "Smoother.", kind: null, result: null });
     s = talk(s, { type: "state", value: "your_turn" });
     expect(s.teach?.better).toBe("I need to tell the client.");
     s = talk(s, { type: "judged", result: "nailed" });
@@ -183,3 +183,17 @@ describe("review fixes (hats)", () => {
   });
 });
 
+
+describe("the teacher names what it teaches (2026-11-18, DS v46)", () => {
+  it("keeps the kind and labels the card", () => {
+    const s = talk({ ...initialTalk, phase: "your_turn" as const }, { type: "teach", better: "We aren't on the same page.", kind: "idiom" });
+    expect(s.teach?.kind).toBe("idiom");
+    expect(teachLabel("idiom")).toBe("Say it better · Idiom");
+    expect(teachLabel("word")).toBe("Say it better · Better word");
+    expect(teachLabel("phrase")).toBe("Say it better · Natural phrase");
+    expect(teachLabel("grammar")).toBe("Say it better · Grammar");
+    expect(teachLabel("english")).toBe("Say it better · In English");
+    expect(teachLabel(null)).toBe("Say it better");
+    expect(teachLabel("something")).toBe("Say it better");
+  });
+});

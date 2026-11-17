@@ -98,6 +98,48 @@ class TeacherTalkTest extends PostgresTestBase {
         assertThat(events("teacher_judged")).isEqualTo(1);
     }
 
+    /** Founder 2026-11-18: the next teach can come right after the try (teach, try, teach). */
+    @Test
+    void theNextTeachComesRightAfterTheTry() throws Exception {
+        try (TalkSocket s = open()) {
+            say(s, 0);
+            speak(s, 2);
+            s.await(4000, "\"type\":\"teach\"", BETTER);
+            s.await(4000, "\"buddy_done\"", "\"turn\":4");
+            stt.nextText(BETTER);
+            say(s, 4);
+            stt.nextText(null);
+            speak(s, 6);
+            s.await(4000, "\"type\":\"teach\"", BETTER);
+        }
+        assertThat(events("teacher_taught")).isEqualTo(2);
+    }
+
+    /** Founder 2026-11-18: vocabulary, grammar and idioms; the line and the card name the kind. */
+    @Test
+    void theTeachNamesItsKind() throws Exception {
+        llm.teachReply("{\"teach\":true,\"kind\":\"idiom\",\"better\":\"" + BETTER + "\",\"why\":\"People say it.\"}");
+        try (TalkSocket s = open()) {
+            say(s, 0);
+            speak(s, 2);
+            s.await(4000, "\"type\":\"teach\"", "\"kind\":\"idiom\"");
+            s.await(4000, "\"caption\"", "An idiom for that");
+        }
+    }
+
+    /** Founder 2026-11-18: the answer to "anything you'd like to learn today?" steers every check. */
+    @Test
+    void theCheckKnowsWhatTheyWantToLearn() throws Exception {
+        try (TalkSocket s = open()) {
+            stt.nextText("Idioms for the office please");
+            say(s, 0);
+            stt.nextText(null);
+            speak(s, 2);
+            s.await(4000, "\"type\":\"teach\"");
+        }
+        assertThat(llm.lastTeachRequest()).contains("Idioms for the office please");
+    }
+
     @Test
     void aTeachLineIsSpokenWithoutTheModel() throws Exception {
         try (TalkSocket s = open()) {

@@ -115,8 +115,9 @@ public class TalkRelayService implements TalkRelayUseCase {
     /** P3b: what Bolo remembers. A failure here never stops a talk: it opens without the brief. */
     private TalkBrief brief(LearnerId learner, TalkView talk) {
         try {
-            // SCN-2 / hats: a standup or an IELTS practice keeps Bolo's personal follow-up for a later talk.
-            return memory.brief(learner, talk.id(), talk.goal(), !"standup".equals(talk.scenario()) && !"ielts".equals(talk.scenario()));
+            // SCN-2 / hats: only a free talk opens with Bolo's personal follow-up; a standup, an IELTS practice or the
+            // teacher (who asks what they'd like to learn, founder 2026-11-18) keeps it for a later free talk.
+            return memory.brief(learner, talk.id(), talk.goal(), "free".equals(talk.scenario()) || talk.scenario() == null);
         } catch (RuntimeException e) {
             log.warn("memory brief failed for talk {}: {}", talk.id(), e.getClass().getSimpleName());
             return TalkBrief.NONE;

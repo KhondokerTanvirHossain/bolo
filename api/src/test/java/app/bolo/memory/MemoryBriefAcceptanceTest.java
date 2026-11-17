@@ -139,4 +139,17 @@ class MemoryBriefAcceptanceTest extends PostgresTestBase {
                 "{\"buddySpeed\":\"normal\",\"captions\":true,\"scenario\":\"free\"}").status()).isEqualTo(204);
         assertThat(opening(startTalk())).contains("one follow-up about: " + PLAN);
     }
+
+    /** Founder 2026-11-18: the teacher opens with "anything you'd like to learn today?"; the follow-up waits for a free talk. */
+    @Test
+    void aTeacherTalkKeepsTheFollowUpForTheNextFreeTalk() throws Exception {
+        assertThat(client.send("PUT", "/api/me/settings", cookie,
+                "{\"buddySpeed\":\"normal\",\"captions\":true,\"scenario\":\"teacher\"}").status()).isEqualTo(204);
+        String teacher = startTalk();
+        seedPlan(learnerOf(teacher));
+        assertThat(opening(teacher)).doesNotContain("one follow-up about").contains("Is there anything you'd like to learn today?");
+        assertThat(client.send("PUT", "/api/me/settings", cookie,
+                "{\"buddySpeed\":\"normal\",\"captions\":true,\"scenario\":\"free\"}").status()).isEqualTo(204);
+        assertThat(opening(startTalk())).contains("one follow-up about: " + PLAN);
+    }
 }

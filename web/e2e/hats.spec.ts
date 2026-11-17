@@ -89,9 +89,10 @@ test("in an English teacher talk, the Say it better card shows and then the judg
   send({ type: "buddy_done", turn: 0 });
   send({ type: "state", value: "your_turn", leftMs: 222000 });
   await expect(page.getByText("English teacher").first()).toBeVisible();
-  send({ type: "teach", better: "I need to tell the client the release is delayed.", changed: ["need", "delayed"], why: "Smoother." });
+  send({ type: "teach", better: "I need to tell the client the release is delayed.", changed: ["need", "delayed"], why: "Smoother.", kind: "grammar" });
   const card = page.getByRole("note", { name: "Say it better" });
   await expect(card).toContainText("I need to tell the client the release is delayed.");
+  await expect(card).toContainText("Say it better · Grammar");
   send({ type: "judged", result: "nailed" });
   await expect(card.getByRole("status")).toHaveText(/Nailed it/);
   send({ type: "state", value: "buddy_speaking", leftMs: 200000 });
