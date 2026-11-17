@@ -70,6 +70,13 @@ Bangla recogniser (bn-IN) writes all Bangla and mixed clips correctly in Bangla 
   Vocabulary card may use one ("you said পরিকল্পনা: in English, plan").
 - Cost: one short REST call per Bangla turn (about $0.003). Speed: a Bangla turn's reply is up to ~1 s later.
 
+**Changed during the build (2026-11-18, live-SDK check):** through the live SDK with pronunciation scoring, the English
+recogniser is 0.47–0.81 confident on Bangla (0.91–0.95 on English), not the REST endpoint's 0.16–0.24, so confidence alone
+can't decide. Now: a turn under 0.85 (or with no score yet, or wordless) is checked by Azure language identification
+(en-US / bn-IN; 9 of 9 test clips right, 2–3 s), started when the learner pauses so the end of the turn waits less. The
+final review found that the crisis keyword screen can't read Bangla script, so every Bangla turn now waits for the safety
+classifier and fails closed.
+
 ## Non-goals
 
 Bangla replies; automatic language detection on every turn; a per-learner teach level setting; new plan rules.
