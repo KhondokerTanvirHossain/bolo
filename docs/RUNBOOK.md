@@ -503,3 +503,12 @@ Me → Speaking → **Time to answer** (Automatic, Quick, Normal, Relaxed) and *
 - **How often the teacher teaches:**
   `select name, props->>'result', count(*) from event where name in ('teacher_taught','teacher_judged') and at > now() - interval '7 days' group by 1, 2;`
 
+
+## Founder feedback 2026-11-18: teacher, opener, Coach cards, Bangla
+
+- **English teacher:** opens with "Is there anything you'd like to learn today?"; teaches grammar / a better word / a natural phrase / an idiom (`teach` socket message carries `kind`); gap 2 turns, at most 6 a talk (10 in 10 minutes). Model and timeout as before (`bolo.talk.teacher.model`, `bolo.talk.teacher.timeout-ms`).
+- **Opener:** a free talk with history offers three things (last topic or follow-up, another from history, a curious question from `TopicBank.curious()`); fixed per talk id. Standup, IELTS and the teacher never use the memory opener.
+- **Coach:** Grammar and Vocabulary cards (`kind` `grammar` / `vocabulary` in the debrief body); at most 5 cards.
+- **Bangla:** a turn whose English confidence is under `bolo.talk.bangla.max-english-confidence` (0.4), or with speech but no words, is sent once to Azure REST bn-IN (`AzureBanglaSpeech`, at most 60 s of audio, `bolo.talk.bangla.timeout-ms` 3000). Accepted as Bangla when the text is Bangla script with confidence ≥ `bolo.talk.bangla.min-bangla-confidence` (0.6) and ≥ the English confidence + 0.25. Cost: one short request per such turn.
+  - To switch it off without a deploy: add `BOLO_TALK_BANGLA_ENABLED=false` to `~/bolo/bolo.env` and restart the API container (deploy.sh procedure). The thresholds can be set the same way (`BOLO_TALK_BANGLA_MAX_ENGLISH_CONFIDENCE`, `BOLO_TALK_BANGLA_MIN_BANGLA_CONFIDENCE`).
+  - Logs never carry the recognised text; a failure logs `bangla recognition failed for talk <id>: <exception class>`.
