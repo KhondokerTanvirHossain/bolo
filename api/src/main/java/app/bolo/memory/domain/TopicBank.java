@@ -125,6 +125,37 @@ public final class TopicBank {
             "Something you changed your mind about",
             "A goal you're working toward right now");
 
+    /** Founder 2026-11-18: "one weird stuff for interesting" — odd, light questions for the opening choice. */
+    private static final List<String> CURIOUS = List.of(
+            "Would you rather never feel cold or never feel sleepy?",
+            "If animals could talk, which one would be the rudest?",
+            "What would you do with one extra hour every day that nobody else gets?",
+            "If you could eat only one food for a year, what would you pick?",
+            "Which everyday thing would you un-invent if you could?",
+            "If your life had a theme song, what would it sound like?",
+            "Would you rather be able to talk to cats or understand every language?",
+            "What's a small thing that makes you unreasonably happy?",
+            "If you could swap lives with someone for one day, who would it be?",
+            "What would a robot find hardest about living in Dhaka?",
+            "If you could add one new holiday, what would people do on it?",
+            "Would you rather live by the sea or in the hills?",
+            "What's the strangest thing you've ever eaten?",
+            "If you woke up as a famous cricketer tomorrow, what would you do first?",
+            "Which superpower would be the most useful in a traffic jam?",
+            "If you could ask your future self one question, what would it be?",
+            "What's a rule you'd make if you ran your home for a week?",
+            "Would you rather have a rickshaw that flies or a phone that never dies?",
+            "What job would you try if money didn't matter at all?",
+            "If you could master one skill overnight, which would you choose?",
+            "What's something everyone loves that you secretly don't?",
+            "If you opened a tiny shop, what would it sell?",
+            "Would you rather read people's minds or see one day into the future?",
+            "What's the funniest thing that happened to you on a bus or a train?");
+
+    public static List<String> curious() {
+        return CURIOUS;
+    }
+
     private static final Map<String, List<String>> BY_GOAL = Map.of(
             "work_meetings", WORK_MEETINGS, "job_interviews", JOB_INTERVIEWS,
             "study_abroad", STUDY_ABROAD, "daily_confidence", DAILY_CONFIDENCE);

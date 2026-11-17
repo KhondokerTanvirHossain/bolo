@@ -70,6 +70,10 @@ class MemoryBriefAcceptanceTest extends PostgresTestBase {
         return llm.lastReplyRequest();
     }
 
+    static String offer(String brief) {
+        return brief.lines().filter(l -> l.contains("offer a choice")).findFirst().orElse("");
+    }
+
     void seedPlan(LearnerId learner) {
         MemoryThread plan = new MemoryThread("p1", MemoryThread.Kind.PLAN, PLAN, LocalDate.of(2026, 11, 11), LocalDate.of(2026, 11, 12), null, null);
         memory.save(learner, true, new MemoryNote(List.of(new Line("a1", "Works as a software tester in Dhaka")), List.of(plan),
@@ -81,18 +85,21 @@ class MemoryBriefAcceptanceTest extends PostgresTestBase {
         String talk = startTalk();
         seedPlan(learnerOf(talk));
         String asked = opening(talk);
-        assertThat(asked).contains("one follow-up about: " + PLAN).contains("Works as a software tester in Dhaka")
-                .contains("Cricket").contains("The payment bug").doesNotContain("a real question about their situation");
+        // Founder 2026-11-18: the follow-up is offered as the first of three choices.
+        assertThat(asked).contains("offer a choice").contains("pick up: " + PLAN).contains("or a fun, curious one: ")
+                .contains("Works as a software tester in Dhaka").contains("Cricket").contains("The payment bug")
+                .doesNotContain("a real question about their situation");
     }
 
     @Test
     void theNextTwoTalksDontReuseIt() throws Exception {
         String first = startTalk();
         seedPlan(learnerOf(first));
-        assertThat(opening(first)).contains("one follow-up about: " + PLAN);
-        assertThat(opening(startTalk())).doesNotContain("one follow-up about").contains(PLAN)
-                .contains("built on what you remember").doesNotContain("a real question about their situation");
-        assertThat(opening(startTalk())).doesNotContain("one follow-up about");
+        assertThat(opening(first)).contains("pick up: " + PLAN);
+        // Resting, the follow-up isn't the first choice; the newest topic is (founder 2026-11-18).
+        assertThat(opening(startTalk())).doesNotContain("pick up: " + PLAN).contains("pick up: The payment bug")
+                .doesNotContain("a real question about their situation");
+        assertThat(opening(startTalk())).doesNotContain("pick up: " + PLAN);
     }
 
     @Test
@@ -105,7 +112,8 @@ class MemoryBriefAcceptanceTest extends PostgresTestBase {
         TalkBrief b = briefs.brief(learner, id, "work_meetings");
         assertThat(a.followUp()).isTrue();
         assertThat(a.known()).isTrue();
-        assertThat(b.text()).contains("one follow-up about: " + PLAN);
+        assertThat(b.text()).contains("pick up: " + PLAN);
+        assertThat(offer(b.text())).as("a reconnect offers the same choice").isEqualTo(offer(a.text()));
         assertThat(memory.find(learner).orElseThrow().talks()).isEqualTo(1);
     }
 
@@ -133,11 +141,11 @@ class MemoryBriefAcceptanceTest extends PostgresTestBase {
                 "{\"buddySpeed\":\"normal\",\"captions\":true,\"scenario\":\"standup\"}").status()).isEqualTo(204);
         String standup = startTalk();
         seedPlan(learnerOf(standup));
-        assertThat(opening(standup)).doesNotContain("one follow-up about").contains("Works as a software tester in Dhaka")
+        assertThat(opening(standup)).doesNotContain("offer a choice").contains("Works as a software tester in Dhaka")
                 .contains("manager");
         assertThat(client.send("PUT", "/api/me/settings", cookie,
                 "{\"buddySpeed\":\"normal\",\"captions\":true,\"scenario\":\"free\"}").status()).isEqualTo(204);
-        assertThat(opening(startTalk())).contains("one follow-up about: " + PLAN);
+        assertThat(opening(startTalk())).contains("pick up: " + PLAN);
     }
 
     /** Founder 2026-11-18: the teacher opens with "anything you'd like to learn today?"; the follow-up waits for a free talk. */
@@ -147,9 +155,9 @@ class MemoryBriefAcceptanceTest extends PostgresTestBase {
                 "{\"buddySpeed\":\"normal\",\"captions\":true,\"scenario\":\"teacher\"}").status()).isEqualTo(204);
         String teacher = startTalk();
         seedPlan(learnerOf(teacher));
-        assertThat(opening(teacher)).doesNotContain("one follow-up about").contains("Is there anything you'd like to learn today?");
+        assertThat(opening(teacher)).doesNotContain("offer a choice").contains("Is there anything you'd like to learn today?");
         assertThat(client.send("PUT", "/api/me/settings", cookie,
                 "{\"buddySpeed\":\"normal\",\"captions\":true,\"scenario\":\"free\"}").status()).isEqualTo(204);
-        assertThat(opening(startTalk())).contains("one follow-up about: " + PLAN);
+        assertThat(opening(startTalk())).contains("pick up: " + PLAN);
     }
 }

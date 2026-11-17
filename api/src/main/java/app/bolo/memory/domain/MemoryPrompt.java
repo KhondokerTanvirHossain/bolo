@@ -80,6 +80,11 @@ public final class MemoryPrompt {
      * follow-up to open with (if any), recent topics to avoid, and fresh ideas. {@code note} null: remembering is off.
      */
     public static String brief(MemoryNote note, MemoryThread opener, List<String> seeds) {
+        return brief(note, opener, null, seeds);
+    }
+
+    /** Founder 2026-11-18: with {@code choice}, the talk opens with a three-way offer instead of one follow-up. */
+    public static String brief(MemoryNote note, MemoryThread opener, OpeningChoice choice, List<String> seeds) {
         StringBuilder b = new StringBuilder();
         if (note != null && !note.isEmpty()) {
             b.append("What you remember about them from earlier talks (use it naturally, like a friend; never list it back):\n");
@@ -94,7 +99,14 @@ public final class MemoryPrompt {
                 b.append("- They enjoy: ").append(String.join(", ", note.interests().stream().map(Line::text).toList())).append('\n');
             }
         }
-        if (opener != null) {
+        if (choice != null) {
+            b.append("Open the talk with a short hello, then offer a choice in at most two short, natural sentences: pick up: ")
+                    .append(choice.last());
+            if (opener != null && opener.text().equals(choice.last())) b.append(" (they said this on ").append(DAY.format(opener.said())).append(")");
+            if (choice.other() != null) b.append("; or something else, like: ").append(choice.other());
+            b.append("; or a fun, curious one: ").append(choice.curious())
+                    .append(" Say it like a friend, not a menu. Then follow whatever they pick; if they bring up something new, follow that.\n");
+        } else if (opener != null) {
             b.append("Open the talk with a short hello and one follow-up about: ").append(opener.text())
                     .append(" (they said this on ").append(DAY.format(opener.said())).append("). Ask it once. ")
                     .append("If they move on, follow them and don't bring it back.\n");

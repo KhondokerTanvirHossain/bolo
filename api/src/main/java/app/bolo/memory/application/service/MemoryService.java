@@ -14,6 +14,7 @@ import app.bolo.memory.domain.TopicBank;
 import app.bolo.memory.domain.Line;
 import app.bolo.memory.domain.MemoryNote;
 import app.bolo.memory.domain.MemoryPrompt;
+import app.bolo.memory.domain.OpeningChoice;
 import app.bolo.memory.domain.MemoryThread;
 import app.bolo.talk.application.port.in.TalkEnded;
 import app.bolo.talk.application.port.in.TalkQueryUseCase;
@@ -154,7 +155,12 @@ public class MemoryService implements MemoryUseCase {
                 memory.save(learner, true, note, number, talk.value());
             }
             List<String> seeds = TopicBank.seeds(goal, Set.copyOf(note.recent()), ThreadLocalRandom.current(), 3);
-            return new TalkBrief(MemoryPrompt.brief(note, opener, seeds), opener != null, !note.isEmpty());
+            // Founder 2026-11-18: a free talk opens with a choice (the last thing, another from history, a curious one),
+            // fixed per talk so a reconnect offers the same.
+            OpeningChoice choice = withOpener
+                    ? OpeningChoice.of(note, opener, new java.util.Random(talk.value().getMostSignificantBits() ^ talk.value().getLeastSignificantBits())).orElse(null)
+                    : null;
+            return new TalkBrief(MemoryPrompt.brief(note, opener, choice, seeds), opener != null || choice != null, !note.isEmpty());
         });
     }
 
