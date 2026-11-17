@@ -258,6 +258,8 @@ function subtitle(f: Fix): string {
   if (f.kind === "sound") return `"${f.saidHighlight}"`;
   if (f.kind === "upgrade") return "Your sentence, one step better";
   if (f.kind === "standup") return "Standup tip";
+  if (f.kind === "grammar") return "Grammar";
+  if (f.kind === "vocabulary") return "Vocabulary";
   return f.word ? `"${f.word}" × ${f.count}` : "Point, reason, example";
 }
 
@@ -273,7 +275,9 @@ function Item({ n, title, sub, on, onClick }: { n: React.ReactNode; title: strin
 
 function FixCard({ fix, n, of, disputing, deviceId, onDispute, playRef }: { fix: Fix; n: number; of: number; disputing: boolean;
   deviceId: string | null; onDispute: () => void; playRef: (p: () => void) => void }) {
-  const kindLabel = fix.kind === "sound" ? "Sound fix" : fix.kind === "upgrade" ? "Say it better" : fix.kind === "standup" ? "Standup tip" : fix.title;
+  const kindLabel = fix.kind === "sound" ? "Sound fix" : fix.kind === "upgrade" ? "Say it better" : fix.kind === "standup" ? "Standup tip"
+    : fix.kind === "grammar" ? "Grammar" : fix.kind === "vocabulary" ? "Vocabulary" : fix.title;
+  const bn = (t?: string) => (t && /[\u0980-\u09FF]/.test(t) ? "bn" : undefined);
   const disputeButton = <button className="bo-btn bo-btn--quiet-neutral" disabled={disputing} onClick={onDispute}>That&apos;s not what I said</button>;
   return (
     <div className="dk-detail on">
@@ -311,6 +315,28 @@ function FixCard({ fix, n, of, disputing, deviceId, onDispute, playRef }: { fix:
             <Tip text={fix.why} />
           </>
         )}
+        {fix.kind === "grammar" && (
+          <>
+            <h2 className="bo-fix__title">{fix.title}</h2>
+            <div><p className="bo-fix__label">You said</p><p className="bo-fix__sentence bo-fix__sentence--before" style={{ margin: 0 }}>&quot;{fix.said}&quot;</p>
+              <Clip src={fix.clip} label="Play what you said" playRef={playRef} /></div>
+            <div><p className="bo-fix__label">Try</p>
+              <p className="bo-fix__sentence" style={{ margin: 0 }}>&quot;{highlight(fix.better ?? "", fix.changed ?? [], "bo-better")}&quot;</p></div>
+            <Clip src={fix.model} label="Play the better version" model />
+            <Tip text={fix.why} />
+          </>
+        )}
+        {fix.kind === "vocabulary" && (
+          <>
+            <h2 className="bo-fix__title"><span lang={bn(fix.used)}>&quot;{fix.used}&quot;</span> → <span className="bo-better">{fix.word}</span></h2>
+            <div><p className="bo-fix__label">You said</p><p className="bo-fix__sentence bo-fix__sentence--before" lang={bn(fix.said)} style={{ margin: 0 }}>&quot;{fix.said}&quot;</p>
+              <Clip src={fix.clip} label="Play what you said" playRef={playRef} /></div>
+            <div><p className="bo-fix__label">Use it</p>
+              <p className="bo-fix__sentence" style={{ margin: 0 }}>&quot;{highlight(fix.better ?? "", fix.changed ?? [], "bo-better")}&quot;</p></div>
+            <Clip src={fix.model} label="Play the example" model />
+            <Tip text={fix.why} />
+          </>
+        )}
         {fix.kind === "habit" && (
           <>
             {fix.word
@@ -320,7 +346,7 @@ function FixCard({ fix, n, of, disputing, deviceId, onDispute, playRef }: { fix:
             <Tip text={fix.tip} />
           </>
         )}
-        {(fix.kind === "sound" || fix.kind === "upgrade" || fix.kind === "standup") && fix.better && (
+        {(fix.kind === "sound" || fix.kind === "upgrade" || fix.kind === "standup" || fix.kind === "grammar" || fix.kind === "vocabulary") && fix.better && (
           <div style={{ marginTop: 18 }}><TryIt reference={fix.better} deviceId={deviceId} kind={fix.kind === "sound" ? "sound" : "upgrade"} /></div>
         )}
         <div style={{ display: "flex", justifyContent: "center", marginTop: 18 }}>{disputeButton}</div>

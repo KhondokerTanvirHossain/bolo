@@ -39,5 +39,10 @@ public interface AssessTalkUseCase {
     }
 
     /** SCN-2: {@code standupTip} a valid standup tip exists (slot kind "standup"). */
-    List<FixSlot> plan(TalkAssessment assessment, int upgrades, boolean standupTip);
+    default List<FixSlot> plan(TalkAssessment assessment, int upgrades, boolean standupTip) {
+        return plan(assessment, upgrades, standupTip, false, false);
+    }
+
+    /** Founder 2026-11-18: valid Grammar / Vocabulary cards exist (slot kinds "grammar", "vocabulary"). */
+    List<FixSlot> plan(TalkAssessment assessment, int upgrades, boolean standupTip, boolean grammar, boolean vocabulary);
 }

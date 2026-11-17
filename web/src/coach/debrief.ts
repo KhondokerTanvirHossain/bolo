@@ -4,8 +4,10 @@ export type Level = "BUILDING" | "GOOD" | "STRONG";
 
 export type Fix = {
   id?: string;
-  /** "standup" (SCN-2, DS v44 StandupTip): one tip in a Standup rehearsal's feedback. */
-  kind: "sound" | "upgrade" | "habit" | "standup";
+  /** "standup" (SCN-2, DS v44 StandupTip): one tip in a Standup rehearsal's feedback. "grammar", "vocabulary" (DS v46). */
+  kind: "sound" | "upgrade" | "habit" | "standup" | "grammar" | "vocabulary";
+  /** vocabulary: the plain word they used (maybe Bangla); {@code word} is the stronger one. */
+  used?: string;
   /** standup: why the better version helps a manager. */
   why?: string;
   rule?: string;

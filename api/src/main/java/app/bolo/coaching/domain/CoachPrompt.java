@@ -49,6 +49,16 @@ public final class CoachPrompt {
                 learner turn (a contiguous part of it). "better" keeps their meaning and their words where possible, \
                 fixes the grammar, adds at most one linking word or detail, sounds natural when spoken, and is at most \
                 25 words. Pick sentences where the upgrade helps most. Skip a sentence that is already fine.
+                - grammar: at most ONE grammar point that would help them most (a list with one item, or empty when \
+                there's none worth teaching). "said" is copied exactly from one learner turn, "turn" that turn's number, \
+                "better" the same sentence with the grammar fixed (at most 25 words), "title" the point in plain words, at \
+                most 8 words, no grammar jargon (e.g. "Past events: went, not go"), "why" at most 10 words. Not the same \
+                sentence as an upgrade.
+                - vocabulary: at most ONE word to grow (a list with one item, or empty). "said" is copied exactly from \
+                one learner turn, "turn" that turn's number, "used" the plain word or words they used, copied from said \
+                (or a word they said in Bangla), "word" a stronger, everyday English word or short phrase for it (at most \
+                4 words, one they will really use, never rare or showy), "example" a natural sentence of at most 15 words \
+                about their topic that uses the word, "why" at most 12 words.
                 - sentenceLevel and vocabularyLevel: BUILDING, GOOD or STRONG for this talk.
                 - topic: name the talk in 2 to 5 plain words, the way the learner would say it, e.g. "The payment bug demo".
                 Judge clarity, not accent. Never use the words: mistake, wrong, error, bad, fail, incorrect, poor, accent.
@@ -77,9 +87,18 @@ public final class CoachPrompt {
                 "required", List.of("turn", "said", "better"),
                 "properties", Map.of("turn", Map.of("type", "integer"), "said", Map.of("type", "string"),
                         "better", Map.of("type", "string")));
+        Map<String, Object> str = Map.of("type", "string");
+        Map<String, Object> grammar = Map.of("type", "object", "additionalProperties", false,
+                "required", List.of("turn", "said", "better", "title", "why"),
+                "properties", Map.of("turn", Map.of("type", "integer"), "said", str, "better", str, "title", str, "why", str));
+        Map<String, Object> vocabulary = Map.of("type", "object", "additionalProperties", false,
+                "required", List.of("turn", "said", "used", "word", "example", "why"),
+                "properties", Map.of("turn", Map.of("type", "integer"), "said", str, "used", str, "word", str, "example", str, "why", str));
         Map<String, Object> props = new java.util.LinkedHashMap<>(Map.of("strength", strength, "upgrades", Map.of("type", "array", "items", upgrade),
+                "grammar", Map.of("type", "array", "items", grammar), "vocabulary", Map.of("type", "array", "items", vocabulary),
                 "sentenceLevel", level, "vocabularyLevel", level, "topic", Map.of("type", "string")));
-        List<String> required = new java.util.ArrayList<>(List.of("strength", "upgrades", "sentenceLevel", "vocabularyLevel", "topic"));
+        List<String> required = new java.util.ArrayList<>(List.of("strength", "upgrades", "grammar", "vocabulary", "sentenceLevel",
+                "vocabularyLevel", "topic"));
         if (standup) {
             props.put("standupTip", Map.of("type", "object", "additionalProperties", false,
                     "required", List.of("rule", "turn", "said", "better", "why"),

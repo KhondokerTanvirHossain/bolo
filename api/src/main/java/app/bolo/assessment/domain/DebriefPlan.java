@@ -38,6 +38,20 @@ public final class DebriefPlan {
         return List.copyOf(plan);
     }
 
+    /**
+     * Founder 2026-11-18: with a Grammar and/or a Vocabulary card, Say it better drops to one; today's (at most 3)
+     * cards are chosen as before, and the new cards follow the sound fix, so a debrief has at most 5.
+     */
+    public static List<FixChoice> choose(List<SoundIssue> sounds, int upgrades, Optional<Habit> habit, boolean grammar,
+                                         boolean vocabulary, boolean standupTip) {
+        int allowed = grammar || vocabulary ? Math.min(upgrades, 1) : upgrades;
+        List<FixChoice> plan = new ArrayList<>(choose(sounds, allowed, habit, standupTip));
+        int at = plan.isEmpty() || !(plan.getFirst() instanceof FixChoice.Sound) ? 0 : 1;
+        if (vocabulary) plan.add(at, new FixChoice.Vocabulary());
+        if (grammar) plan.add(at, new FixChoice.Grammar());
+        return List.copyOf(plan);
+    }
+
     /** ASM-6: under a minute of speech there isn't enough to judge. */
     public static boolean tooShort(FluencyStats stats, long minSpeechMs) {
         return stats.speechMs() < minSpeechMs;

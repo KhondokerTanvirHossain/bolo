@@ -180,7 +180,15 @@ public class CoachService implements DebriefUseCase, LatestDebriefUseCase, app.b
         // SCN-2: a standup's one tip, only when it quotes the learner and names a known rule.
         boolean standup = "standup".equals(record.scenario());
         CoachReply.StandupTip tip = standup ? validTip(reply.standupTip(), byIdx) : null;
-        List<FixSlot> plan = assessment.plan(scored, upgrades.size(), tip != null);
+        // Founder 2026-11-18: one Grammar and one Vocabulary card when real; Say it better never repeats the grammar sentence.
+        CoachReply.Grammar grammar = reply.grammarOrEmpty().stream().filter(g -> validGrammar(g, byIdx)).findFirst().orElse(null);
+        CoachReply.Vocabulary vocabulary = reply.vocabularyOrEmpty().stream().filter(v -> validVocabulary(v, byIdx)).findFirst().orElse(null);
+        if (grammar != null) {
+            CoachReply.Grammar g = grammar;
+            upgrades = upgrades.stream().filter(u -> !(u.turn() == g.turn()
+                    && ReplyCheck.normalize(u.said()).equals(ReplyCheck.normalize(g.said())))).toList();
+        }
+        List<FixSlot> plan = assessment.plan(scored, upgrades.size(), tip != null, grammar != null, vocabulary != null);
 
         TalkContext ctx = new TalkContext(learner, id);
         ObjectNode body = JSON.createObjectNode();
@@ -193,6 +201,8 @@ public class CoachService implements DebriefUseCase, LatestDebriefUseCase, app.b
                 case "sound" -> soundFix(id, ctx, n, scored.sounds().get(slot.index()), byIdx);
                 case "upgrade" -> upgradeFix(id, ctx, n, upgrades.get(slot.index()), byIdx);
                 case "standup" -> standupFix(id, ctx, n, tip, byIdx);
+                case "grammar" -> grammarFix(id, ctx, n, grammar, byIdx);
+                case "vocabulary" -> vocabularyFix(id, ctx, n, vocabulary, byIdx);
                 default -> habitFix(id, ctx, n, scored.habit().orElseThrow());
             };
             // A stable id: disputes name the card, not its position (positions shift as cards are removed).
@@ -306,6 +316,67 @@ public class CoachService implements DebriefUseCase, LatestDebriefUseCase, app.b
         ReplyCheck.changedWords(u.said(), u.better()).forEach(changed::add);
         putClip(fix, "clip", id, n, cutQuote(byIdx.get(u.turn()), u.said()));
         putModel(fix, id, ctx, n, u.better().trim());
+        return fix;
+    }
+
+    static int words(String s) {
+        String n = s == null ? "" : s.strip();
+        return n.isEmpty() ? 0 : n.split("\\s+").length;
+    }
+
+    /** A real sentence from the talk, a real change, a short plain title and why. */
+    static boolean validGrammar(CoachReply.Grammar g, Map<Integer, TalkRecord.Turn> byIdx) {
+        return g != null && byIdx.containsKey(g.turn()) && g.said() != null && g.better() != null
+                && ReplyCheck.quoteIn(byIdx.get(g.turn()).text(), g.said()) && ReplyCheck.upgradeOk(g.said(), g.better())
+                && g.title() != null && words(g.title()) > 0 && words(g.title()) <= 8 && ReplyCheck.clean(g.title())
+                && g.why() != null && words(g.why()) > 0 && words(g.why()) <= 15 && ReplyCheck.clean(g.why());
+    }
+
+    /** Their sentence, a word they really used in it, a short everyday word, and an example that uses it. */
+    static boolean validVocabulary(CoachReply.Vocabulary v, Map<Integer, TalkRecord.Turn> byIdx) {
+        if (v == null || !byIdx.containsKey(v.turn()) || v.said() == null || v.used() == null || v.word() == null
+                || v.example() == null || v.why() == null) return false;
+        String turn = byIdx.get(v.turn()).text();
+        boolean saidIn = ReplyCheck.quoteIn(turn, v.said()) || (!v.said().isBlank() && turn.contains(v.said().strip()));
+        String used = ReplyCheck.normalize(v.used());
+        boolean usedIn = used.isEmpty() ? !v.used().isBlank() && v.said().contains(v.used().strip())
+                : (" " + ReplyCheck.normalize(v.said()) + " ").contains(" " + used + " ");
+        String word = ReplyCheck.normalize(v.word());
+        return saidIn && usedIn && !word.isEmpty() && words(v.word()) <= 4 && !word.equals(used)
+                && words(v.example()) <= 15 && (" " + ReplyCheck.normalize(v.example()) + " ").contains(" " + word + " ")
+                && ReplyCheck.clean(v.word()) && ReplyCheck.clean(v.example()) && words(v.why()) > 0 && words(v.why()) <= 15
+                && ReplyCheck.clean(v.why());
+    }
+
+    private ObjectNode grammarFix(TalkSessionId id, TalkContext ctx, int n, CoachReply.Grammar g, Map<Integer, TalkRecord.Turn> byIdx) {
+        ObjectNode fix = JSON.createObjectNode();
+        fix.put("kind", "grammar");
+        fix.put("title", g.title().strip());
+        fix.put("said", g.said().trim());
+        fix.put("turn", g.turn());
+        fix.put("better", g.better().trim());
+        ArrayNode changed = fix.putArray("changed");
+        ReplyCheck.changedWords(g.said(), g.better()).forEach(changed::add);
+        fix.put("why", g.why().trim());
+        putClip(fix, "clip", id, n, cutQuote(byIdx.get(g.turn()), g.said()));
+        putModel(fix, id, ctx, n, g.better().trim());
+        return fix;
+    }
+
+    private ObjectNode vocabularyFix(TalkSessionId id, TalkContext ctx, int n, CoachReply.Vocabulary v, Map<Integer, TalkRecord.Turn> byIdx) {
+        ObjectNode fix = JSON.createObjectNode();
+        fix.put("kind", "vocabulary");
+        fix.put("title", "\"" + v.used().strip() + "\" → " + v.word().strip());
+        fix.put("used", v.used().strip());
+        fix.put("word", v.word().strip());
+        fix.put("said", v.said().trim());
+        fix.put("turn", v.turn());
+        fix.put("better", v.example().trim());
+        ArrayNode changed = fix.putArray("changed");
+        for (String w : v.word().strip().split("\\s+")) changed.add(w.replaceAll("[^A-Za-z0-9']", ""));
+        fix.put("why", v.why().trim());
+        putClip(fix, "clip", id, n, cutQuote(byIdx.get(v.turn()), v.said()));
+        putModel(fix, id, ctx, n, v.example().trim());
         return fix;
     }
 

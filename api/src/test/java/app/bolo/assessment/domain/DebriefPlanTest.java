@@ -71,4 +71,32 @@ class DebriefPlanTest {
         assertThat(DebriefPlan.choose(List.of(issue(SoundPattern.V_BH)), 2, Optional.empty(), false))
                 .isEqualTo(DebriefPlan.choose(List.of(issue(SoundPattern.V_BH)), 2, Optional.empty()));
     }
+
+    // Founder 2026-11-18: Grammar and Vocabulary cards after the sound fix; Say it better drops to one; at most 5.
+    @Test
+    void grammarAndVocabularyFollowTheSoundFixAndUpgradesDropToOne() {
+        assertThat(DebriefPlan.choose(List.of(issue(SoundPattern.V_BH)), 2, Optional.of(new Habit(Habit.Kind.FILLER, "um", 7, 0)), true, true, false))
+                .containsExactly(new FixChoice.Sound(issue(SoundPattern.V_BH)), new FixChoice.Grammar(), new FixChoice.Vocabulary(),
+                        new FixChoice.Upgrade(0), new FixChoice.HabitFix(new Habit(Habit.Kind.FILLER, "um", 7, 0)));
+    }
+
+    @Test
+    void onlyGrammar() {
+        assertThat(DebriefPlan.choose(List.of(), 2, Optional.empty(), true, false, false))
+                .containsExactly(new FixChoice.Grammar(), new FixChoice.Upgrade(0));
+    }
+
+    @Test
+    void withATipStillAtMostFive() {
+        List<FixChoice> plan = DebriefPlan.choose(List.of(issue(SoundPattern.V_BH)), 2, Optional.of(new Habit(Habit.Kind.FILLER, "um", 7, 0)),
+                true, true, true);
+        assertThat(plan).hasSize(5).containsExactly(new FixChoice.Sound(issue(SoundPattern.V_BH)), new FixChoice.Grammar(),
+                new FixChoice.Vocabulary(), new FixChoice.Upgrade(0), new FixChoice.StandupTip());
+    }
+
+    @Test
+    void neitherIsTodaysPlan() {
+        assertThat(DebriefPlan.choose(List.of(issue(SoundPattern.V_BH)), 2, Optional.empty(), false, false, true))
+                .isEqualTo(DebriefPlan.choose(List.of(issue(SoundPattern.V_BH)), 2, Optional.empty(), true));
+    }
 }

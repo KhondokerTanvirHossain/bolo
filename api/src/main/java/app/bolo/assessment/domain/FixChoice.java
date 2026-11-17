@@ -15,4 +15,12 @@ public sealed interface FixChoice {
     /** SCN-2 (2026-11-15): the Coach's one standup tip, in a Standup rehearsal only. */
     record StandupTip() implements FixChoice {
     }
+
+    /** Founder 2026-11-18: one grammar point from the talk. */
+    record Grammar() implements FixChoice {
+    }
+
+    /** Founder 2026-11-18: one word to grow. */
+    record Vocabulary() implements FixChoice {
+    }
 }

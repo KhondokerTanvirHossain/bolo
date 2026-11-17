@@ -43,18 +43,20 @@ public class AssessmentService implements AssessTalkUseCase {
     }
 
     @Override
-    public List<FixSlot> plan(TalkAssessment a, int upgrades, boolean standupTip) {
+    public List<FixSlot> plan(TalkAssessment a, int upgrades, boolean standupTip, boolean grammar, boolean vocabulary) {
         // The domain plan only needs to know how many sound issues and whether a habit exists.
         List<SoundIssue> sounds = a.sounds().stream().map(s -> new SoundIssue(null, List.of())).toList();
         Optional<Habit> habit = a.habit().map(h -> new Habit(Habit.Kind.valueOf(h.kind()), h.word(), h.count(), h.averageWords()));
         List<FixSlot> slots = new ArrayList<>();
         int soundIndex = 0;
-        for (FixChoice c : DebriefPlan.choose(sounds, upgrades, habit, standupTip)) {
+        for (FixChoice c : DebriefPlan.choose(sounds, upgrades, habit, grammar, vocabulary, standupTip)) {
             switch (c) {
                 case FixChoice.Sound s -> slots.add(new FixSlot("sound", soundIndex++));
                 case FixChoice.Upgrade u -> slots.add(new FixSlot("upgrade", u.index()));
                 case FixChoice.HabitFix h -> slots.add(new FixSlot("habit", 0));
                 case FixChoice.StandupTip t -> slots.add(new FixSlot("standup", 0));
+                case FixChoice.Grammar g -> slots.add(new FixSlot("grammar", 0));
+                case FixChoice.Vocabulary v -> slots.add(new FixSlot("vocabulary", 0));
             }
         }
         return List.copyOf(slots);
