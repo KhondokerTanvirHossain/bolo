@@ -120,6 +120,18 @@ final class TalkConversation implements TalkConnection {
     private final app.bolo.talk.domain.Teaching teaching;
     /** The learner's first answer in a teacher talk: what they'd like to learn today (founder 2026-11-18). */
     private String wish;
+    /** Founder 2026-11-18: Bangla. Null: never checks (tests that build a talk by hand). */
+    private app.bolo.speech.application.port.in.BanglaRecognitionUseCase bangla;
+    private app.bolo.talk.domain.BanglaGuess banglaGuess;
+    private long banglaTimeoutMs;
+    /** The English recogniser's confidence for this turn: a word-weighted mean of its segments. */
+    private double turnConfidenceSum;
+    private int turnConfidenceWords;
+    /** The Bangla check for this turn is running (late segments still belong to this turn). */
+    private boolean checkingBangla;
+    /** The turn being committed was heard in Bangla; the last saved turn was (its late scores are dropped). */
+    private boolean banglaTurn;
+    private boolean lastTurnBangla;
     private TeacherCheck teacherCheck;
     /** Review I4: the check started with the speculative reply, for the words it was started on. */
     private String earlyCheckFor;
@@ -237,6 +249,13 @@ final class TalkConversation implements TalkConnection {
     }
 
     /** Hats: the English teacher's check and where its moments are reported; set before {@link #start()}. */
+    void useBangla(app.bolo.speech.application.port.in.BanglaRecognitionUseCase recognition, app.bolo.talk.domain.BanglaGuess guess,
+                   long timeoutMs) {
+        this.bangla = recognition;
+        this.banglaGuess = guess;
+        this.banglaTimeoutMs = timeoutMs;
+    }
+
     void useTeacher(TeacherCheck check, Consumer<app.bolo.talk.application.port.in.TeacherMoment> moments) {
         this.teacherCheck = check;
         this.onTeacher = moments;
@@ -369,6 +388,8 @@ final class TalkConversation implements TalkConnection {
                 turnStreamStartMs = streamMs;
                 turnPcm.reset();
                 turnWords.clear();
+                turnConfidenceSum = 0;
+                turnConfidenceWords = 0;
                 // Marked inside the lock but the utterance never calls back while holding its own lock (no cycle).
                 TranscriptionStream s = stt;
                 if (s != null) s.mark();
@@ -413,8 +434,9 @@ final class TalkConversation implements TalkConnection {
         switch (d) {
             case SPECULATE -> {
                 cancel(speculation);
-                // "Sorry?" / "Slower please" are answered without the model: nothing to speculate.
-                if (TalkIntent.of(transcript) != TalkIntent.NONE) {
+                // "Sorry?" / "Slower please" are answered without the model: nothing to speculate. A turn that may be
+                // Bangla isn't speculated on either: its words may be replaced (founder 2026-11-18).
+                if (TalkIntent.of(transcript) != TalkIntent.NONE || mayBeBangla(transcript)) {
                     speculation = null;
                     return;
                 }
@@ -431,15 +453,19 @@ final class TalkConversation implements TalkConnection {
                 cancel(speculation);
                 speculation = null;
             }
-            case COMMIT -> commit();
+            case COMMIT -> {
+                if (!checkBangla(false)) commit();
+            }
             case CUT_IN -> {
                 cutIns.used(nowMs.getAsLong());
                 onInterrupted.accept(new app.bolo.talk.application.port.in.StandupInterrupted(talk.id(), ctx.learnerId(), learnerTurns + 1));
                 commit(true);
             }
             case UNCLEAR -> {
-                dropLive();
-                cue(BuddyPrompt.UNCLEAR_CUE);
+                if (!checkBangla(true)) {
+                    dropLive();
+                    cue(BuddyPrompt.UNCLEAR_CUE);
+                }
             }
             case NONE -> { }
         }
@@ -452,7 +478,10 @@ final class TalkConversation implements TalkConnection {
     /** {@code cutIn} (SCN-2): only the ordinary reply to this very turn asks the cut-in follow-up (review I2). */
     private void commit(boolean cutIn) {
         String said = transcript.trim();
+        boolean bn = banglaTurn;
+        banglaTurn = false;
         if (said.isEmpty()) return;
+        lastTurnBangla = bn;
         long commitAt = nowMs.getAsLong();
         phase = Phase.THINKING;
         learnerTurns++;
@@ -514,6 +543,17 @@ final class TalkConversation implements TalkConnection {
             history.add(new Exchange(Exchange.Speaker.BUDDY, lastBuddyText));
             buddyTurn = nextIdx++;
             startSpeaker(buddyTurn, fixed(lastBuddyText), commitAt);
+        } else if (bn) {
+            // Founder 2026-11-18: a Bangla turn. Bolo answers in English with the English way to say it; the teacher
+            // teaches that sentence. A pending try said in Bangla isn't judged.
+            if (teaching.pending().isPresent()) {
+                teaching.drop();
+                out.send(message("teach_dropped"));
+            }
+            cancel(speculation);
+            speculation = null;
+            if (teacher && teacherCheck != null && elapsedMs() < limitMs()) teachEnglish(said, commitAt);
+            else replyTo(said, commitAt, false, false, null, true);
         } else if (teacher && teaching.pending().isPresent()) {
             // Hats: this turn was the learner's try at the better sentence; judge it, then carry on.
             String better = teaching.pending().get();
@@ -572,20 +612,109 @@ final class TalkConversation implements TalkConnection {
         });
     }
 
+    private Double turnConfidence() {
+        return turnConfidenceWords == 0 ? null : turnConfidenceSum / turnConfidenceWords;
+    }
+
+    private boolean mayBeBangla(String text) {
+        return bangla != null && banglaGuess != null && !text.isBlank() && banglaGuess.worthChecking(text, turnConfidence());
+    }
+
+    /**
+     * Founder 2026-11-18: a finished turn the English recogniser was unsure of ({@code wordless}: heard no words at all)
+     * is heard once in Bangla, off the audio thread. A Bangla turn is committed with its Bangla text; anything else (not
+     * Bangla, slow, failed) goes on as before. False: no check needed, the caller goes on now. Lock held.
+     */
+    private boolean checkBangla(boolean wordless) {
+        if (bangla == null || banglaGuess == null) return false;
+        Double confidence = turnConfidence();
+        if (!banglaGuess.worthChecking(wordless ? "" : transcript, confidence)) return false;
+        byte[] wav = Wav.wrap(turnPcm.toByteArray(), 16000);
+        int token = resumeToken;
+        int turnsBefore = learnerTurns;
+        var recognition = bangla;
+        var guess = banglaGuess;
+        long timeout = banglaTimeoutMs;
+        phase = Phase.THINKING;
+        checkingBangla = true;
+        out.send(message("state", "value", "thinking", "leftMs", leftMs()));
+        cancel(speculation);
+        speculation = null;
+        earlyCheck = null;
+        earlyCheckFor = null;
+        Thread.ofVirtual().start(() -> {
+            var heard = recognition.recognise(ctx, wav, timeout);
+            lock.lock();
+            try {
+                checkingBangla = false;
+                // Paused, ended or moved on while checking: say nothing; resume asks the last question again.
+                if (ended || endAfterSpeaking != null || phase == Phase.PAUSED || token != resumeToken || learnerTurns != turnsBefore) return;
+                if (heard.isPresent() && guess.accept(heard.get().text(), heard.get().confidence(), confidence)) {
+                    transcript = heard.get().text();
+                    banglaTurn = true;
+                    turnWords.clear();
+                    commit();
+                } else if (wordless || transcript.isBlank()) {
+                    dropLive();
+                    cue(BuddyPrompt.UNCLEAR_CUE);
+                } else {
+                    commit();
+                }
+            } finally {
+                lock.unlock();
+            }
+        });
+        return true;
+    }
+
+    /** Founder 2026-11-18: the teacher teaches the English for a Bangla turn; no English to teach means a Bangla-aware reply. */
+    private void teachEnglish(String said, long commitAt) {
+        int turn = learnerTurns;
+        int token = resumeToken;
+        TeacherCheck check = teacherCheck;
+        var started = check.askEnglish(ctx, said);
+        Thread.ofVirtual().start(() -> {
+            var t = check.await(started);
+            lock.lock();
+            try {
+                if (ended || endAfterSpeaking != null || phase == Phase.PAUSED || token != resumeToken || learnerTurns != turn) return;
+                if (t.isEmpty()) {
+                    replyTo(said, commitAt, false, false, null, true);
+                    return;
+                }
+                String better = t.get().better();
+                teaching.taughtExtra(turn, better);
+                String line = app.bolo.talk.domain.Teaching.english(better);
+                out.send(message("teach", "better", better, "changed", List.of(), "why", t.get().why(), "kind", "english"));
+                history.add(new Exchange(Exchange.Speaker.BUDDY, line));
+                buddyTurn = nextIdx++;
+                startSpeaker(buddyTurn, fixed(line), commitAt);
+                onTeacher.accept(new app.bolo.talk.application.port.in.TeacherMoment(talk.id(), ctx.learnerId(), null));
+            } finally {
+                lock.unlock();
+            }
+        });
+    }
+
     private void replyTo(String said, long commitAt, boolean mayReuseSpeculation, boolean cut) {
         replyTo(said, commitAt, mayReuseSpeculation, cut, null);
     }
 
     /** Bolo's reply to a committed learner turn (lock may or may not be held by the caller; it is taken here). {@code judged}: the teacher's judgement line to start with. */
     private void replyTo(String said, long commitAt, boolean mayReuseSpeculation, boolean cut, String judged) {
+        replyTo(said, commitAt, mayReuseSpeculation, cut, judged, false);
+    }
+
+    /** {@code bangla} (founder 2026-11-18): the turn was in Bangla; Bolo answers in English with the English way to say it. */
+    private void replyTo(String said, long commitAt, boolean mayReuseSpeculation, boolean cut, String judged, boolean bangla) {
         lock.lock();
         try {
             // Paused while the safety check ran: say nothing now; resume asks the last question again.
             if (ended || endAfterSpeaking != null || phase == Phase.PAUSED) return;
             boolean wrap = elapsedMs() >= limitMs();
             String sys = wrap ? BuddyPrompt.wrapUpSystem(system) : judged != null ? BuddyPrompt.judgedSystem(system, judged)
-                    : cut ? BuddyPrompt.cutInSystem(system) : systemFor(said);
-            shortStreak = words(said).split(" ").length < 5 ? shortStreak + 1 : 0;
+                    : bangla ? BuddyPrompt.banglaSystem(system) : cut ? BuddyPrompt.cutInSystem(system) : systemFor(said);
+            if (!bangla) shortStreak = words(said).split(" ").length < 5 ? shortStreak + 1 : 0;
             if (shortStreak >= 3) {
                 // One starter card, for the question Bolo is about to ask (sent when that line is done).
                 startersAfterReply = true;
@@ -593,7 +722,7 @@ final class TalkConversation implements TalkConnection {
             }
             Reply reply;
             // A speculative reply was written without the cut-in instruction.
-            if (mayReuseSpeculation && !wrap && !cut && judged == null && speculation != null && sameWords(speculation.forTranscript, said)) {
+            if (mayReuseSpeculation && !wrap && !cut && !bangla && judged == null && speculation != null && sameWords(speculation.forTranscript, said)) {
                 reply = speculation;
             } else {
                 cancel(speculation);
@@ -1106,11 +1235,16 @@ final class TalkConversation implements TalkConnection {
                 long base = sttBaseMs;
                 if (base != 0) {
                     segment = new ScoredSegment(segment.text(), segment.words().stream().map(w -> new ScoredWord(w.word(),
-                            w.startMs() + base, w.endMs() + base, w.accuracy(), w.errorType(), w.phonemes())).toList());
+                            w.startMs() + base, w.endMs() + base, w.accuracy(), w.errorType(), w.phonemes())).toList(), segment.confidence());
                 }
-                if (phase == Phase.YOUR_TURN) {
+                if (phase == Phase.YOUR_TURN || checkingBangla) {
                     turnWords.addAll(segment.words());
-                } else if (lastLearnerIdx >= 0 && segment.words().getFirst().startMs() >= lastTurnStreamStartMs) {
+                    if (segment.confidence() != null) {
+                        int n = Math.max(1, segment.words().size());
+                        turnConfidenceSum += segment.confidence() * n;
+                        turnConfidenceWords += n;
+                    }
+                } else if (lastLearnerIdx >= 0 && !lastTurnBangla && segment.words().getFirst().startMs() >= lastTurnStreamStartMs) {
                     lastTurnWords.addAll(segment.words());
                     turns.updateScored(talk.id(), lastLearnerIdx, List.copyOf(lastTurnWords));
                 }

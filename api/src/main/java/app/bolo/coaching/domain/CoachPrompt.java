@@ -61,13 +61,16 @@ public final class CoachPrompt {
                 about their topic that uses the word, "why" at most 12 words.
                 - sentenceLevel and vocabularyLevel: BUILDING, GOOD or STRONG for this talk.
                 - topic: name the talk in 2 to 5 plain words, the way the learner would say it, e.g. "The payment bug demo".
+                Turns marked "said in Bangla" were spoken in Bangla: never quote them for strength, upgrades or grammar; \
+                vocabulary may take one Bangla word from them ("used" in Bangla, "word" the English).
                 Judge clarity, not accent. Never use the words: mistake, wrong, error, bad, fail, incorrect, poor, accent.
                 """;
 
     public static String transcript(List<Line> lines) {
         StringBuilder b = new StringBuilder("The talk, in order. Learner turns are numbered.\n");
         for (Line l : lines) {
-            b.append(l.learner() ? "Learner turn " + l.turn() + ": " : "Bolo: ").append(l.text()).append('\n');
+            boolean bangla = l.learner() && app.bolo.common.text.Bangla.is(l.text());
+            b.append(l.learner() ? "Learner turn " + l.turn() + (bangla ? " (said in Bangla)" : "") + ": " : "Bolo: ").append(l.text()).append('\n');
         }
         return b.toString();
     }

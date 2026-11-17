@@ -36,6 +36,12 @@ public class TeacherCheck {
             and their words where possible, natural when spoken, at most 20 words; and "why": a warm reason in at most \
             10 words. Judge clarity, not accent. Never use the words mistake, wrong, error, bad, incorrect.""";
     static final String WISH = " What they said they'd like to learn today: \"%s\". When this sentence allows it, teach that kind of thing.";
+    /** Founder 2026-11-18: the learner said it in Bangla; the teacher gives them the English. */
+    static final String ENGLISH = """
+            You help an English teacher. The learner is a Bangladeshi adult practising spoken English, and just said this \
+            in Bangla. Return teach true, kind "grammar", "better": what they meant, as one natural, simple English \
+            sentence they could say themselves (at most 20 words), and "why": a warm reason in at most 10 words. If you \
+            can't tell what they meant, return teach false. Never use the words mistake, wrong, error, bad, incorrect.""";
     static final String STAMMER = " This learner stammers: never teach a sentence because of repeated sounds or words, blocks or pauses.";
     static final Map<String, Object> SCHEMA = Map.of("type", "object", "additionalProperties", false,
             "required", List.of("teach", "kind", "better", "why"),
@@ -80,6 +86,17 @@ public class TeacherCheck {
             var request = new LlmRequest(model, system, List.of(LlmMessage.user("Learner's last turn: " + said)),
                     150, SCHEMA, true);
             return llm.stream(ctx, request, d -> { }).done().handle((r, e) -> e != null ? Optional.<Teach>empty() : parse(said, r.text()));
+        } catch (RuntimeException e) {
+            return CompletableFuture.completedFuture(Optional.empty());
+        }
+    }
+
+    /** Founder 2026-11-18: the English for a Bangla turn. */
+    public CompletableFuture<Optional<Teach>> askEnglish(TalkContext ctx, String saidInBangla) {
+        try {
+            var request = new LlmRequest(model, ENGLISH, List.of(LlmMessage.user("What they said in Bangla: " + saidInBangla)),
+                    150, SCHEMA, true);
+            return llm.stream(ctx, request, d -> { }).done().handle((r, e) -> e != null ? Optional.<Teach>empty() : parse(saidInBangla, r.text()));
         } catch (RuntimeException e) {
             return CompletableFuture.completedFuture(Optional.empty());
         }

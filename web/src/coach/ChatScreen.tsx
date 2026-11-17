@@ -1,4 +1,5 @@
 "use client";
+import { langOf } from "@/talk/bangla";
 import { Icon } from "@/scene/Scene";
 import { segments, type Chat } from "./chat";
 
@@ -20,7 +21,7 @@ export function ChatScreen({ chat, onBack, onOpenFix }: { chat: Chat; onBack: ()
           return (
             <li key={i} className={you ? "dk-bubble dk-bubble--you" : "dk-bubble"}>
               <span className="dk-bubble__who">{you ? "You" : "Bolo"}</span>
-              <p className="dk-bubble__text">
+              <p className="dk-bubble__text" lang={you ? langOf(t.text) : undefined}>
                 {segments(t.text, chat.marks.filter((m) => m.turn === i)).map((s, j) => s.mark ? (
                   <button key={j} className="dk-mark" aria-label={`"${s.text}": ${s.mark.title}`} onClick={() => onOpenFix(s.mark!.fix)}>{s.text}</button>
                 ) : <span key={j}>{s.text}</span>)}

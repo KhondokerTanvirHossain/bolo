@@ -158,6 +158,17 @@ public final class BuddyPrompt {
                 """.formatted(minutes) + moodStyle(mood) + (brief == null || brief.isBlank() ? "" : "\n" + brief.strip() + "\n");
     }
 
+    /**
+     * Founder 2026-11-18: the learner's last turn was in Bangla (shown in Bangla script). Bolo shows it understood and gives
+     * the English way to say it; it never answers in Bangla.
+     */
+    public static String banglaSystem(String system) {
+        return system + "- Their last turn was in Bangla. Reply in English only, never in Bangla: first a few warm words that "
+                + "show you understood what they meant, then say: In English, you can say: \"<what they meant, as one natural, "
+                + "simple English sentence of at most 15 words>\" Then invite them to try saying it in English. Never scold "
+                + "them for using Bangla.\n";
+    }
+
     /** Hats: the reply after the learner tried the better sentence; {@code line} is Teaching's judgement ("Nailed it!"). */
     public static String judgedSystem(String system, String line) {
         return system + "- They just tried saying the better sentence again. Start your reply with exactly \"" + line

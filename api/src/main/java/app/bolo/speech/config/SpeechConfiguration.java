@@ -48,6 +48,13 @@ class SpeechConfiguration {
             return new AzureScriptedAssessment(requireKey(key), "https://" + region + ".stt.speech.microsoft.com");
         }
 
+        /** Founder 2026-11-18: a turn the English recogniser was unsure of, heard once in Bangla. */
+        @Bean
+        app.bolo.speech.application.port.out.BanglaSpeechPort azureBanglaSpeech(@Value("${bolo.speech.azure.key}") String key,
+                                                                                 @Value("${bolo.speech.azure.region}") String region) {
+            return new app.bolo.speech.adapter.out.azure.AzureBanglaSpeech(requireKey(key), "https://" + region + ".stt.speech.microsoft.com");
+        }
+
         private static String requireKey(String key) {
             if (key == null || key.isBlank()) {
                 throw new IllegalStateException("bolo.speech.vendor=azure but BOLO_AZURE_SPEECH_KEY is empty");
@@ -73,6 +80,11 @@ class SpeechConfiguration {
         @Bean
         FakeScriptedAssessment fakeScriptedAssessment() {
             return new FakeScriptedAssessment();
+        }
+
+        @Bean
+        app.bolo.speech.adapter.out.fake.FakeBanglaSpeech fakeBanglaSpeech() {
+            return new app.bolo.speech.adapter.out.fake.FakeBanglaSpeech();
         }
     }
 }

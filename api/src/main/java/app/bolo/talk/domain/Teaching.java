@@ -90,6 +90,17 @@ public final class Teaching {
         pending = better;
     }
 
+    /** Founder 2026-11-18: the English for a Bangla turn: the next turn is its try, but it doesn't count toward the cap. */
+    public void taughtExtra(int learnerTurn, String better) {
+        lastTurn = learnerTurn;
+        pending = better;
+    }
+
+    /** What Bolo says when it gives the English for a Bangla turn. */
+    public static String english(String better) {
+        return "In English, you can say: \"" + ended(better) + "\" Try saying it.";
+    }
+
     /** The better sentence the next turn is a try at, if any. */
     public Optional<String> pending() {
         return Optional.ofNullable(pending);

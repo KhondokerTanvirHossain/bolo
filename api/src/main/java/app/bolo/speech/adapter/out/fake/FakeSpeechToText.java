@@ -23,6 +23,7 @@ public class FakeSpeechToText implements SpeechToTextPort {
     private volatile List<ScoredWord> nextWords = defaultWords();
     private volatile String nextText = "hello bolo";
     private volatile boolean silent;
+    private volatile Double nextConfidence;
     private volatile long openDelayMs;
 
     /** Simulates a slow vendor start (Azure takes ~0.5-1 s to open a recognition). */
@@ -33,6 +34,11 @@ public class FakeSpeechToText implements SpeechToTextPort {
     /** What the fake "hears" (default "hello bolo"). */
     public void nextText(String text) {
         this.nextText = text == null ? "hello bolo" : text;
+    }
+
+    /** The confidence reported with each scored segment (null: none, like a vendor that gives none). */
+    public void nextConfidence(Double confidence) {
+        this.nextConfidence = confidence;
     }
 
     /** Hears speech but makes no words of it (Bangla, mumbling). */
@@ -104,7 +110,7 @@ public class FakeSpeechToText implements SpeechToTextPort {
                     long base = utteranceStartMs;
                     scored = new ScoredSegment(owner.nextText, owner.nextWords.stream()
                             .map(w -> new ScoredWord(w.word(), base + w.startMs(), base + w.endMs(), w.accuracy(), w.errorType(), w.phonemes()))
-                            .toList());
+                            .toList(), owner.nextConfidence);
                 }
             }
             if (heard) {

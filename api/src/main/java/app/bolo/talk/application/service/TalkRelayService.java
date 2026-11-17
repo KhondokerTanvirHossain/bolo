@@ -42,6 +42,17 @@ public class TalkRelayService implements TalkRelayUseCase {
     /** Hats (2026-11-16): the English teacher's check. */
     @org.springframework.beans.factory.annotation.Autowired
     private TeacherCheck teacherCheck;
+    /** Founder 2026-11-18: a turn the English recogniser was unsure of, heard again in Bangla. */
+    @org.springframework.beans.factory.annotation.Autowired
+    private app.bolo.speech.application.port.in.BanglaRecognitionUseCase banglaRecognition;
+    @org.springframework.beans.factory.annotation.Value("${bolo.talk.bangla.timeout-ms:3000}")
+    private long banglaTimeoutMs;
+    @org.springframework.beans.factory.annotation.Value("${bolo.talk.bangla.max-english-confidence:0.4}")
+    private double banglaMaxEnglish;
+    @org.springframework.beans.factory.annotation.Value("${bolo.talk.bangla.min-bangla-confidence:0.6}")
+    private double banglaMinBangla;
+    @org.springframework.beans.factory.annotation.Value("${bolo.talk.bangla.enabled:true}")
+    private boolean banglaEnabled;
     private final TalkSettings settings;
     private final MemoryUseCase memory;
 
@@ -107,6 +118,7 @@ public class TalkRelayService implements TalkRelayUseCase {
                         : BuddyPrompt.Opening.FROM_GOAL);
         c.onInterrupted(events::publishEvent);
         c.useTeacher(teacherCheck, events::publishEvent);
+        if (banglaEnabled) c.useBangla(banglaRecognition, new app.bolo.talk.domain.BanglaGuess(banglaMaxEnglish, banglaMinBangla), banglaTimeoutMs);
         c.start();
         events.publishEvent(new TalkStarted(talk.id(), learner, talk.scenario(), talk.difficulty()));
         return c;

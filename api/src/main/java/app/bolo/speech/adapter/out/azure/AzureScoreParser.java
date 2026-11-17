@@ -35,7 +35,8 @@ public final class AzureScoreParser {
                 words.add(new ScoredWord(w.path("Word").asString(""), start, end, score(w), errorType(w), List.copyOf(phonemes)));
             }
             String text = best.path("Display").asString(json.isEmpty() ? "" : JSON.readTree(json).path("DisplayText").asString(""));
-            return Optional.of(new ScoredSegment(text, List.copyOf(words)));
+            Double confidence = best.path("Confidence").isNumber() ? best.path("Confidence").asDouble() : null;
+            return Optional.of(new ScoredSegment(text, List.copyOf(words), confidence));
         } catch (RuntimeException e) {
             return Optional.empty();
         }

@@ -54,4 +54,20 @@ class AzureScoreParserTest {
         assertThat(AzureScoreParser.parse("{not json")).isEmpty();
         assertThat(AzureScoreParser.parse("{\"NBest\":[]}")).isEmpty();
     }
+
+    /** Founder 2026-11-18: each segment carries Azure's confidence, the sign that the learner spoke Bangla. */
+    @Test
+    void readsTheConfidence() {
+        String sdk = """
+                {"DisplayText":"Amar boss.","NBest":[{"Confidence":0.162,"Display":"Amar boss.","Words":[
+                  {"Word":"amar","Offset":1000000,"Duration":4000000,"PronunciationAssessment":{"AccuracyScore":20.0,"ErrorType":"None"}}]}]}""";
+        assertThat(AzureScoreParser.parse(sdk).orElseThrow().confidence()).isEqualTo(0.162);
+    }
+
+    @Test
+    void noConfidenceIsNull() {
+        String sdk = """
+                {"NBest":[{"Display":"Hi.","Words":[{"Word":"hi","Offset":0,"Duration":100}]}]}""";
+        assertThat(AzureScoreParser.parse(sdk).orElseThrow().confidence()).isNull();
+    }
 }

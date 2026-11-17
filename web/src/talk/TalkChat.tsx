@@ -1,4 +1,5 @@
 "use client";
+import { langOf } from "./bangla";
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { Icon } from "@/scene/Scene";
 import type { ChatTurn } from "./talkState";
@@ -53,7 +54,7 @@ export function TalkChat({ chat, live, replay, status, canRepeat, onRepeat }: {
           </div>
         ) : (
           <div key={`y${t.turn}`} className="bo-chat__turn bo-chat__turn--you">
-            <span className="bo-chat__who">You</span><p className="bo-chat__text">{t.text}</p>
+            <span className="bo-chat__who">You</span><p className="bo-chat__text" lang={langOf(t.text)}>{t.text}</p>
           </div>
         ))}
       </div>

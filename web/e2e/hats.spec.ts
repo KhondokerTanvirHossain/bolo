@@ -99,3 +99,24 @@ test("in an English teacher talk, the Say it better card shows and then the judg
   send({ type: "state", value: "your_turn", leftMs: 190000 });
   await expect(card).toHaveCount(0);
 });
+
+/** Founder 2026-11-18 (DS v46 ScreenBanglaTurn): a turn said in Bangla shows in Bangla script; the teacher gives the English. */
+test("a Bangla turn shows in Bangla, and the teacher's card says In English", async ({ page }) => {
+  await stub(page, "free", { scenario: "teacher" });
+  let route: WebSocketRoute | null = null;
+  await page.routeWebSocket("**/ws/talk/**", (ws) => { route = ws; ws.onMessage(() => {}); });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Start talking" }).click();
+  await expect.poll(() => route !== null).toBe(true);
+  const send = (m: object) => route!.send(JSON.stringify(m));
+  send({ type: "state", value: "buddy_speaking", leftMs: 222000 });
+  send({ type: "caption", turn: 0, text: "Is there anything you'd like to learn today?" });
+  send({ type: "buddy_done", turn: 0 });
+  send({ type: "state", value: "your_turn", leftMs: 222000 });
+  send({ type: "turn_end", turn: 1, text: "আমার বস শেষ মুহূর্তে পুরো পরিকল্পনা বদলে দিয়েছে।" });
+  const said = page.getByText("আমার বস শেষ মুহূর্তে পুরো পরিকল্পনা বদলে দিয়েছে।");
+  await expect(said).toBeVisible();
+  await expect(said).toHaveAttribute("lang", "bn");
+  send({ type: "teach", better: "My boss changed the whole plan at the last minute.", changed: [], why: "Here it is in English.", kind: "english" });
+  await expect(page.getByRole("note", { name: "Say it better" })).toContainText("Say it better · In English");
+});
