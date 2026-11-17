@@ -43,4 +43,13 @@ class FluencyStatsTest {
         assertThat(stammer.longPauses()).isZero();
         assertThat(stammer.speechMs()).isEqualTo(3600);
     }
+
+    /** Review 2026-11-18 (Important 2): a turn said in Bangla is left out of English fluency, never counted as a short answer. */
+    @Test
+    void aBanglaTurnIsLeftOut() {
+        FluencyStats s = FluencyStats.of(List.of(new TurnScore(1, "one two three four five six seven eight nine ten", List.of()),
+                new TurnScore(3, "আমার বস শেষ মুহূর্তে পুরো পরিকল্পনা বদলে দিয়েছে।", List.of())));
+        assertThat(s.words()).isEqualTo(10);
+        assertThat(s.averageWordsPerTurn()).isEqualTo(10.0);
+    }
 }

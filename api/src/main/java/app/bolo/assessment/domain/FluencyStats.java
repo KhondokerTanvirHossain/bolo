@@ -30,7 +30,11 @@ public record FluencyStats(long speechMs, int words, int wordsPerMinute, int lon
         int words = 0;
         int pauses = 0;
         Map<String, Integer> fillers = new LinkedHashMap<>();
+        int counted = 0;
         for (TurnScore t : turns) {
+            // Review 2026-11-18: a turn said in Bangla isn't English speech: left out, never a "short answer".
+            if (app.bolo.common.text.Bangla.is(t.text())) continue;
+            counted++;
             String[] tokens = t.text().toLowerCase(Locale.ROOT).replaceAll("[^a-z' ]", " ").trim().split("\\s+");
             int count = t.text().isBlank() ? 0 : tokens.length;
             words += count;
@@ -53,7 +57,7 @@ public record FluencyStats(long speechMs, int words, int wordsPerMinute, int lon
         }
         long timed = speech - blocks;
         int wpm = timed <= 0 ? 0 : (int) Math.round(words / (timed / 60_000.0));
-        double average = turns.isEmpty() ? 0 : (double) words / turns.size();
+        double average = counted == 0 ? 0 : (double) words / counted;
         return new FluencyStats(speech, words, wpm, pauses, Map.copyOf(fillers), average);
     }
 

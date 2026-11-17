@@ -45,9 +45,9 @@ public class TalkRelayService implements TalkRelayUseCase {
     /** Founder 2026-11-18: a turn the English recogniser was unsure of, heard again in Bangla. */
     @org.springframework.beans.factory.annotation.Autowired
     private app.bolo.speech.application.port.in.BanglaRecognitionUseCase banglaRecognition;
-    @org.springframework.beans.factory.annotation.Value("${bolo.talk.bangla.timeout-ms:3000}")
+    @org.springframework.beans.factory.annotation.Value("${bolo.talk.bangla.timeout-ms:3500}")
     private long banglaTimeoutMs;
-    @org.springframework.beans.factory.annotation.Value("${bolo.talk.bangla.max-english-confidence:0.4}")
+    @org.springframework.beans.factory.annotation.Value("${bolo.talk.bangla.max-english-confidence:0.85}")
     private double banglaMaxEnglish;
     @org.springframework.beans.factory.annotation.Value("${bolo.talk.bangla.min-bangla-confidence:0.6}")
     private double banglaMinBangla;

@@ -52,7 +52,7 @@ class SpeechConfiguration {
         @Bean
         app.bolo.speech.application.port.out.BanglaSpeechPort azureBanglaSpeech(@Value("${bolo.speech.azure.key}") String key,
                                                                                  @Value("${bolo.speech.azure.region}") String region) {
-            return new app.bolo.speech.adapter.out.azure.AzureBanglaSpeech(requireKey(key), "https://" + region + ".stt.speech.microsoft.com");
+            return new app.bolo.speech.adapter.out.azure.AzureBanglaSpeech(requireKey(key), region);
         }
 
         private static String requireKey(String key) {

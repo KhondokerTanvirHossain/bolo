@@ -55,6 +55,8 @@ class BanglaTalkTest extends PostgresTestBase {
         stt.silentRecogniser(false);
         bangla.reset();
         llm.teachReply(null);
+        llm.failSafety(false);
+        llm.safetyReply(null);
     }
 
     TalkSocket yourTurn() throws Exception {
@@ -103,6 +105,24 @@ class BanglaTalkTest extends PostgresTestBase {
         assertThat(llm.lastReplyRequest()).doesNotContain("in Bangla");
     }
 
+    /** The check starts when the learner pauses (with the speculative reply), so the end of the turn waits less. */
+    @Test
+    void theCheckStartsAtThePauseAndIsUsedOnce() throws Exception {
+        stt.nextText(ROMANISED);
+        stt.nextConfidence(0.6);
+        // 700 ms is longer than the 600 ms the end of the turn waits: only a check started at the pause finishes in time.
+        bangla.delayMs(700);
+        try (TalkSocket s = yourTurn()) {
+            s.tone(400);
+            s.zeros(200);
+            Thread.sleep(600); // the learner pauses in real time: the speculative reply and the Bangla check start here
+            s.zeros(400);
+            s.await(3000, "\"turn_end\"", BANGLA);
+            s.await(4000, "\"buddy_done\"", "\"turn\":2");
+        }
+        assertThat(bangla.calls()).as("the early check is used, not repeated").isEqualTo(1);
+    }
+
     @Test
     void speechWithNoWordsIsCheckedInBangla() throws Exception {
         stt.silentRecogniser(true);
@@ -144,8 +164,8 @@ class BanglaTalkTest extends PostgresTestBase {
     @Test
     void englishLettersBackMeansNotBangla() throws Exception {
         stt.nextText(ROMANISED);
-        stt.nextConfidence(0.3);
-        bangla.reply("hello there", 0.9);
+        stt.nextConfidence(0.7);
+        bangla.reply(null, 0);
         try (TalkSocket s = yourTurn()) {
             speak(s);
             s.await(4000, "\"buddy_done\"", "\"turn\":2");
@@ -194,5 +214,36 @@ class BanglaTalkTest extends PostgresTestBase {
             s.await(4000, "\"caption\"", "In English, you can say");
         }
         assertThat(llm.lastTeachRequest()).contains("Bangla");
+    }
+
+    /**
+     * Review 2026-11-18 (Critical 1): the keyword screen can't read Bangla script, so every Bangla turn waits for the
+     * safety classifier before Bolo says anything, and a classifier that fails counts as a crisis (fail closed).
+     */
+    @Test
+    void aBanglaTurnWaitsForTheSafetyCheckAndFailsClosed() throws Exception {
+        stt.nextText(ROMANISED);
+        stt.nextConfidence(0.16);
+        llm.failSafety(true);
+        try (TalkSocket s = yourTurn()) {
+            speak(s);
+            assertThat(s.await(5000, "\"crisis\"")).contains("You're not alone");
+        }
+        assertThat(llm.lastReplyRequest()).as("Bolo never answered the Bangla turn").doesNotContain(BANGLA);
+    }
+
+    @Test
+    void aBanglaCrisisInTheTeacherHatIsNeverTaught() throws Exception {
+        assertThat(client.send("PUT", "/api/me/settings", cookie, "{\"buddySpeed\":\"normal\",\"captions\":true,\"scenario\":\"teacher\"}")
+                .status()).isEqualTo(204);
+        llm.teachReply("{\"teach\":true,\"kind\":\"grammar\",\"better\":\"I feel very sad.\",\"why\":\"Here it is in English.\"}");
+        llm.safetyReply("{\"crisis\":true}");
+        stt.nextText(ROMANISED);
+        stt.nextConfidence(0.16);
+        try (TalkSocket s = yourTurn()) {
+            speak(s);
+            s.await(5000, "\"crisis\"");
+            assertThat(s.quiet(500, "\"type\":\"teach\"")).isTrue();
+        }
     }
 }

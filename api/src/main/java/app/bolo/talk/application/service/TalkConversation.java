@@ -129,6 +129,8 @@ final class TalkConversation implements TalkConnection {
     private int turnConfidenceWords;
     /** The Bangla check for this turn is running (late segments still belong to this turn). */
     private boolean checkingBangla;
+    /** The check started at the pause (with the speculative reply), for the turn's audio so far. */
+    private java.util.concurrent.CompletableFuture<java.util.Optional<app.bolo.speech.application.port.in.HeardBangla>> earlyBangla;
     /** The turn being committed was heard in Bangla; the last saved turn was (its late scores are dropped). */
     private boolean banglaTurn;
     private boolean lastTurnBangla;
@@ -248,7 +250,7 @@ final class TalkConversation implements TalkConnection {
         this.onInterrupted = c;
     }
 
-    /** Hats: the English teacher's check and where its moments are reported; set before {@link #start()}. */
+    /** Founder 2026-11-18: the Bangla check for unsure turns; set before {@link #start()}. */
     void useBangla(app.bolo.speech.application.port.in.BanglaRecognitionUseCase recognition, app.bolo.talk.domain.BanglaGuess guess,
                    long timeoutMs) {
         this.bangla = recognition;
@@ -256,6 +258,7 @@ final class TalkConversation implements TalkConnection {
         this.banglaTimeoutMs = timeoutMs;
     }
 
+    /** Hats: the English teacher's check and where its moments are reported; set before {@link #start()}. */
     void useTeacher(TeacherCheck check, Consumer<app.bolo.talk.application.port.in.TeacherMoment> moments) {
         this.teacherCheck = check;
         this.onTeacher = moments;
@@ -390,6 +393,8 @@ final class TalkConversation implements TalkConnection {
                 turnWords.clear();
                 turnConfidenceSum = 0;
                 turnConfidenceWords = 0;
+                earlyBangla = null;
+                checkingBangla = false;
                 // Marked inside the lock but the utterance never calls back while holding its own lock (no cycle).
                 TranscriptionStream s = stt;
                 if (s != null) s.mark();
@@ -434,9 +439,11 @@ final class TalkConversation implements TalkConnection {
         switch (d) {
             case SPECULATE -> {
                 cancel(speculation);
-                // "Sorry?" / "Slower please" are answered without the model: nothing to speculate. A turn that may be
-                // Bangla isn't speculated on either: its words may be replaced (founder 2026-11-18).
-                if (TalkIntent.of(transcript) != TalkIntent.NONE || mayBeBangla(transcript)) {
+                // Founder 2026-11-18: a turn that may be Bangla starts its language check now, so the end of the turn
+                // waits less (the speculative reply is dropped if it turns out Bangla).
+                if (mayBeBangla(transcript)) startEarlyBangla();
+                // "Sorry?" / "Slower please" are answered without the model: nothing to speculate.
+                if (TalkIntent.of(transcript) != TalkIntent.NONE) {
                     speculation = null;
                     return;
                 }
@@ -452,6 +459,7 @@ final class TalkConversation implements TalkConnection {
             case RESUMED -> {
                 cancel(speculation);
                 speculation = null;
+                earlyBangla = null;
             }
             case COMMIT -> {
                 if (!checkBangla(false)) commit();
@@ -499,11 +507,15 @@ final class TalkConversation implements TalkConnection {
         lastTurnWords.clear();
         lastTurnWords.addAll(turnWords);
         history.add(new Exchange(Exchange.Speaker.LEARNER, said));
-        if (teacher && learnerTurns == 1) wish = said;
+        // The answer to "anything you'd like to learn today?": not a "Sorry?", a crisis-screen turn or Bangla; kept short.
+        if (teacher && learnerTurns == 1 && !bn && TalkIntent.of(said) == TalkIntent.NONE && !CrisisScreen.mayBeCrisis(said)) {
+            wish = said.length() > 200 ? said.substring(0, 200) : said;
+        }
 
         // TLK-14 first: a turn that trips the keyword screen waits for the classifier before Bolo says anything, and a
         // classifier that fails or is slow counts as a crisis (fail closed).
-        if (CrisisScreen.mayBeCrisis(said)) {
+        // Review 2026-11-18 (C1): the keyword screen can't read Bangla script, so a Bangla turn always waits for the classifier.
+        if (CrisisScreen.mayBeCrisis(said) || bn) {
             // Hats: a try that trips the screen isn't judged; the web clears the card (review I1).
             if (teaching.pending().isPresent()) {
                 teaching.drop();
@@ -523,7 +535,8 @@ final class TalkConversation implements TalkConnection {
                     crisis();
                 } else {
                     crisisPending = false;
-                    replyTo(said, commitAt, false, false);
+                    if (bn) answerBangla(said, commitAt);
+                    else replyTo(said, commitAt, false, false);
                 }
             });
             return;
@@ -543,17 +556,6 @@ final class TalkConversation implements TalkConnection {
             history.add(new Exchange(Exchange.Speaker.BUDDY, lastBuddyText));
             buddyTurn = nextIdx++;
             startSpeaker(buddyTurn, fixed(lastBuddyText), commitAt);
-        } else if (bn) {
-            // Founder 2026-11-18: a Bangla turn. Bolo answers in English with the English way to say it; the teacher
-            // teaches that sentence. A pending try said in Bangla isn't judged.
-            if (teaching.pending().isPresent()) {
-                teaching.drop();
-                out.send(message("teach_dropped"));
-            }
-            cancel(speculation);
-            speculation = null;
-            if (teacher && teacherCheck != null && elapsedMs() < limitMs()) teachEnglish(said, commitAt);
-            else replyTo(said, commitAt, false, false, null, true);
         } else if (teacher && teaching.pending().isPresent()) {
             // Hats: this turn was the learner's try at the better sentence; judge it, then carry on.
             String better = teaching.pending().get();
@@ -616,8 +618,10 @@ final class TalkConversation implements TalkConnection {
         return turnConfidenceWords == 0 ? null : turnConfidenceSum / turnConfidenceWords;
     }
 
+    /** Early start (at the pause) only for a known low score; a turn with no score yet is checked when it ends. */
     private boolean mayBeBangla(String text) {
-        return bangla != null && banglaGuess != null && !text.isBlank() && banglaGuess.worthChecking(text, turnConfidence());
+        Double confidence = turnConfidence();
+        return bangla != null && banglaGuess != null && !text.isBlank() && confidence != null && banglaGuess.worthChecking(text, confidence);
     }
 
     /**
@@ -629,12 +633,12 @@ final class TalkConversation implements TalkConnection {
         if (bangla == null || banglaGuess == null) return false;
         Double confidence = turnConfidence();
         if (!banglaGuess.worthChecking(wordless ? "" : transcript, confidence)) return false;
-        byte[] wav = Wav.wrap(turnPcm.toByteArray(), 16000);
         int token = resumeToken;
         int turnsBefore = learnerTurns;
-        var recognition = bangla;
         var guess = banglaGuess;
         long timeout = banglaTimeoutMs;
+        var started = earlyBangla != null ? earlyBangla : recogniseAsync(timeout);
+        earlyBangla = null;
         phase = Phase.THINKING;
         checkingBangla = true;
         out.send(message("state", "value", "thinking", "leftMs", leftMs()));
@@ -643,12 +647,20 @@ final class TalkConversation implements TalkConnection {
         earlyCheck = null;
         earlyCheckFor = null;
         Thread.ofVirtual().start(() -> {
-            var heard = recognition.recognise(ctx, wav, timeout);
+            java.util.Optional<app.bolo.speech.application.port.in.HeardBangla> heard;
+            try {
+                heard = started.get(timeout, TimeUnit.MILLISECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                heard = java.util.Optional.empty();
+            } catch (Exception e) {
+                heard = java.util.Optional.empty();
+            }
             lock.lock();
             try {
-                checkingBangla = false;
                 // Paused, ended or moved on while checking: say nothing; resume asks the last question again.
                 if (ended || endAfterSpeaking != null || phase == Phase.PAUSED || token != resumeToken || learnerTurns != turnsBefore) return;
+                checkingBangla = false;
                 if (heard.isPresent() && guess.accept(heard.get().text(), heard.get().confidence(), confidence)) {
                     transcript = heard.get().text();
                     banglaTurn = true;
@@ -660,11 +672,46 @@ final class TalkConversation implements TalkConnection {
                 } else {
                     commit();
                 }
+            } catch (RuntimeException e) {
+                // Review 2026-11-18 (M6): a failure here closes the talk, as it would on the socket thread; it never hangs.
+                fail(e);
             } finally {
                 lock.unlock();
             }
         });
         return true;
+    }
+
+    /** Founder 2026-11-18: a Bangla turn that passed the safety check. Bolo answers in English; the teacher teaches the English. */
+    private void answerBangla(String said, long commitAt) {
+        lock.lock();
+        try {
+            if (ended || endAfterSpeaking != null || phase == Phase.PAUSED) return;
+            // A pending try said in Bangla isn't judged.
+            if (teaching.pending().isPresent()) {
+                teaching.drop();
+                out.send(message("teach_dropped"));
+            }
+            cancel(speculation);
+            speculation = null;
+            if (teacher && teacherCheck != null && elapsedMs() < limitMs()) teachEnglish(said, commitAt);
+            else replyTo(said, commitAt, false, false, null, true);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    /** The language check on the turn's audio so far, off the audio thread; it never fails (anything wrong is empty). */
+    private java.util.concurrent.CompletableFuture<java.util.Optional<app.bolo.speech.application.port.in.HeardBangla>> recogniseAsync(long budgetMs) {
+        byte[] wav = Wav.wrap(turnPcm.toByteArray(), 16000);
+        var recognition = bangla;
+        return java.util.concurrent.CompletableFuture.supplyAsync(() -> recognition.recognise(ctx, wav, budgetMs),
+                r -> Thread.ofVirtual().start(r));
+    }
+
+    /** Started at the pause: it may run until the turn ends plus the usual wait. Lock held. */
+    private void startEarlyBangla() {
+        if (earlyBangla == null) earlyBangla = recogniseAsync(banglaTimeoutMs * 2);
     }
 
     /** Founder 2026-11-18: the teacher teaches the English for a Bangla turn; no English to teach means a Bangla-aware reply. */

@@ -137,7 +137,8 @@ bolo:
     max-tokens: 4000
   coaching:
     model: claude-sonnet-5-5
-    max-tokens: 1500
+    # 2026-11-18: room for the Grammar and Vocabulary cards (review M9: a cut-off reply is a failed debrief).
+    max-tokens: 2500
     # ASM-6: under this much learner speech, no debrief ("not enough talking"). Tests shorten it.
     min-speech-ms: 60000
     retry-backoff-ms: 2000

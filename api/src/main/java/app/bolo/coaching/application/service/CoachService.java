@@ -174,7 +174,8 @@ public class CoachService implements DebriefUseCase, LatestDebriefUseCase, app.b
 
         CoachReply reply = askCoach(id, learner, record, stammer, "standup".equals(record.scenario()));
         List<CoachReply.Upgrade> upgrades = (reply.upgrades() == null ? List.<CoachReply.Upgrade>of() : reply.upgrades()).stream()
-                .filter(u -> byIdx.containsKey(u.turn()) && ReplyCheck.quoteIn(byIdx.get(u.turn()).text(), u.said())
+                .filter(u -> byIdx.containsKey(u.turn()) && !app.bolo.common.text.Bangla.is(byIdx.get(u.turn()).text())
+                        && ReplyCheck.quoteIn(byIdx.get(u.turn()).text(), u.said())
                         && ReplyCheck.upgradeOk(u.said(), u.better()))
                 .limit(2).toList();
         // SCN-2: a standup's one tip, only when it quotes the learner and names a known rule.
@@ -326,7 +327,8 @@ public class CoachService implements DebriefUseCase, LatestDebriefUseCase, app.b
 
     /** A real sentence from the talk, a real change, a short plain title and why. */
     static boolean validGrammar(CoachReply.Grammar g, Map<Integer, TalkRecord.Turn> byIdx) {
-        return g != null && byIdx.containsKey(g.turn()) && g.said() != null && g.better() != null
+        return g != null && byIdx.containsKey(g.turn()) && !app.bolo.common.text.Bangla.is(byIdx.get(g.turn()).text())
+                && g.said() != null && g.better() != null
                 && ReplyCheck.quoteIn(byIdx.get(g.turn()).text(), g.said()) && ReplyCheck.upgradeOk(g.said(), g.better())
                 && g.title() != null && words(g.title()) > 0 && words(g.title()) <= 8 && ReplyCheck.clean(g.title())
                 && g.why() != null && words(g.why()) > 0 && words(g.why()) <= 15 && ReplyCheck.clean(g.why());
